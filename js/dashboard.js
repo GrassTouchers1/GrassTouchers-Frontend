@@ -26,7 +26,7 @@ const FloodDashboard = (function () {
   // nên window.floodPoints luôn undefined -> trước đây Dashboard bị trống)
   async function fetchPoints() {
     try {
-      const res = await fetch('/api/flood-points');
+      const res = await fetch(getApiUrl('/api/flood-points'));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       return data.features || [];

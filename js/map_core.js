@@ -277,9 +277,25 @@ function initMap() {
   floodMarkersLayer.addTo(map);
   map.on('zoomend', syncFloodCirclesWithZoom);
 
-
+  window.toggleFloodPointsLayer = function(visible) {
+    if (!map) return;
+    if (visible) {
+      if (!map.hasLayer(floodCirclesLayer)) map.addLayer(floodCirclesLayer);
+      if (!map.hasLayer(floodMarkersLayer)) map.addLayer(floodMarkersLayer);
+    } else {
+      if (map.hasLayer(floodCirclesLayer)) map.removeLayer(floodCirclesLayer);
+      if (map.hasLayer(floodMarkersLayer)) map.removeLayer(floodMarkersLayer);
+    }
+  };
 
   map.on('click', onMapClick);
+
+  if (window.NorthStarRescue) {
+    NorthStarRescue.initRescueLayers(map);
+    NorthStarRescue.loadDisasters();
+    NorthStarRescue.loadShelters();
+    NorthStarRescue.loadSOSBeacons();
+  }
 
 
 
@@ -338,7 +354,7 @@ async function loadFloodPoints() {
   const contentEl = document.getElementById('summary-content-view');
 
   try {
-    const res = await fetch('/api/flood-points');
+    const res = await fetch(getApiUrl('/api/flood-points'));
     if (!res.ok) {
       throw new Error(`Mã phản hồi HTTP: ${res.status}`);
     }
@@ -659,7 +675,7 @@ async function fetchAiPredictions(forceRefresh = false, rainfallMm = null) {
 
   try {
     const query = (rainfallMm !== null && rainfallMm !== undefined) ? `?rainfall_mm=${encodeURIComponent(rainfallMm)}` : '';
-    const res = await fetch(`/api/predictions${query}`);
+    const res = await fetch(getApiUrl(`/api/predictions${query}`));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (Array.isArray(data)) {
@@ -1442,7 +1458,7 @@ async function updateSensorDepth(pointId, depthCm) {
 
   try {
 
-    const res = await fetch('/api/readings', {
+    const res = await fetch(getApiUrl('/api/readings'), {
 
       method: 'POST',
 
@@ -1722,11 +1738,20 @@ function setPresetRoute(oLng, oLat, dLng, dLat, name) {
 
   updatePickMarker('destination', dLat, dLng, '#ef4444', 'Điểm đến');
 
-
-
   calculateRoute();
-
 }
+
+window.setDestinationPoint = function(lng, lat, name) {
+  coords.destination = { lng: Number(lng), lat: Number(lat) };
+  const destEl = document.getElementById('dest-text');
+  if (destEl) destEl.value = name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const clrD = document.getElementById('btn-clear-dest');
+  if (clrD) clrD.classList.remove('hidden');
+  updatePickMarker('destination', Number(lat), Number(lng), '#ef4444', name || 'Điểm đến');
+  if (coords.origin && coords.destination) {
+    calculateRoute();
+  }
+};
 
 
 
@@ -1846,7 +1871,7 @@ async function calculateRoute() {
   }
 
   try {
-    const res = await fetch('/api/route', {
+    const res = await fetch(getApiUrl('/api/route'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2265,7 +2290,7 @@ async function submitReport() {
 
   try {
 
-    const res = await fetch('/api/reports', {
+    const res = await fetch(getApiUrl('/api/reports'), {
 
       method: 'POST',
 
@@ -2309,7 +2334,7 @@ async function submitReport() {
 
 // 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
 function switchTab(tabId) {
-  ['route', 'points', 'report'].forEach(id => {
+  ['route', 'points', 'report', 'rescue'].forEach(id => {
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`tab-btn-${id}`);
     const hdrBtn = document.getElementById(`hdr-btn-${id}`);
@@ -2340,7 +2365,15 @@ function switchTab(tabId) {
       mobTitle.innerHTML = '<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i> Danh sách 130 trạm quan trắc';
     } else if (tabId === 'report') {
       mobTitle.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5 text-emerald-500"></i> Báo cáo ngập tại hiện trường';
+    } else if (tabId === 'rescue') {
+      mobTitle.innerHTML = '<i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-500"></i> Cứu hộ SOS & Điểm sơ tán';
     }
+  }
+
+  if (tabId === 'rescue' && window.NorthStarRescue) {
+    NorthStarRescue.loadShelters();
+    NorthStarRescue.loadDisasters();
+    NorthStarRescue.loadSOSBeacons();
   }
 
   // Trên thiết bị di động, tự động mở sidebar khi người dùng chuyển tab
@@ -3038,7 +3071,7 @@ async function checkPostGISConnection() {
   const badge = document.getElementById('postgis-status-badge');
   if (!badge) return;
   try {
-    const res = await fetch('/api/health');
+    const res = await fetch(getApiUrl('/api/health'));
     if (res.ok) {
       const data = await res.json();
       if (data.database === 'connected') {
@@ -3046,9 +3079,19 @@ async function checkPostGISConnection() {
         badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 rounded-lg text-[11px] font-semibold cursor-default';
         badge.title = 'PostGIS Live: Cơ sở dữ liệu không gian PostgreSQL kết nối thành công';
         return;
+      } else {
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>PostGIS Standby</span>';
+        badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-100 rounded-lg text-[11px] font-semibold cursor-default';
+        badge.title = 'PostGIS Standby: Đang hoạt động ở chế độ bộ nhớ dự phòng In-Memory / SQLite';
+        return;
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span><span>Backend Standby</span>';
+    badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/20 border border-rose-400/30 text-rose-200 rounded-lg text-[11px] font-semibold cursor-default';
+    badge.title = 'Không thể kết nối Backend API. Vui lòng kiểm tra lại dịch vụ Backend.';
+    return;
+  }
   badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>PostGIS Standby</span>';
   badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-100 rounded-lg text-[11px] font-semibold cursor-default';
   badge.title = 'PostGIS Standby: Đang hoạt động ở chế độ bộ nhớ dự phòng In-Memory / SQLite';
@@ -3059,7 +3102,7 @@ async function loadWeatherInfo() {
   const el = document.getElementById('weather-badge');
   if (!el) return;
   try {
-    const res = await fetch('/api/weather/hanoi');
+    const res = await fetch(getApiUrl('/api/weather/hanoi'));
     if (res.ok) {
       const data = await res.json();
       const currentPrecip = data.hourly_forecast && data.hourly_forecast[0] ? data.hourly_forecast[0].precipitation_mm : 0;

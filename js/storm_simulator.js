@@ -163,7 +163,7 @@ const StormSimulator = (function () {
     }));
 
     // Gửi batch readings lên backend
-    fetch('/api/readings/batch', {
+    fetch(getApiUrl('/api/readings/batch'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(batchPayload)
@@ -287,7 +287,7 @@ const StormSimulator = (function () {
 
     // 6.3. Khôi phục trực tiếp dữ liệu thực từ các trạm quan trắc trong CSDL qua API /reset
     try {
-      const res = await fetch('/api/flood-points/reset', { method: 'POST' });
+      const res = await fetch(getApiUrl('/api/flood-points/reset'), { method: 'POST' });
       if (res.ok) {
         const geojson = await res.json();
         if (typeof window.renderFloodPoints === 'function') {

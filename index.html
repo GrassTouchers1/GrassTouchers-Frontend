@@ -36,7 +36,7 @@
 
   <!-- Custom Styles (Phụ trách: Thành viên 1) -->
 
-  <link rel="stylesheet" href="/static/css/style.css?v=5.4" />
+  <link rel="stylesheet" href="css/style.css?v=5.4" />
 
 </head>
 
@@ -76,6 +76,10 @@
         <button id="hdr-btn-report" onclick="switchTab('report')" title="Gửi báo cáo ngập tại hiện trường từ cộng đồng" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
           <i data-lucide="send" class="w-3.5 h-3.5 text-emerald-300"></i>
           <span>Báo ngập</span>
+        </button>
+        <button id="hdr-btn-rescue" onclick="switchTab('rescue')" title="Cứu hộ khẩn cấp & Sơ tán an toàn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-300"></i>
+          <span>Cứu hộ SOS</span>
         </button>
       </nav>
 
@@ -268,11 +272,13 @@
         </button>
 
         <button onclick="switchTab('report')" id="tab-btn-report" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
-
           <i data-lucide="send" class="w-4 h-4"></i>
-
           <span>Báo ngập</span>
+        </button>
 
+        <button onclick="switchTab('rescue')" id="tab-btn-rescue" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
+          <span>Cứu hộ SOS</span>
         </button>
 
       </div>
@@ -801,6 +807,137 @@
 
         </div>
 
+        <!-- ========================================================
+             TAB 4: CỨU HỘ KHẨN CẤP, SƠ TÁN & ĐA THIÊN TAI (NORTHSTAR)
+             ======================================================== -->
+        <div id="tab-rescue" class="hidden space-y-4">
+          <!-- 1. Nút tác vụ Sơ tán Khẩn cấp -->
+          <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-3.5 rounded-2xl shadow-lg border border-emerald-400/30">
+            <div class="flex items-center gap-2">
+              <div class="p-2 bg-white/20 rounded-xl">
+                <i data-lucide="shield-check" class="w-5 h-5 text-emerald-100"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-extrabold tracking-tight">Sơ Tán Khẩn Cấp</h3>
+                <p class="text-[11px] text-emerald-100">Tìm lộ trình an toàn nhất tới điểm cứu hộ gần bạn</p>
+              </div>
+            </div>
+
+            <div class="mt-3 flex gap-2">
+              <button onclick="NorthStarRescue.findEvacuationRoute(null, 'walk')" class="flex-1 py-2 bg-white text-emerald-800 font-extrabold text-xs rounded-xl shadow hover:bg-emerald-50 transition flex items-center justify-center gap-1.5">
+                <i data-lucide="footprints" class="w-4 h-4 text-emerald-600"></i>
+                <span>Sơ tán (Đi bộ)</span>
+              </button>
+              <button onclick="NorthStarRescue.findEvacuationRoute(null, 'motorbike')" class="flex-1 py-2 bg-emerald-500/30 hover:bg-emerald-500/40 text-white font-bold text-xs rounded-xl border border-white/20 transition flex items-center justify-center gap-1.5">
+                <i data-lucide="bike" class="w-4 h-4"></i>
+                <span>Xe máy</span>
+              </button>
+            </div>
+            
+            <div id="evacuation-loading" class="hidden text-center text-xs text-white/90 py-2">
+              Đang tính toán mạng lưới đường tránh ngập & hiểm họa thiên tai...
+            </div>
+          </div>
+
+          <!-- Kết quả đường sơ tán (Hiển thị khi đã tính toán) -->
+          <div id="evacuation-result-card" class="hidden p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-sm space-y-2">
+            <div class="flex items-center justify-between text-xs text-emerald-800 font-bold">
+              <span>ĐIỂM SƠ TÁN ĐỀ XUẤT</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px]">AN TOÀN</span>
+            </div>
+            <h4 id="evac-shelter-name" class="font-black text-sm text-slate-900">Trường THPT Yên Hòa</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs text-slate-700 pt-1">
+              <div>Cự ly: <b id="evac-distance" class="text-slate-900">1.2 km</b></div>
+              <div>Thời gian: <b id="evac-duration" class="text-slate-900">~15 phút</b></div>
+              <div>Chỗ tiếp nhận: <b id="evac-shelter-capacity" class="text-slate-900">600 người</b></div>
+              <div class="hidden">Hotline: <a id="evac-shelter-hotline" href="#" class="text-blue-600 font-bold hover:underline"></a></div>
+            </div>
+          </div>
+
+          <!-- 2. Form Phát Tín Hiệu Kêu Cứu 1-Click SOS -->
+          <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl shadow-sm space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <h3 class="text-xs font-black uppercase text-rose-700 tracking-wider">Phát Tín Hiệu Cứu Hộ SOS</h3>
+            </div>
+            <p class="text-[11px] text-slate-600">Gửi toạ độ khẩn cấp khi bị cô lập trong vùng nước ngập sâu hoặc sạt lở.</p>
+
+            <div class="space-y-2 text-xs">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Họ tên người liên hệ:</label>
+                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số điện thoại:</label>
+                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số người mắc kẹt:</label>
+                  <input id="sos-input-people" type="number" min="1" max="100" value="1" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 pt-1">
+                <input id="sos-input-vulnerable" type="checkbox" class="rounded text-rose-600 focus:ring-rose-500">
+                <label for="sos-input-vulnerable" class="text-[11px] font-bold text-rose-800">Có người già, trẻ nhỏ hoặc người bệnh</label>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Ghi chú tình trạng khẩn cấp:</label>
+                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano gấp..." class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"></textarea>
+              </div>
+
+              <button onclick="NorthStarRescue.submitSOSBeacon()" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="radio" class="w-4 h-4"></i>
+                <span>Gửi Yêu Cầu Cứu Hộ SOS</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Danh sách Trạm Sơ tán & Cứu trợ An toàn -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="home" class="w-4 h-4 text-emerald-600"></i>
+                <span>Điểm sơ tán an toàn</span>
+              </span>
+              <button onclick="NorthStarRescue.loadShelters()" class="text-blue-600 text-[11px] hover:underline">Làm mới</button>
+            </div>
+            <div id="rescue-shelters-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <!-- Render shelters via JS -->
+            </div>
+          </div>
+
+          <!-- 4. Danh sách Cảnh báo Vùng Thiên Tai -->
+          <div class="space-y-2 pt-2 border-t border-slate-200">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="alert-octagon" class="w-4 h-4 text-amber-600"></i>
+                <span>Cảnh báo thiên tai & nguy cơ</span>
+              </span>
+              <button onclick="NorthStarRescue.loadDisasters()" class="text-blue-600 text-[11px] hover:underline">Cập nhật</button>
+            </div>
+            <div id="rescue-disasters-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <!-- Render disasters via JS -->
+            </div>
+          </div>
+
+          <!-- 5. Tín hiệu SOS đang xử lý -->
+          <div class="space-y-2 pt-2 border-t border-slate-200">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="bell-ring" class="w-4 h-4 text-rose-600"></i>
+                <span>Tín hiệu SOS từ cộng đồng</span>
+              </span>
+              <button onclick="NorthStarRescue.loadSOSBeacons()" class="text-blue-600 text-[11px] hover:underline">Cập nhật</button>
+            </div>
+            <div id="rescue-sos-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <!-- Render SOS beacons via JS -->
+            </div>
+          </div>
+        </div>
+
 
 
       </div>
@@ -829,6 +966,30 @@
     <main class="w-full h-full flex-1 relative z-0">
 
       <div id="map" class="w-full h-full"></div>
+
+      <!-- Floating Multi-Hazard Layer Control (NorthStar) -->
+      <div id="multi-hazard-layer-control" class="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2.5 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold space-y-1.5 hidden sm:block">
+        <div class="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-600"></i>
+          <span>Lớp Bản Đồ Thiên Tai</span>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <input type="checkbox" id="layer-toggle-floods" checked onchange="window.toggleFloodPointsLayer ? window.toggleFloodPointsLayer(this.checked) : null" class="rounded text-blue-600 focus:ring-blue-500">
+          <span>🌊 Trạm ngập lụt IoT (130 trạm)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <input type="checkbox" id="layer-toggle-disasters" checked onchange="NorthStarRescue.toggleLayer('disasters', this.checked)" class="rounded text-amber-500 focus:ring-amber-500">
+          <span>⚠️ Vùng thiên tai & sự cố</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <input type="checkbox" id="layer-toggle-shelters" checked onchange="NorthStarRescue.toggleLayer('shelters', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500">
+          <span>🛡️ Điểm sơ tán an toàn</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <input type="checkbox" id="layer-toggle-sos" checked onchange="NorthStarRescue.toggleLayer('sos', this.checked)" class="rounded text-rose-600 focus:ring-rose-500">
+          <span>🆘 Tín hiệu SOS cộng đồng</span>
+        </label>
+      </div>
 
 
 
@@ -1127,47 +1288,39 @@
 
        ======================================================== -->
 
+  <!-- 0. Cấu hình Môi trường & API Endpoint -->
+  <script src="js/config.js"></script>
+
   <!-- 1. Controller Bản đồ chính (Thành viên 1 & 2) -->
-  <script src="/static/js/map_core.js?v=6.5"></script>
-
-
+  <script src="js/map_core.js?v=6.5"></script>
 
   <!-- 2. Module Cảnh báo Giọng nói Tiếng Việt (Thành viên 3) -->
-
-  <script src="/static/js/voice_warning.js?v=5.0"></script>
-
-
+  <script src="js/voice_warning.js?v=5.0"></script>
 
   <!-- 2b. Module Mô phỏng xe di chuyển dọc tuyến (Thành viên 3) -->
-
-  <script src="/static/js/vehicle_sim.js?v=5.2"></script>
-
-
+  <script src="js/vehicle_sim.js?v=5.2"></script>
 
   <!-- 3. Module Giả lập Kịch bản Mưa Bão (Thành viên 3) -->
-
-  <script src="/static/js/storm_simulator.js?v=5.5"></script>
-
-
+  <script src="js/storm_simulator.js?v=5.5"></script>
 
   <!-- 4. Module Dashboard Thống kê Đô thị (Thành viên 3) -->
+  <script src="js/dashboard.js?v=5.0"></script>
 
-  <script src="/static/js/dashboard.js?v=5.0"></script>
-
-
+  <!-- 5. Module Quản lý Cứu hộ, Sơ tán & Đa thiên tai (NorthStar) -->
+  <script src="js/rescue_manager.js?v=1.0"></script>
 
   <!-- Khởi động khi tải xong trang -->
-
   <script>
-
     window.addEventListener('DOMContentLoaded', () => {
-
       if (window.lucide) lucide.createIcons();
-
       initMap();
-
+      if (window.NorthStarRescue && window.map) {
+        NorthStarRescue.initRescueLayers(window.map);
+        NorthStarRescue.loadDisasters();
+        NorthStarRescue.loadShelters();
+        NorthStarRescue.loadSOSBeacons();
+      }
     });
-
   </script>
 
 </body>
