@@ -1,32 +1,34 @@
-# 🗺️ GrassTouchers Frontend – Interactive Smart Flood Map & PWA Navigation
+# 🗺️ NORTHSTAR Frontend – Multi-Hazard GIS & Disaster Response PWA
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OSI Approved](https://img.shields.io/badge/OSI-Approved%20Open%20Source-brightgreen.svg)](https://opensource.org/licenses)
 [![Leaflet](https://img.shields.io/badge/Map-Leaflet.js-green.svg?logo=leaflet)](https://leafletjs.com/)
 [![OpenStreetMap](https://img.shields.io/badge/Tiles-OpenStreetMap-brightgreen.svg)](https://www.openstreetmap.org/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Offline%20Cache-purple.svg)](https://web.dev/progressive-web-apps/)
 [![Web Speech API](https://img.shields.io/badge/Voice-W3C%20Web%20Speech-blue.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
-[![PWA Ready](https://img.shields.io/badge/PWA-Mobile%20First-purple.svg)](https://web.dev/progressive-web-apps/)
 
-> **Giao diện Web PWA bản đồ thông minh cảnh báo và dẫn đường tránh điểm ngập lụt Hà Nội.**  
-> 100% Mã nguồn mở, hoạt động trực tiếp trên trình duyệt, tích hợp cảnh báo giọng nói tiếng Việt offline.
+> **Giao diện Web PWA bản đồ số đa thiên tai, điều hành ứng phó khẩn cấp và dẫn đường cứu hộ (Kế thừa FloodNav).**  
+> 100% Mã nguồn mở, hoạt động trực tiếp trên trình duyệt, hỗ trợ Service Worker caching ngoại tuyến và cảnh báo giọng nói tiếng Việt.
 
 ---
 
 ## ✨ 1. Tính năng nổi bật
 
-- 📍 **Bản đồ tương tác OpenStreetMap (Leaflet.js):**
-  - Hiển thị trực quan 130 trạm quan trắc và điểm ngập cục bộ tại Hà Nội.
-  - Phân loại màu sắc trực quan: **Xanh** (An toàn $<5\text{cm}$), **Vàng** (Cảnh báo $5-20\text{cm}$), **Đỏ** (Nguy hiểm $\ge 20\text{cm}$).
+- 🌍 **Bản đồ GIS Đa thiên tai Đa tầng (Multi-Hazard Layer Control):**
+  - Tích hợp 4 lớp dữ liệu trực quan: **Trạm đo ngập IoT**, **Vùng thiên tai nguy hiểm** (lũ lụt, sạt lở, bão), **Điểm sơ tán an toàn**, và **Yêu cầu cứu trợ SOS**.
+  - Phân loại màu sắc nguy cơ trực quan: Xanh (An toàn), Vàng (Cảnh báo), Đỏ/Cam (Nguy hiểm).
+- 🚨 **Mô-đun Cứu hộ SOS & Điểm Trú ẩn (NorthStar Rescue Hub):**
+  - **1-Click SOS Beacon:** Người dân phát tín hiệu cầu cứu khẩn cấp kèm tọa độ GPS thực địa, số điện thoại và số lượng người cần cứu trợ.
+  - **Định tuyến Sơ tán Khẩn cấp:** 1 chạm tính toán lộ trình đi bộ hoặc xe máy né vùng nguy hiểm đến điểm trú ẩn còn sức chứa gần nhất.
 - 🚗 **Dẫn đường so sánh thông minh (Dual-route View):**
-  - Hiển thị song song 2 lộ trình: **Đường nhanh nhất** (màu xám/đỏ khi gặp ngập) và **Đường an toàn né ngập** (màu xanh lá).
+  - Hiển thị song song 2 lộ trình: **Đường nhanh nhất** và **Đường an toàn né ngập/thiên tai**.
 - 🔊 **Cảnh báo giọng nói tiếng Việt (W3C Web Speech API):**
-  - Cảnh báo tức thì khi phương tiện sắp đi vào vùng ngập sâu: *"Đã phát hiện điểm ngập phía trước. Hệ thống đã tự động đổi lộ trình an toàn."*
-  - Chạy 100% trên trình duyệt client, không tốn phí, không phụ thuộc Google Cloud TTS.
+  - Cảnh báo tức thì khi phương tiện tiếp cận vùng ngập sâu hoặc chướng ngại vật thiên tai mà không phụ thuộc cloud API.
 - ⚡ **Theo dõi GPS & Re-routing thời gian thực (WebSocket):**
-  - Kết nối liên tục với backend, tự động đổi hướng đi ngay khi cảm biến phía trước báo nước dâng cao.
-- 🌧️ **Giả lập mưa bão & Xe chạy (Simulator Suite):**
-  - Tích hợp bảng điều khiển giả lập mưa bão dồn dập (15–60 phút) để kiểm tra khả năng ứng biến của lộ trình.
-  - Mô phỏng xe chạy GPS dọc theo tuyến đường để trải nghiệm như đang lái xe thực tế.
+  - Kênh WebSocket hai chiều theo dõi GPS và nhận thông báo phát thanh cứu hộ khẩn cấp từ trung tâm chỉ huy.
+- 📦 **PWA & Offline First:**
+  - Tích hợp Service Worker (`sw.js`) và `manifest.json` tự động lưu bộ đệm các tài nguyên giao diện, cho phép mở bản đồ ngay cả khi mất sóng Internet tạm thời.
+
 
 ---
 

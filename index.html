@@ -8,7 +8,9 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>FloodNav - Bản đồ Cảnh báo & Định tuyến Tránh Ngập Hà Nội</title>
+  <title>NORTHSTAR - Nền tảng Giám sát & Ứng phó Đa thiên tai (FloodNav v2)</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1d4ed8" />
 
   
 
@@ -1319,6 +1321,13 @@
         NorthStarRescue.loadDisasters();
         NorthStarRescue.loadShelters();
         NorthStarRescue.loadSOSBeacons();
+      }
+
+      // Đăng ký Service Worker cho PWA Offline Caching
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('[NORTHSTAR PWA] Service Worker registered with scope:', reg.scope))
+          .catch((err) => console.warn('[NORTHSTAR PWA] Service Worker registration failed:', err));
       }
     });
   </script>
