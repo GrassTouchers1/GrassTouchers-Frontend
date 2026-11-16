@@ -1,0 +1,3178 @@
+/**
+
+ * =================================================
+ * FloodNav - Map Controller & Core Interaction
+
+ * Phụ trách: Thành viên 1 & Thành viên 2 (Hợp tác nâng cấp)
+
+ * Thư viện: Leaflet 1.9.4 (BSD-2-Clause - OSI Approved)
+
+ * =================================================
+ */
+
+
+
+let map = null;
+
+let floodMarkersLayer = null;
+
+let floodCirclesLayer = L.layerGroup();
+
+let routeLayers = { safe: null, fastest: null };
+
+let pickMarkers = { origin: null, destination: null, report: null };
+
+
+
+let currentBaseLayer = null;
+
+let esriBaseLayer = null;
+
+let darkBaseLayer = null;
+
+
+
+let coords = {
+
+  origin: null,
+
+  destination: null,
+
+  report: null
+
+};
+
+
+
+let currentPickMode = null; // 'origin' | 'destination' | 'report' | null
+
+let floodPoints = [];
+
+
+
+// 1. Khởi tạo bản đồ
+
+
+/**
+ * Tạo icon cụm (MarkerCluster) theo phong cách nhận diện FloodNav (Xanh dương & Xanh ngọc)
+ * Tự động hiển thị số lượng điểm ngập trong cụm và cảnh báo nếu có điểm ngập sâu.
+ */
+function createClusterIcon(cluster) {
+  const count = cluster.getChildCount();
+  const children = cluster.getAllChildMarkers();
+
+  let hasDanger = false;
+  let hasWarning = false;
+  let hasSafe = false;
+
+  for (let i = 0; i < children.length; i++) {
+    const s = children[i].options.floodStatus;
+    const d = children[i].options.depthCm;
+    if (s === 'danger' || (d !== null && d !== undefined && d >= 20)) {
+      hasDanger = true;
+    } else if (s === 'warning' || (d !== null && d !== undefined && d >= 5)) {
+      hasWarning = true;
+    } else if (s === 'safe') {
+      hasSafe = true;
+    }
+  }
+
+  let size = 36;
+  let clusterLevel = 'safe';
+  if (hasDanger) {
+    clusterLevel = 'danger';
+  } else if (hasWarning) {
+    clusterLevel = 'warning';
+  } else if (!hasSafe) {
+    // Toàn bộ các điểm trong cụm là mất tín hiệu hoặc chưa có dữ liệu
+    clusterLevel = 'offline';
+  }
+
+  if (count >= 25) {
+    size = 46;
+  } else if (count >= 10) {
+    size = 40;
+  }
+
+  const badgeHtml = hasDanger ? '<span class="cluster-danger-dot" title="Có điểm ngập sâu trong cụm"></span>' : '';
+
+  return L.divIcon({
+    html: `
+      <div class="flood-cluster-badge flood-cluster-${clusterLevel}" style="width: ${size}px; height: ${size}px;" title="Cụm ${count} điểm quan trắc (nhấp để phóng to)">
+        <span class="cluster-num">${count}</span>
+        ${badgeHtml}
+      </div>
+    `,
+    className: 'flood-cluster-container',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+}
+
+function syncFloodCirclesWithZoom() {
+  if (!map) return;
+  // Khi ở zoom xa (zoom < 14) các điểm được gom cụm, ẩn bớt vòng sóng nước để bản đồ thoáng đãng
+  // Khi zoom gần (zoom >= 14) tách cụm, hiển thị đầy đủ vòng bán kính sóng nước
+  if (map.getZoom() < 14) {
+    if (map.hasLayer(floodCirclesLayer)) {
+      map.removeLayer(floodCirclesLayer);
+    }
+  } else {
+    if (!map.hasLayer(floodCirclesLayer)) {
+      map.addLayer(floodCirclesLayer);
+    }
+  }
+}
+
+function initMap() {
+
+  // Tâm bản đồ tại trung tâm khu vực nghiên cứu Hà Nội (Cầu Giấy - Đống Đa)
+
+  map = L.map('map', {
+    // FE: gán map vào window
+    
+
+    center: [21.020, 105.815],
+
+    zoom: 13,
+
+    zoomControl: true
+
+  });
+  window.map = map;
+
+
+
+  // Lớp bản đồ chính: ESRI World Street Map (Akamai CDN tốc độ cao, không dính watermark, không cần API key)
+
+  // FE-01: Cách ly container bản đồ tránh lỗi xung đột z-index modal
+  const mapContainer = map.getContainer();
+  mapContainer.style.isolation = 'isolate';
+  if (mapContainer.parentElement) {
+    mapContainer.parentElement.style.isolation = 'isolate';
+  }
+
+  esriBaseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+
+    attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap contributors',
+
+    maxZoom: 19
+
+  });
+
+
+
+  // Lớp bản đồ Dark Mode chuyên nghiệp (ESRI World Dark Gray - 100% Free, không cần API key, không dính watermark, Akamai CDN)
+
+  const esriDarkBase = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+
+    maxZoom: 19
+
+  });
+
+  const esriDarkRef = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+
+    attribution: '',
+
+    maxZoom: 19
+
+  });
+
+  darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkRef]);
+
+
+
+  // Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
+
+  const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+
+    attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+
+    maxZoom: 19,
+
+    subdomains: ['a', 'b', 'c']
+
+  });
+
+
+
+  // Lớp bản đồ tiêu chuẩn OSM
+
+  const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+
+    maxZoom: 19,
+
+    subdomains: ['a', 'b', 'c']
+
+  });
+
+
+
+  // Mặc định nạp OpenStreetMap (Đồng bộ 100% với mạng lưới giao thông cập nhật mới)
+  currentBaseLayer = osmFrLayer;
+  currentBaseLayer.addTo(map);
+
+  L.control.layers({
+    'OpenStreetMap (Chuẩn OSM - Cập nhật mới)': osmFrLayer,
+    'OpenStreetMap Quốc tế': osmLayer,
+    'Chế độ Ban đêm (ESRI Dark)': darkBaseLayer,
+    'Bản đồ ESRI (Dữ liệu cũ - Thiếu đường mới)': esriBaseLayer
+  }, null, { position: 'topright' }).addTo(map);
+
+
+
+  // Đồng bộ hóa khi người dùng chuyển lớp bản đồ từ điều khiển Leaflet
+
+  map.on('baselayerchange', (e) => {
+
+    currentBaseLayer = e.layer;
+
+    const isDark = (e.layer === darkBaseLayer);
+
+    if (isDark && !document.body.classList.contains('dark-mode')) {
+
+      document.body.classList.add('dark-mode');
+
+      const btn = document.getElementById('dark-mode-icon');
+
+      if (btn) btn.setAttribute('data-lucide', 'sun');
+
+      if (window.lucide) lucide.createIcons();
+
+    } else if (!isDark && document.body.classList.contains('dark-mode')) {
+
+      document.body.classList.remove('dark-mode');
+
+      const btn = document.getElementById('dark-mode-icon');
+
+      if (btn) btn.setAttribute('data-lucide', 'moon');
+
+      if (window.lucide) lucide.createIcons();
+
+    }
+
+  });
+
+
+
+    // Triển khai Marker Clustering cho 130 điểm ngập (Leaflet.markercluster)
+  if (typeof L.markerClusterGroup === 'function') {
+    floodMarkersLayer = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      spiderfyOnMaxZoom: true,
+      spiderfyDistanceMultiplier: 1.4,
+      maxClusterRadius: 40,
+      disableClusteringAtZoom: 16,
+      iconCreateFunction: createClusterIcon
+    });
+  } else {
+    floodMarkersLayer = L.layerGroup();
+  }
+  floodCirclesLayer.addTo(map);
+  floodMarkersLayer.addTo(map);
+  map.on('zoomend', syncFloodCirclesWithZoom);
+
+
+
+  map.on('click', onMapClick);
+
+
+
+  // Cập nhật cảnh báo điểm ngập theo thời gian thực khi người dùng kéo/thu phóng bản đồ
+
+  map.on('moveend', () => {
+
+    updateViewportFloodAlert();
+
+    renderPointsList();
+  syncFloodCirclesWithZoom();
+
+  });
+
+
+
+  // Tự động tính toán lại kích thước bản đồ tránh lỗi màn hình xám khi layout flex tải xong
+
+  map.whenReady(() => {
+
+    map.invalidateSize();
+
+  });
+
+  setTimeout(() => { if (map) map.invalidateSize(); }, 250);
+
+  setTimeout(() => { if (map) map.invalidateSize(); }, 800);
+
+  window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+
+
+
+  // Tải danh sách điểm ngập ban đầu
+
+  loadFloodPoints();
+  checkPostGISConnection();
+  loadWeatherInfo();
+  fetchAiPredictions(); // Nạp dự báo AI vào cache nền tránh spam API
+  map.on('popupopen', handlePopupOpen);
+
+
+
+
+  // Kiểm tra và hiển thị hướng dẫn người dùng mới (Onboarding Guide)
+
+  checkFirstTimeVisitor();
+
+}
+
+
+
+// 2. Tải danh sách 8 điểm ngập và vẽ lên bản đồ
+async function loadFloodPoints() {
+  const loadingEl = document.getElementById('summary-loading-view');
+  const errorEl = document.getElementById('summary-error-view');
+  const contentEl = document.getElementById('summary-content-view');
+
+  try {
+    const res = await fetch('/api/flood-points');
+    if (!res.ok) {
+      throw new Error(`Mã phản hồi HTTP: ${res.status}`);
+    }
+    const geojson = await res.json();
+    renderFloodPoints(geojson);
+  } catch (err) {
+    console.error('Lỗi tải danh sách điểm ngập:', err);
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (contentEl) contentEl.classList.add('hidden');
+    if (errorEl) {
+      errorEl.classList.remove('hidden');
+      const errP = errorEl.querySelector('p');
+      if (errP) errP.innerText = `Lỗi kết nối máy chủ: ${err.message || 'Không thể lấy dữ liệu'}.`;
+    }
+  }
+}
+
+function formatReadingTime(isoStr) {
+  if (!isoStr) return 'Chưa có bản ghi';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${hours}:${mins} ${day}/${month}/${year}`;
+  } catch (e) {
+    return isoStr;
+  }
+}
+
+// Tính toán số liệu thống kê tình hình ngập từ dữ liệu trạm quan trắc thực tế
+function getFloodStats() {
+  const points = window.floodPoints || [];
+  if (!points || points.length === 0) {
+    return null;
+  }
+
+  let validCount = 0;
+  let safeCount = 0;
+  let warningCount = 0;
+  let dangerCount = 0;
+  let offlineCount = 0;
+  let noDataCount = 0;
+  let staleCount = 0;
+  let latestTime = null;
+
+  points.forEach(p => {
+    const hasValidDepth = (p.depth_cm !== null && p.depth_cm !== undefined && !isNaN(Number(p.depth_cm)));
+    const isOffline = p.status === 'offline';
+    const isNoData = p.status === 'no_data' || !hasValidDepth;
+    const isInvalid = p.status === 'invalid';
+    const isStale = p.status === 'stale';
+
+    if (p.last_reading_at) {
+      const t = new Date(p.last_reading_at);
+      if (!isNaN(t.getTime()) && (!latestTime || t > latestTime)) {
+        latestTime = t;
+      }
+    }
+
+    if (isOffline) {
+      offlineCount++;
+    } else if (isNoData || isInvalid) {
+      noDataCount++;
+    } else if (isStale) {
+      staleCount++;
+    } else {
+      validCount++;
+      const depth = Number(p.depth_cm);
+      if (depth < 5) {
+        safeCount++;
+      } else if (depth < 20) {
+        warningCount++;
+      } else {
+        dangerCount++;
+      }
+    }
+  });
+
+  return {
+    total: points.length,
+    valid: validCount,
+    safe: safeCount,
+    warning: warningCount,
+    danger: dangerCount,
+    offline: offlineCount,
+    noData: noDataCount,
+    stale: staleCount,
+    latestTime: latestTime ? latestTime.toISOString() : null
+  };
+}
+
+// Cập nhật giao diện Tóm tắt tình hình ngập ở Sidebar (trước khi tìm đường)
+function updateSidebarFloodSummary() {
+  const loadingEl = document.getElementById('summary-loading-view');
+  const errorEl = document.getElementById('summary-error-view');
+  const contentEl = document.getElementById('summary-content-view');
+  if (!contentEl) return;
+
+  const stats = getFloodStats();
+  if (!stats) {
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    contentEl.classList.add('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+    return;
+  }
+
+  if (loadingEl) loadingEl.classList.add('hidden');
+  if (errorEl) errorEl.classList.add('hidden');
+  contentEl.classList.remove('hidden');
+
+  const safeEl = document.getElementById('sum-count-safe');
+  const warnEl = document.getElementById('sum-count-warning');
+  const dangEl = document.getElementById('sum-count-danger');
+  const ratioEl = document.getElementById('sum-valid-ratio');
+  const timeEl = document.getElementById('sum-last-update');
+  const badgeEl = document.getElementById('summary-badge-status');
+  const staleNoteEl = document.getElementById('sum-stale-note');
+  const staleCountEl = document.getElementById('sum-stale-count');
+
+  if (safeEl) safeEl.innerText = stats.safe;
+  if (warnEl) warnEl.innerText = stats.warning;
+  if (dangEl) dangEl.innerText = stats.danger;
+  if (ratioEl) ratioEl.innerText = `${stats.valid} / ${stats.total} trạm`;
+
+  const staleTotal = stats.offline + stats.noData + (stats.stale || 0);
+  if (staleNoteEl && staleCountEl) {
+    if (staleTotal > 0) {
+      staleNoteEl.classList.remove('hidden');
+      const parts = [];
+      if (stats.stale > 0) parts.push(`${stats.stale} dữ liệu cũ`);
+      if (stats.offline > 0) parts.push(`${stats.offline} mất kết nối`);
+      if (stats.noData > 0) parts.push(`${stats.noData} chưa có DL`);
+      staleCountEl.innerText = `${staleTotal} trạm (${parts.join(', ')})`;
+    } else {
+      staleNoteEl.classList.add('hidden');
+    }
+  }
+
+  if (timeEl) {
+    timeEl.innerText = stats.latestTime ? formatReadingTime(stats.latestTime) : 'Chưa có bản ghi';
+  }
+
+  if (badgeEl) {
+    if (stats.danger > 0) {
+      badgeEl.innerText = `${stats.danger} điểm ngập sâu`;
+      badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
+    } else if (stats.warning > 0) {
+      badgeEl.innerText = `${stats.warning} điểm chú ý`;
+      badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+    } else {
+      badgeEl.innerText = 'Bình thường';
+      badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+    }
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// ============================================================================
+// KHU VỰC QUẢN LÝ DỰ ĐOÁN NGẬP BẰNG AI (Router /api/predictions)
+// ============================================================================
+let aiPredictionsCache = null;
+window.aiPredictionsCache = null;
+let aiPredictionsLoading = false;
+let aiPredictionsError = false;
+
+// Đánh giá mức độ rủi ro theo tiêu chuẩn màu sắc và ngưỡng ngập của FloodNav
+function getRiskBadge(depth, riskScore, exceedsThreshold) {
+  if (exceedsThreshold || depth >= 20 || riskScore >= 0.7) {
+    return {
+      label: 'Nguy hiểm',
+      colorClass: 'text-rose-600',
+      badgeClass: 'bg-rose-100 text-rose-800 border-rose-200'
+    };
+  } else if (depth >= 5 || riskScore >= 0.25) {
+    return {
+      label: 'Chú ý',
+      colorClass: 'text-amber-600',
+      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200'
+    };
+  } else {
+    return {
+      label: 'An toàn',
+      colorClass: 'text-emerald-600',
+      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+    };
+  }
+}
+
+function renderAiLoadingHtml() {
+  return `
+    <div class="bg-indigo-50/60 rounded-lg p-2 border border-indigo-100 text-[10px]">
+      <div class="flex items-center justify-between text-indigo-900 font-bold">
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 text-indigo-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+          DỰ ĐOÁN NGẬP BẰNG AI
+        </span>
+        <span class="text-[9px] text-indigo-600 font-normal">Đang nạp...</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderAiErrorHtml() {
+  return `
+    <div class="bg-rose-50/70 rounded-lg p-2 border border-rose-200 text-[10px]">
+      <div class="flex items-center justify-between text-rose-900 font-bold mb-1">
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          DỰ ĐOÁN NGẬP BẰNG AI
+        </span>
+        <span class="text-[9px] text-rose-600 bg-rose-100 px-1.5 py-0.2 rounded border border-rose-200">Lỗi nạp</span>
+      </div>
+      <p class="text-[10px] text-rose-700">Không thể tải dữ liệu dự đoán</p>
+    </div>
+  `;
+}
+
+function renderAiForecastHtml(pred, threshold_cm) {
+  if (!pred || !pred.forecast_30m || !pred.forecast_60m) {
+    return `
+      <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 text-[10px]">
+        <div class="flex items-center justify-between text-slate-700 font-bold mb-1">
+          <span class="flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            DỰ ĐOÁN NGẬP BẰNG AI
+          </span>
+          <span class="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">Chưa có kết quả</span>
+        </div>
+        <p class="text-[10px] text-slate-500 italic">Chưa có dữ liệu dự đoán</p>
+      </div>
+    `;
+  }
+
+  const f30 = pred.forecast_30m;
+  const f60 = pred.forecast_60m;
+  const risk30 = getRiskBadge(f30.predicted_depth_cm, f30.risk_score, f30.exceeds_threshold);
+  const risk60 = getRiskBadge(f60.predicted_depth_cm, f60.risk_score, f60.exceeds_threshold);
+
+  return `
+    <div class="bg-indigo-50/70 rounded-lg p-2 border border-indigo-100">
+      <div class="flex items-center justify-between pb-1.5 border-b border-indigo-100/80">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          <span class="text-[10px] font-bold text-indigo-900 tracking-wider uppercase">Dự đoán ngập bằng AI</span>
+        </div>
+        <span class="text-[9px] font-semibold text-indigo-600 bg-indigo-100/70 px-1.5 py-0.2 rounded border border-indigo-200">
+          Đã cập nhật
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+        <!-- Cột 30 phút -->
+        <div class="bg-white/95 rounded p-1.5 border border-indigo-100/80 text-center shadow-2xs">
+          <span class="text-[10px] text-slate-500 font-medium block">Sau 30 phút</span>
+          <div class="flex items-baseline justify-center gap-0.5 my-0.5">
+            <span class="text-base font-black ${risk30.colorClass}">${f30.predicted_depth_cm}</span>
+            <span class="text-[10px] font-bold text-slate-500">cm</span>
+          </div>
+          <div class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold border ${risk30.badgeClass}">
+            ${risk30.label}
+          </div>
+          <div class="text-[9px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f30.risk_score).toFixed(2)}</div>
+        </div>
+
+        <!-- Cột 60 phút -->
+        <div class="bg-white/95 rounded p-1.5 border border-indigo-100/80 text-center shadow-2xs">
+          <span class="text-[10px] text-slate-500 font-medium block">Sau 60 phút</span>
+          <div class="flex items-baseline justify-center gap-0.5 my-0.5">
+            <span class="text-base font-black ${risk60.colorClass}">${f60.predicted_depth_cm}</span>
+            <span class="text-[10px] font-bold text-slate-500">cm</span>
+          </div>
+          <div class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold border ${risk60.badgeClass}">
+            ${risk60.label}
+          </div>
+          <div class="text-[9px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f60.risk_score).toFixed(2)}</div>
+        </div>
+      </div>
+
+      <p class="text-[9px] text-indigo-600/80 mt-1.5 text-center leading-tight">
+        * Dự báo xu thế theo mô hình thủy văn & lượng mưa Open-Meteo
+      </p>
+    </div>
+  `;
+}
+
+function updateOpenPopupAi() {
+  const containers = document.querySelectorAll('[data-ai-point-id]');
+  containers.forEach(el => {
+    const pointId = parseInt(el.getAttribute('data-ai-point-id'), 10);
+    const threshold = parseFloat(el.getAttribute('data-threshold')) || 20;
+    const parent = el.closest('.flood-custom-popup') || el.parentElement;
+    const drainageContainer = parent ? (parent.querySelector(`#popup-drainage-forecast-${pointId}`) || parent.querySelector('[data-drainage-point-id]')) : null;
+
+    if (aiPredictionsError) {
+      el.innerHTML = renderAiErrorHtml();
+    } else if (aiPredictionsCache) {
+      const pred = aiPredictionsCache[pointId];
+      el.innerHTML = renderAiForecastHtml(pred, threshold);
+      if (drainageContainer && pred) {
+        drainageContainer.innerHTML = renderDrainageForecastHtml(pred);
+      }
+    }
+  });
+}
+
+async function fetchAiPredictions(forceRefresh = false, rainfallMm = null) {
+  if (!forceRefresh && aiPredictionsCache !== null) return aiPredictionsCache;
+  if (aiPredictionsLoading) return;
+  aiPredictionsLoading = true;
+  aiPredictionsError = false;
+
+  try {
+    const query = (rainfallMm !== null && rainfallMm !== undefined) ? `?rainfall_mm=${encodeURIComponent(rainfallMm)}` : '';
+    const res = await fetch(`/api/predictions${query}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      aiPredictionsCache = {};
+      data.forEach(item => {
+        if (item && item.point_id !== undefined) {
+          aiPredictionsCache[item.point_id] = item;
+        }
+      });
+      window.aiPredictionsCache = aiPredictionsCache;
+      aiPredictionsError = false;
+    } else {
+      aiPredictionsCache = {};
+      window.aiPredictionsCache = {};
+    }
+    updateOpenPopupAi();
+    return aiPredictionsCache;
+  } catch (err) {
+    console.warn("Lỗi tải dữ liệu dự đoán AI:", err);
+    aiPredictionsError = true;
+    updateOpenPopupAi();
+    return null;
+  } finally {
+    aiPredictionsLoading = false;
+  }
+}
+
+window.fetchAiPredictions = fetchAiPredictions;
+window.updateOpenPopupAi = updateOpenPopupAi;
+
+function handlePopupOpen(e) {
+  const popup = e.popup;
+  if (!popup) return;
+  const el = popup.getElement();
+  if (!el) return;
+  const aiContainer = el.querySelector('[data-ai-point-id]');
+  if (!aiContainer) return;
+
+  const pointId = parseInt(aiContainer.getAttribute('data-ai-point-id'), 10);
+  const threshold = parseFloat(aiContainer.getAttribute('data-threshold')) || 20;
+  const drainageContainer = el.querySelector(`#popup-drainage-forecast-${pointId}`) || el.querySelector('[data-drainage-point-id]');
+
+  if (aiPredictionsCache) {
+    const pred = aiPredictionsCache[pointId];
+    aiContainer.innerHTML = renderAiForecastHtml(pred, threshold);
+    if (drainageContainer && pred) {
+      drainageContainer.innerHTML = renderDrainageForecastHtml(pred);
+    }
+  } else if (aiPredictionsError) {
+    aiContainer.innerHTML = renderAiErrorHtml();
+  } else if (!aiPredictionsLoading) {
+    aiContainer.innerHTML = renderAiLoadingHtml();
+    fetchAiPredictions();
+  }
+}
+
+// ============================================================================
+// KHU VỰC DỰ ĐOÁN THỜI GIAN NƯỚC RÚT & XU HƯỚNG MỰC NƯỚC
+// ============================================================================
+function renderDrainageForecastHtml(fp) {
+  // Trích xuất xu hướng và thời gian nước rút từ API (hỗ trợ cả cấu trúc phẳng lẫn object lồng nhau)
+  const trend = (fp && (fp.water_trend || (fp.drainage_forecast && fp.drainage_forecast.water_trend))) || null;
+  const drainTime = (fp && (fp.estimated_drainage_time || (fp.drainage_forecast && fp.drainage_forecast.estimated_drainage_time))) || null;
+
+  let trendLabel = 'Chưa xác định';
+  let trendClass = 'text-slate-700';
+  let trendDot = 'bg-slate-400';
+
+  if (trend === 'rising') {
+    trendLabel = 'Đang tăng';
+    trendClass = 'text-rose-600';
+    trendDot = 'bg-rose-500';
+  } else if (trend === 'falling') {
+    trendLabel = 'Đang giảm';
+    trendClass = 'text-cyan-600';
+    trendDot = 'bg-cyan-500';
+  } else if (trend === 'stable') {
+    trendLabel = 'Ổn định';
+    trendClass = 'text-emerald-600';
+    trendDot = 'bg-emerald-500';
+  }
+
+  const drainTimeDisplay = drainTime || 'Chưa đủ dữ liệu để dự đoán';
+  const isSupported = Boolean(trend || drainTime);
+  const statusBadge = isSupported 
+    ? '<span class="text-[9px] font-semibold text-cyan-700 bg-cyan-100/70 px-1.5 py-0.2 rounded border border-cyan-200">Đã cập nhật</span>'
+    : '<span class="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">Chưa hỗ trợ API</span>';
+
+  return `
+    <div class="bg-slate-50/90 rounded-lg p-2 border border-slate-200">
+      <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/70">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
+          <span class="text-[10px] font-bold text-slate-800 tracking-wider uppercase">Dự đoán nước rút</span>
+        </div>
+        ${statusBadge}
+      </div>
+
+      <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+        <!-- Xu hướng mực nước -->
+        <div class="bg-white rounded p-1.5 border border-slate-200/80 shadow-2xs">
+          <span class="text-[10px] text-slate-500 font-medium block">Xu hướng mực nước</span>
+          <div class="mt-1 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full ${trendDot} flex-shrink-0"></span>
+            <span class="text-xs font-bold ${trendClass}">${trendLabel}</span>
+          </div>
+          <p class="text-[9px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Dự báo theo mô hình AI' : 'Cần chuỗi đo lịch sử'}</p>
+        </div>
+
+        <!-- Thời gian nước rút dự kiến -->
+        <div class="bg-white rounded p-1.5 border border-slate-200/80 shadow-2xs">
+          <span class="text-[10px] text-slate-500 font-medium block">Thời gian nước rút</span>
+          <div class="mt-1">
+            <span class="text-[11px] font-bold ${drainTime ? 'text-cyan-700 font-mono' : 'text-slate-600'} block leading-tight">
+              ${drainTimeDisplay}
+            </span>
+          </div>
+          <p class="text-[9px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Về ngưỡng an toàn (< 5cm)' : 'Chưa có mô hình tính'}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFloodPoints(data) {
+  if (data && data.features) {
+    floodPoints = data.features.map(f => ({
+      id: f.properties.id,
+      name: f.properties.name,
+      sensor_id: f.properties.sensor_id,
+      sensor_status: f.properties.sensor_status,
+      source: f.properties.source,
+      lng: f.geometry.coordinates[0],
+      lat: f.geometry.coordinates[1],
+      depth_cm: f.properties.depth_cm,
+      threshold_cm: f.properties.threshold_cm,
+      status: f.properties.status,
+      last_reading_at: f.properties.last_reading_at,
+      stale_hours_threshold: f.properties.stale_hours_threshold
+    }));
+  } else if (Array.isArray(data)) {
+    floodPoints = data;
+  }
+
+  window.floodPoints = floodPoints;
+  if (!window._initialFloodPoints && floodPoints && floodPoints.length > 0) {
+    window._initialFloodPoints = JSON.parse(JSON.stringify(floodPoints));
+  }
+
+  // Cập nhật số đếm trên Tab
+  const countEl = document.getElementById('points-count');
+  if (countEl) countEl.innerText = floodPoints.length;
+  const hdrCountEl = document.getElementById('hdr-points-count');
+  if (hdrCountEl) hdrCountEl.innerText = floodPoints.length;
+
+
+  floodMarkersLayer.clearLayers();
+  floodCirclesLayer.clearLayers();
+
+  floodPoints.forEach(fp => {
+    const { id, name, sensor_id, sensor_status, source, lng, lat, depth_cm, threshold_cm, status, last_reading_at } = fp;
+    const hasValidDepth = (depth_cm !== null && depth_cm !== undefined && !isNaN(Number(depth_cm)));
+    const depth = hasValidDepth ? Number(depth_cm) : null;
+
+    let sourceDisplay = 'Cảm biến quan trắc';
+    if (source === 'sensor') {
+      sourceDisplay = sensor_id ? `Cảm biến IoT (${sensor_id})` : 'Cảm biến IoT';
+    } else if (source === 'crowd') {
+      sourceDisplay = 'Báo cáo cộng đồng';
+    } else if (source === 'ai') {
+      sourceDisplay = 'Mô hình AI dự báo';
+    } else if (sensor_id) {
+      sourceDisplay = `Cảm biến IoT (${sensor_id})`;
+    }
+
+    let bgColor = '#10b981'; // Xanh lá: an toàn
+    let pulseClass = '';
+    let radiusColor = '#10b981';
+    let markerText = hasValidDepth ? `${Math.round(depth)}cm` : '--';
+    let statusLabel = 'An toàn';
+    let badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    let depthColorClass = 'text-emerald-600';
+    let depthDisplay = hasValidDepth ? `${depth} cm` : 'Chưa có dữ liệu quan trắc';
+    let timeDisplay = formatReadingTime(last_reading_at);
+
+    if (status === 'no_data' || depth === null || depth === undefined) {
+      // 3. KHÔNG CÓ DỮ LIỆU: Chưa có bản ghi quan trắc
+      bgColor = '#94a3b8'; // Xám bạc
+      pulseClass = '';
+      markerText = '--';
+      statusLabel = 'Chưa có DL';
+      badgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+      depthColorClass = 'text-slate-500';
+      depthDisplay = 'Chưa có dữ liệu quan trắc';
+      timeDisplay = 'Chưa có bản ghi';
+    } else if (status === 'invalid' || depth < 0) {
+      // 5. DỮ LIỆU KHÔNG HỢP LỆ: Giá trị quan trắc sai định dạng hoặc âm
+      bgColor = '#e11d48'; // Đỏ hồng
+      pulseClass = '';
+      markerText = 'ERR';
+      statusLabel = 'Dữ liệu lỗi';
+      badgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
+      depthColorClass = 'text-rose-600';
+      depthDisplay = `Dữ liệu không hợp lệ (${depth} cm)`;
+      timeDisplay = formatReadingTime(last_reading_at);
+    } else if (status === 'offline') {
+      // 4. MẤT KẾT NỐI: Backend xác định cảm biến không kết nối hoặc mất tín hiệu
+      bgColor = '#64748b'; // Xám đậm
+      pulseClass = '';
+      markerText = 'OFF';
+      statusLabel = 'Mất kết nối';
+      badgeClass = 'bg-slate-200 text-slate-800 border-slate-400';
+      depthColorClass = 'text-slate-600';
+      depthDisplay = 'Cảm biến mất kết nối';
+      timeDisplay = last_reading_at ? `${formatReadingTime(last_reading_at)} (Mất tín hiệu)` : 'Mất tín hiệu';
+      if (sourceDisplay.indexOf('Mất kết nối') === -1) {
+        sourceDisplay += ' - Mất kết nối';
+      }
+    } else if (status === 'stale') {
+      // 2. DỮ LIỆU CŨ: Có bản ghi nhưng đã quá thời gian cập nhật cho phép
+      bgColor = '#d97706'; // Vàng cam hổ phách
+      pulseClass = '';
+      radiusColor = '#d97706';
+      markerText = `${Math.round(depth)}cm`;
+      statusLabel = 'Dữ liệu cũ';
+      badgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+      depthColorClass = 'text-amber-700';
+      depthDisplay = `${depth} cm (Dữ liệu cũ)`;
+      timeDisplay = `${formatReadingTime(last_reading_at)} (Quá 24h)`;
+    } else if (status === 'warning') {
+      // 1b. DỮ LIỆU MỚI: Chú ý (5cm đến < 20cm)
+      bgColor = '#f59e0b'; // Vàng: 5-20cm
+      pulseClass = 'flood-pulse-warning';
+      radiusColor = '#f59e0b';
+      markerText = `${Math.round(depth)}cm`;
+      statusLabel = 'Chú ý';
+      badgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+      depthColorClass = 'text-amber-600';
+      depthDisplay = `${depth} cm`;
+      timeDisplay = formatReadingTime(last_reading_at);
+    } else if (status === 'danger') {
+      // 1c. DỮ LIỆU MỚI: Nguy hiểm (>= 20cm)
+      bgColor = '#ef4444'; // Đỏ: >=20cm
+      pulseClass = 'flood-pulse-danger';
+      radiusColor = '#ef4444';
+      markerText = `${Math.round(depth)}cm`;
+      statusLabel = 'Nguy hiểm';
+      badgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
+      depthColorClass = 'text-rose-600';
+      depthDisplay = `${depth} cm`;
+      timeDisplay = formatReadingTime(last_reading_at);
+    } else {
+      // 1a. DỮ LIỆU MỚI: An toàn (< 5cm, kể cả 0cm thực tế)
+      bgColor = '#10b981'; // Xanh lá: an toàn
+      pulseClass = '';
+      radiusColor = '#10b981';
+      markerText = `${Math.round(depth)}cm`;
+      statusLabel = 'An toàn';
+      badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      depthColorClass = 'text-emerald-600';
+      depthDisplay = `${depth} cm`;
+      timeDisplay = formatReadingTime(last_reading_at);
+    }
+
+    // Hiệu ứng vùng sóng ngập chỉ vẽ khi có dữ liệu mới/cũ hợp lệ và mực nước >= 5cm
+    if (hasValidDepth && depth >= 5 && status !== 'no_data' && status !== 'offline' && status !== 'invalid') {
+      const radiusMeters = Math.min(100 + depth * 2.5, 300);
+      
+      const outerCircle = L.circle([lat, lng], {
+        radius: radiusMeters,
+        color: radiusColor,
+        fillColor: radiusColor,
+        fillOpacity: depth >= 20 ? 0.22 : 0.14,
+        weight: depth >= 20 ? 2 : 1,
+        dashArray: (depth >= 20 || status === 'stale') ? '5, 5' : '8, 8',
+        className: depth >= 20 ? 'animated-flood-ring' : ''
+      });
+      outerCircle.bindTooltip(`<b>${fp.name}</b><br/>Mực nước: ${depth} cm | Ngưỡng ngập: ${threshold_cm} cm`, { direction: 'top' });
+      floodCirclesLayer.addLayer(outerCircle);
+
+      const innerCircle = L.circle([lat, lng], {
+        radius: Math.max(30, radiusMeters * 0.4),
+        color: radiusColor,
+        fillColor: radiusColor,
+        fillOpacity: 0.35,
+        weight: 1
+      });
+      floodCirclesLayer.addLayer(innerCircle);
+    }
+
+    // Marker tròn hiển thị số cm ngập hoặc ký hiệu trạng thái
+    const icon = L.divIcon({
+      className: 'custom-flood-pin',
+      html: `
+        <div class="custom-marker ${pulseClass}" style="width: 32px; height: 32px; background-color: ${bgColor};" title="${name}: ${depthDisplay}">
+          <span>${markerText}</span>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const marker = L.marker([lat, lng], {
+      icon,
+      floodStatus: status,
+      depthCm: depth,
+      thresholdCm: threshold_cm
+    });
+
+    // Xử lý khối trung tâm theo đúng 5 trạng thái
+    let centerBoxHtml = '';
+    if (status === 'no_data' || depth === null || depth === undefined) {
+      centerBoxHtml = `
+        <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+          <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Tình trạng quan trắc</span>
+          <div class="flex items-center gap-1.5 mt-1 text-slate-700 font-bold text-xs">
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>Chưa có dữ liệu quan trắc</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-0.5">Trạm chưa ghi nhận bản ghi đo mực nước nào</p>
+        </div>
+      `;
+    } else if (status === 'invalid' || depth < 0) {
+      centerBoxHtml = `
+        <div class="bg-rose-50 rounded-lg p-2.5 border border-rose-200">
+          <span class="text-[10px] uppercase tracking-wider font-semibold text-rose-500 block">Thông báo quan trắc</span>
+          <div class="flex items-center gap-1.5 mt-1 text-rose-700 font-bold text-xs">
+            <svg class="w-4 h-4 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span>Dữ liệu quan trắc không hợp lệ</span>
+          </div>
+          <p class="text-[10px] text-rose-600 mt-0.5">Giá trị đo sai định dạng: <code class="font-mono bg-rose-100 px-1 rounded">${depth} cm</code></p>
+        </div>
+      `;
+    } else if (status === 'offline') {
+      centerBoxHtml = `
+        <div class="bg-slate-100 rounded-lg p-2.5 border border-slate-300">
+          <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Trạng thái cảm biến</span>
+          <div class="flex items-center gap-1.5 mt-1 text-slate-800 font-bold text-xs">
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-5.657m0 0l2.828 2.829m-2.828-2.829L3 3m5.464 5.464a5 5 0 000 7.072"></path></svg>
+            <span>Cảm biến mất kết nối</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-0.5">Hệ thống ghi nhận mất tín hiệu đường truyền</p>
+          ${hasValidDepth ? `<div class="text-[10px] text-slate-600 mt-1 pt-1 border-t border-slate-200">Số đo trước khi mất tín hiệu: <b class="font-mono text-slate-700">${depth} cm</b></div>` : ''}
+        </div>
+      `;
+    } else if (status === 'stale') {
+      centerBoxHtml = `
+        <div class="bg-amber-50 rounded-lg p-2.5 border border-amber-200">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase tracking-wider font-bold text-amber-800 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              Cảnh báo: Dữ liệu đã cũ
+            </span>
+            <span class="text-[10px] text-amber-700 font-medium bg-amber-100 px-1.5 py-0.2 rounded">Quá 24h</span>
+          </div>
+          <div class="flex items-baseline justify-between mt-1.5 pt-1.5 border-t border-amber-200/60">
+            <div>
+              <span class="text-[10px] text-slate-500 block">Số đo trước đó:</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-2xl font-black text-amber-800">${Math.round(depth)}</span>
+                <span class="text-xs font-bold text-amber-700">cm</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] uppercase tracking-wider font-medium text-slate-400 block">Ngưỡng tràn</span>
+              <span class="text-xs font-bold text-slate-700 font-mono">${threshold_cm} cm</span>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      centerBoxHtml = `
+        <div class="bg-slate-50 rounded-lg p-2 border border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Mực nước hiện tại</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black ${depthColorClass}">${Math.round(depth)}</span>
+              <span class="text-xs font-bold text-slate-500">cm</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase tracking-wider font-medium text-slate-400 block">Ngưỡng tràn</span>
+            <span class="text-xs font-bold text-slate-700 font-mono">${threshold_cm} cm</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const cachedAi = aiPredictionsCache ? aiPredictionsCache[id] : null;
+    let aiInitialHtml = '';
+    if (aiPredictionsError) {
+      aiInitialHtml = renderAiErrorHtml();
+    } else if (cachedAi) {
+      aiInitialHtml = renderAiForecastHtml(cachedAi, threshold_cm);
+    } else {
+      aiInitialHtml = renderAiLoadingHtml();
+    }
+
+    const drainageHtml = renderDrainageForecastHtml(fp);
+
+    let districtName = 'Hà Nội';
+    const districtMatch = name.match(/\((.*?)\)/);
+    if (districtMatch && districtMatch[1]) {
+      districtName = `${districtMatch[1]}, Hà Nội`;
+    }
+
+    marker.bindPopup(`
+      <div class="text-xs space-y-1.5 p-0.5 min-w-[250px] max-w-[275px] max-h-[385px] overflow-y-auto pr-0.5 custom-scrollbar">
+        <!-- Header: Tên trạm, Địa bàn & Badge mức độ nguy hiểm -->
+        <div class="border-b border-slate-100 pb-1.5">
+          <div class="flex items-start justify-between gap-1.5">
+            <h4 class="font-bold text-slate-900 text-sm leading-tight flex-1">${name}</h4>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass} flex-shrink-0 shadow-xs">
+              ${statusLabel}
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-500 flex items-center justify-between gap-1 mt-1">
+            <div class="flex items-center gap-1 min-w-0" title="Địa bàn: ${districtName}">
+              <svg class="w-3 h-3 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              <span class="truncate text-slate-600 font-medium">${districtName}</span>
+            </div>
+            <span class="font-mono text-slate-500 text-[10px] flex-shrink-0">${lat.toFixed(4)}°B, ${lng.toFixed(4)}°Đ</span>
+          </div>
+        </div>
+
+        <!-- Khối hiển thị trung tâm xử lý theo 5 trạng thái -->
+        ${centerBoxHtml}
+
+        <!-- Thông tin chi tiết: Thời gian cập nhật & Nguồn dữ liệu -->
+        <div class="space-y-1 text-[11px] text-slate-600 border-b border-slate-100 pb-1.5">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Cập nhật:</span>
+            <span class="font-medium text-slate-700 font-mono">${timeDisplay}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Nguồn dữ liệu:</span>
+            <span class="font-medium text-cyan-800 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-100 text-[10px]">${sourceDisplay}</span>
+          </div>
+        </div>
+
+        <!-- Khu vực dự đoán ngập bằng AI (30 phút & 60 phút) -->
+        <div id="popup-ai-forecast-${id}" data-ai-point-id="${id}" data-threshold="${threshold_cm}">
+          ${aiInitialHtml}
+        </div>
+
+        <!-- Khu vực dự đoán nước rút (Xu hướng & Thời gian rút) -->
+        <div id="popup-drainage-forecast-${id}" data-drainage-point-id="${id}">
+          ${drainageHtml}
+        </div>
+
+        <!-- Nút thao tác nhanh lộ trình -->
+        <div class="pt-0.5 flex gap-1.5">
+          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'origin')" class="flex-1 px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+            <span>Điểm Đi</span>
+          </button>
+          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'destination')" class="flex-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+            <span>Điểm Đến</span>
+          </button>
+        </div>
+      </div>
+    `, {
+      maxWidth: 290,
+      minWidth: 260,
+      autoPan: true,
+      autoPanPadding: [25, 25],
+      className: 'flood-custom-popup'
+    });
+
+    floodMarkersLayer.addLayer(marker);
+  });
+
+
+
+
+    renderPointsList();
+  updateViewportFloodAlert();
+  syncFloodCirclesWithZoom();
+  updateSidebarFloodSummary();
+}
+
+
+
+function setAsRouteTarget(lng, lat, type) {
+
+  if (type === 'origin') {
+
+    coords.origin = { lng, lat };
+
+    document.getElementById('origin-text').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    updatePickMarker('origin', lat, lng, '#10b981', 'Điểm xuất phát');
+
+  } else {
+
+    coords.destination = { lng, lat };
+
+    document.getElementById('dest-text').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    updatePickMarker('destination', lat, lng, '#ef4444', 'Điểm đến');
+
+  }
+
+  map.closePopup();
+
+  switchTab('route');
+
+}
+
+
+
+// 3. Render danh sách điểm ngập ở Tab 2 (Ưu tiên điểm trong khung nhìn bản đồ)
+function renderPointsList() {
+  const container = document.getElementById('points-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const bounds = map ? map.getBounds() : null;
+  const inViewCount = bounds ? floodPoints.filter(fp => bounds.contains([fp.lat, fp.lng])).length : floodPoints.length;
+  const summaryEl = document.getElementById('points-viewport-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `<i data-lucide="eye" class="w-3.5 h-3.5 text-blue-600 inline-block mr-1"></i> Trong khung nhìn: <b>${inViewCount}</b> / ${floodPoints.length} điểm`;
+  }
+
+  // Sắp xếp: Điểm trong khung nhìn lên trước, kế tiếp ưu tiên nguy hiểm / chú ý / an toàn / mất tín hiệu
+  const sortedPoints = [...floodPoints].sort((a, b) => {
+    const aInView = bounds ? bounds.contains([a.lat, a.lng]) : false;
+    const bInView = bounds ? bounds.contains([b.lat, b.lng]) : false;
+    if (aInView && !bInView) return -1;
+    if (!aInView && bInView) return 1;
+
+    const rank = s => (s === 'danger' ? 4 : s === 'warning' ? 3 : s === 'safe' ? 2 : 1);
+    const rDiff = rank(b.status) - rank(a.status);
+    if (rDiff !== 0) return rDiff;
+
+    return (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0);
+  });
+
+  sortedPoints.forEach(fp => {
+    const { id, name, depth_cm, threshold_cm, status, lat, lng } = fp;
+    const hasValidDepth = (depth_cm !== null && depth_cm !== undefined && !isNaN(Number(depth_cm)));
+    const depth = hasValidDepth ? Number(depth_cm) : null;
+    const isInView = bounds ? bounds.contains([lat, lng]) : true;
+
+    let badgeBg = 'bg-emerald-100 text-emerald-800';
+    let badgeText = 'An toàn';
+    if (status === 'no_data' || !hasValidDepth) {
+      badgeBg = 'bg-slate-100 text-slate-700 border border-slate-300';
+      badgeText = 'Chưa có DL';
+    } else if (status === 'offline') {
+      badgeBg = 'bg-slate-200 text-slate-800 border border-slate-400';
+      badgeText = 'Mất kết nối';
+    } else if (status === 'invalid') {
+      badgeBg = 'bg-rose-100 text-rose-800 border border-rose-300';
+      badgeText = 'Dữ liệu lỗi';
+    } else if (status === 'stale') {
+      badgeBg = 'bg-amber-100 text-amber-900 border border-amber-300';
+      badgeText = 'Dữ liệu cũ';
+    } else if (status === 'warning') {
+      badgeBg = 'bg-amber-100 text-amber-800';
+      badgeText = 'Chú ý';
+    } else if (status === 'danger') {
+      badgeBg = 'bg-rose-100 text-rose-800';
+      badgeText = 'Nguy hiểm';
+    }
+
+    const inViewBadge = isInView ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">Khung nhìn</span>' : '';
+
+    const div = document.createElement('div');
+    div.className = `p-3 bg-white rounded-xl border ${isInView ? 'border-blue-300 shadow-sm' : 'border-slate-200 opacity-80'} space-y-2 hover:border-blue-500 transition`;
+
+    const sliderVal = hasValidDepth ? depth : 0;
+    const depthText = hasValidDepth ? `${depth}cm` : '--';
+
+    div.innerHTML = `
+      <div class="flex items-center justify-between gap-1">
+        <h4 class="font-bold text-xs text-slate-800 cursor-pointer hover:text-blue-600 truncate flex-1" onclick="flyToPoint(${lat}, ${lng})" title="Nhấp để chuyển tới điểm này">
+          ${name}
+        </h4>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          ${inViewBadge}
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeBg}">${badgeText}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-slate-500">Mực nước:</span>
+        <input type="range" min="0" max="60" value="${sliderVal}" 
+               class="flex-1 accent-blue-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+               onchange="updateSensorDepth(${id}, this.value)"
+               oninput="this.nextElementSibling.innerText = this.value + 'cm'">
+        <span class="text-[11px] font-mono w-10 text-right font-bold text-slate-700">${depthText}</span>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+
+
+// 3.1. Cảnh báo điểm ngập theo khung nhìn hiện tại (Viewport Alert Controller)
+
+let lastVoiceViewportAlertTime = 0;
+
+let viewportAlertTargetPoint = null;
+
+
+
+function onViewportAlertClick() {
+
+  if (viewportAlertTargetPoint && map) {
+
+    map.flyTo([viewportAlertTargetPoint.lat, viewportAlertTargetPoint.lng], 15, { duration: 1 });
+
+  }
+
+}
+
+
+
+function zoomToAllPoints() {
+
+  if (!map || !floodPoints || floodPoints.length === 0) return;
+
+  const group = L.featureGroup(floodPoints.map(p => L.marker([p.lat, p.lng])));
+
+  map.fitBounds(group.getBounds().pad(0.08));
+
+}
+
+
+
+function updateViewportFloodAlert() {
+
+  if (!map || !floodPoints || floodPoints.length === 0) return;
+
+
+
+  const alertEl = document.getElementById('viewport-flood-alert');
+
+  const alertText = document.getElementById('viewport-alert-text');
+
+  const alertBtn = document.getElementById('viewport-alert-btn');
+
+  const alertIcon = document.getElementById('viewport-alert-icon');
+
+  if (!alertEl || !alertText || !alertBtn || !alertIcon) return;
+
+
+
+  const bounds = map.getBounds();
+  const inView = floodPoints.filter(fp => bounds.contains([fp.lat, fp.lng]));
+  const dangerInView = inView.filter(fp => fp.status === 'danger');
+  const warningInView = inView.filter(fp => fp.status === 'warning');
+  const offlineOrNoDataInView = inView.filter(fp => fp.status === 'offline' || fp.status === 'no_data' || fp.status === 'invalid' || fp.status === 'stale');
+  const safeInView = inView.filter(fp => fp.status === 'safe');
+
+  alertEl.classList.remove('hidden');
+  const baseClass = 'absolute px-3.5 py-2 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2.5 border transition-all duration-300 pointer-events-auto ';
+
+  if (dangerInView.length > 0) {
+    dangerInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
+    viewportAlertTargetPoint = dangerInView[0];
+    alertEl.className = baseClass + 'bg-rose-50/95 border-rose-300 text-rose-900 shadow-rose-200/50';
+    alertIcon.className = 'p-1 rounded-full bg-rose-200 text-rose-700 animate-pulse flex-shrink-0';
+    alertIcon.innerHTML = '<i data-lucide="alert-octagon" class="w-4 h-4"></i>';
+
+    const spotNames = dangerInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
+    const more = dangerInView.length > 2 ? ` và ${dangerInView.length - 2} điểm khác` : '';
+    alertText.innerHTML = `<span class="font-bold text-rose-700">Nguy hiểm:</span> ${dangerInView.length} điểm ngập sâu: <b>${spotNames}</b>${more}`;
+
+    alertBtn.classList.remove('hidden');
+    alertBtn.className = 'px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+    alertBtn.innerText = 'Xem điểm ngập';
+
+    // Cảnh báo bằng giọng nói (chống spam mỗi 15 giây)
+    const now = Date.now();
+    if (window.VoiceWarning && (now - lastVoiceViewportAlertTime > 15000)) {
+      lastVoiceViewportAlertTime = now;
+      VoiceWarning.speak(`Khu vực này có điểm ngập sâu nguy hiểm tại ${viewportAlertTargetPoint.name}, mực nước ${viewportAlertTargetPoint.depth_cm} centimet.`);
+    }
+  } else if (warningInView.length > 0) {
+    warningInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
+    viewportAlertTargetPoint = warningInView[0];
+    alertEl.className = baseClass + 'bg-amber-50/95 border-amber-300 text-amber-900 shadow-amber-200/50';
+    alertIcon.className = 'p-1 rounded-full bg-amber-200 text-amber-700 flex-shrink-0';
+    alertIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i>';
+
+    const spotNames = warningInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
+    const more = warningInView.length > 2 ? ` và ${warningInView.length - 2} điểm khác` : '';
+    alertText.innerHTML = `<span class="font-bold text-amber-700">Chú ý:</span> ${warningInView.length} điểm ngập nhẹ: <b>${spotNames}</b>${more}`;
+
+    alertBtn.classList.remove('hidden');
+    alertBtn.className = 'px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+    alertBtn.innerText = 'Xem vị trí';
+  } else if (inView.length > 0) {
+    viewportAlertTargetPoint = null;
+    if (offlineOrNoDataInView.length === 0) {
+      alertEl.className = baseClass + 'bg-emerald-50/95 border-emerald-300 text-emerald-900 shadow-emerald-200/50';
+      alertIcon.className = 'p-1 rounded-full bg-emerald-200 text-emerald-700 flex-shrink-0';
+      alertIcon.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i>';
+      alertText.innerHTML = `Khu vực đang xem có <b>${inView.length}</b> trạm quan trắc, tất cả đều an toàn (&lt;5cm)`;
+    } else {
+      alertEl.className = baseClass + 'bg-slate-50/95 border-slate-300 text-slate-800 shadow-slate-200/50';
+      alertIcon.className = 'p-1 rounded-full bg-slate-200 text-slate-700 flex-shrink-0';
+      alertIcon.innerHTML = '<i data-lucide="info" class="w-4 h-4"></i>';
+      alertText.innerHTML = `Khu vực có <b>${safeInView.length}</b> trạm an toàn, <b>${offlineOrNoDataInView.length}</b> trạm mất tín hiệu / dữ liệu cũ / chưa có dữ liệu`;
+    }
+    alertBtn.classList.add('hidden');
+  } else {
+
+    // Không có điểm ngập nào trong khung nhìn -> tìm điểm gần nhất tâm bản đồ
+
+    const center = map.getCenter();
+
+    let minDist = Infinity;
+
+    let nearest = null;
+
+    floodPoints.forEach(fp => {
+
+      const d = map.distance(center, [fp.lat, fp.lng]);
+
+      if (d < minDist) {
+
+        minDist = d;
+
+        nearest = fp;
+
+      }
+
+    });
+
+
+
+    viewportAlertTargetPoint = nearest;
+
+    alertEl.className = baseClass + 'bg-slate-900/90 border-slate-700 text-white shadow-xl';
+
+    alertIcon.className = 'p-1 rounded-full bg-slate-800 text-cyan-300 flex-shrink-0';
+
+    alertIcon.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i>';
+
+
+
+    const distKm = (minDist / 1000).toFixed(1);
+
+    alertText.innerHTML = `Chưa có điểm ngập trong khung nhìn. Gần nhất: <b>${nearest.name}</b> (${distKm} km)`;
+
+    alertBtn.classList.remove('hidden');
+
+    alertBtn.className = 'px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+
+    alertBtn.innerText = 'Đến xem';
+
+  }
+
+
+
+  if (window.lucide) lucide.createIcons();
+
+}
+
+
+
+function flyToPoint(lat, lng) {
+
+  map.flyTo([lat, lng], 16, { duration: 1 });
+
+}
+
+
+
+// 4. Cập nhật số đo mực nước cảm biến
+
+async function updateSensorDepth(pointId, depthCm) {
+
+  try {
+
+    const res = await fetch('/api/readings', {
+
+      method: 'POST',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      body: JSON.stringify({
+
+        point_id: Number(pointId),
+
+        depth_cm: Number(depthCm),
+
+        source: 'sensor'
+
+      })
+
+    });
+
+    if (res.ok) {
+
+      await loadFloodPoints();
+
+      if (coords.origin && coords.destination) {
+
+        calculateRoute();
+
+      }
+
+    }
+
+  } catch (err) {
+
+    console.error('Lỗi cập nhật số đo cảm biến:', err);
+
+  }
+
+}
+
+
+
+// 5. Chế độ chọn điểm trên bản đồ & Điều khiển giao diện Mobile (FE-02)
+
+function toggleMobilePanel(show) {
+
+  const panel = document.getElementById('sidebar-panel');
+
+  const openBtn = document.getElementById('btn-mobile-open-panel');
+
+  if (!panel) return;
+
+
+
+  if (show) {
+
+    panel.classList.remove('translate-y-full');
+
+    panel.classList.add('translate-y-0');
+
+    if (openBtn) openBtn.classList.add('hidden');
+
+  } else {
+
+    panel.classList.add('translate-y-full');
+
+    panel.classList.remove('translate-y-0');
+
+    if (openBtn) openBtn.classList.remove('hidden');
+
+  }
+
+
+
+  setTimeout(() => {
+
+    if (window.map) map.invalidateSize();
+
+  }, 320);
+
+}
+
+
+
+function setPickMode(mode) {
+
+  currentPickMode = mode;
+
+  const hint = document.getElementById('pick-hint');
+
+  const hintText = document.getElementById('pick-hint-text');
+
+  hint.classList.remove('hidden');
+
+
+
+  if (mode === 'origin') {
+
+    hintText.innerText = 'Nhấp lên bản đồ để chọn Điểm xuất phát...';
+
+  } else if (mode === 'destination') {
+
+    hintText.innerText = 'Nhấp lên bản đồ để chọn Điểm đến...';
+
+  } else if (mode === 'report') {
+
+    hintText.innerText = 'Nhấp lên vị trí ngập bạn muốn báo cáo...';
+
+  }
+
+
+
+  // Tự động thu gọn bảng điều khiển trên Mobile để người dùng dễ dàng chấm điểm trên bản đồ
+
+  if (window.innerWidth < 640) {
+
+    toggleMobilePanel(false);
+
+  }
+
+}
+
+
+
+function cancelPickMode() {
+
+  currentPickMode = null;
+
+  const hint = document.getElementById('pick-hint');
+
+  if (hint) hint.classList.add('hidden');
+
+  if (window.innerWidth < 640) {
+
+    toggleMobilePanel(true);
+
+  }
+
+}
+
+
+
+function onMapClick(e) {
+
+  if (!currentPickMode) return;
+
+
+
+  const lat = e.latlng.lat;
+
+  const lng = e.latlng.lng;
+
+
+
+  if (currentPickMode === 'origin') {
+
+    coords.origin = { lat, lng };
+
+    document.getElementById('origin-text').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    const clr = document.getElementById('btn-clear-origin');
+
+    if (clr) clr.classList.remove('hidden');
+
+    updatePickMarker('origin', lat, lng, '#10b981', 'Điểm xuất phát');
+
+  } else if (currentPickMode === 'destination') {
+
+    coords.destination = { lat, lng };
+
+    document.getElementById('dest-text').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    const clr = document.getElementById('btn-clear-dest');
+
+    if (clr) clr.classList.remove('hidden');
+
+    updatePickMarker('destination', lat, lng, '#ef4444', 'Điểm đến');
+
+  } else if (currentPickMode === 'report') {
+
+    coords.report = { lat, lng };
+
+    document.getElementById('report-coord-text').innerText = `Toạ độ: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    updatePickMarker('report', lat, lng, '#f43f5e', 'Vị trí báo ngập');
+
+  }
+
+
+
+  cancelPickMode();
+
+
+
+  // Tự động mở lại bảng điều khiển trên Mobile sau khi chấm điểm xong
+
+  if (window.innerWidth < 640) {
+
+    toggleMobilePanel(true);
+
+  }
+
+}
+
+
+
+function updatePickMarker(type, lat, lng, color, label) {
+
+  if (pickMarkers[type]) {
+
+    map.removeLayer(pickMarkers[type]);
+
+  }
+
+  const marker = L.circleMarker([lat, lng], {
+
+    radius: 8,
+
+    fillColor: color,
+
+    color: '#ffffff',
+
+    weight: 2,
+
+    opacity: 1,
+
+    fillOpacity: 0.9
+
+  }).bindTooltip(label, { permanent: true, direction: 'top' });
+
+  marker.addTo(map);
+
+  pickMarkers[type] = marker;
+
+}
+
+
+
+// 6. Cài đặt lộ trình mẫu nhanh
+
+function setPresetRoute(oLng, oLat, dLng, dLat, name) {
+
+  coords.origin = { lng: oLng, lat: oLat };
+
+  coords.destination = { lng: dLng, lat: dLat };
+
+
+
+  if (name && name.includes('➔')) {
+
+    const parts = name.split('➔').map(s => s.trim());
+
+    const originEl = document.getElementById('origin-text');
+
+    const destEl = document.getElementById('dest-text');
+
+    if (originEl) originEl.value = parts[0] || `${oLat.toFixed(4)}, ${oLng.toFixed(4)}`;
+
+    if (destEl) destEl.value = parts[1] || `${dLat.toFixed(4)}, ${dLng.toFixed(4)}`;
+
+  } else {
+
+    document.getElementById('origin-text').value = `${oLat.toFixed(4)}, ${oLng.toFixed(4)}`;
+
+    document.getElementById('dest-text').value = `${dLat.toFixed(4)}, ${dLng.toFixed(4)}`;
+
+  }
+
+
+
+  const clrO = document.getElementById('btn-clear-origin');
+
+  if (clrO) clrO.classList.remove('hidden');
+
+  const clrD = document.getElementById('btn-clear-dest');
+
+  if (clrD) clrD.classList.remove('hidden');
+
+  updatePickMarker('origin', oLat, oLng, '#10b981', 'Điểm xuất phát');
+
+  updatePickMarker('destination', dLat, dLng, '#ef4444', 'Điểm đến');
+
+
+
+  calculateRoute();
+
+}
+
+
+
+// Fallback định tuyến đường bộ mở rộng (OSRM) khi điểm nằm ngoài vùng graph nội bộ hoặc backend chưa sẵn sàng
+async function fetchExtendedOsrmRoute(origin, destination, vehicle) {
+  if (!origin || !destination) return null;
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return null;
+
+    const r = data.routes[0];
+    const distM = Math.round(r.distance);
+    const speedKmh = vehicle === 'car' ? 30 : 25;
+    const durationMin = Math.round((distM / (speedKmh * 1000 / 60)) * 10) / 10;
+
+    const warnings = [];
+    const coordinates = (r.geometry && r.geometry.coordinates) ? r.geometry.coordinates : [];
+    if (Array.isArray(window.floodPoints)) {
+      window.floodPoints.forEach(pt => {
+        const depth = Number(pt.current_depth_cm || 0);
+        if (depth >= 5) {
+          for (let i = 0; i < coordinates.length; i += 3) {
+            const dLng = coordinates[i][0] - pt.lng;
+            const dLat = coordinates[i][1] - pt.lat;
+            const distApprox = Math.sqrt(Math.pow(dLat * 111000, 2) + Math.pow(dLng * 103000, 2));
+            if (distApprox < 80) {
+              warnings.push({
+                street: pt.name || pt.location_desc || 'Điểm ngập trên tuyến',
+                depth_cm: depth
+              });
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    const routeObj = {
+      found: true,
+      mode: 'safe',
+      distance_m: distM,
+      duration_min: durationMin,
+      geometry: r.geometry,
+      flood_warnings: warnings
+    };
+
+    return {
+      vehicle: vehicle,
+      ai_prediction_applied: false,
+      same_route: true,
+      fastest: routeObj,
+      safe: routeObj,
+      flood_sources_used: (window.floodPoints || []).length,
+      affected_road_segments: warnings.length,
+      is_extended_route: true
+    };
+  } catch (e) {
+    console.debug("Extended OSRM error:", e);
+    return null;
+  }
+}
+
+// 7. Gọi API Tìm đường Né ngập
+
+async function calculateRoute() {
+
+  const btn = document.getElementById('btn-submit-route');
+
+
+
+  // Tự động phân giải địa chỉ nếu người dùng đã gõ chữ vào ô nhưng chưa chọn từ gợi ý
+
+  if (!coords.origin) {
+
+    await resolveAddressFromInput('origin');
+
+  }
+
+  if (!coords.destination) {
+
+    await resolveAddressFromInput('destination');
+
+  }
+
+
+
+  if (!coords.origin || !coords.destination) {
+
+    alert('Vui lòng chọn hoặc nhập cả Điểm xuất phát và Điểm đến!');
+
+    return;
+
+  }
+
+
+
+  const vehicle = document.querySelector('input[name="vehicle"]:checked').value;
+
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang tính toán lộ trình A*...</span>`;
+  if (window.lucide) lucide.createIcons();
+
+  // Dọn dẹp lộ trình cũ trên bản đồ trước khi tính toán tuyến mới
+  if (routeLayers.safe && map) {
+    map.removeLayer(routeLayers.safe);
+    routeLayers.safe = null;
+  }
+  if (routeLayers.fastest && map) {
+    map.removeLayer(routeLayers.fastest);
+    routeLayers.fastest = null;
+  }
+  if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
+    VehicleSim.stop();
+  }
+
+  try {
+    const res = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origin: coords.origin,
+        destination: coords.destination,
+        vehicle: vehicle,
+        use_ai_prediction: true
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      displayRouteResults(data);
+      return;
+    }
+
+    // Nếu backend trả về lỗi (ví dụ 422 do điểm ngoại thành hoặc bản đồ server chưa tải)
+    // Tự động kích hoạt OSRM Routing mở rộng ngay trên client
+    const osrmData = await fetchExtendedOsrmRoute(coords.origin, coords.destination, vehicle);
+    if (osrmData) {
+      displayRouteResults(osrmData);
+      return;
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Không thể tìm thấy lộ trình');
+  } catch (err) {
+    // Thử lại lần cuối với OSRM nếu có lỗi mạng
+    const osrmData = await fetchExtendedOsrmRoute(coords.origin, coords.destination, vehicle);
+    if (osrmData) {
+      displayRouteResults(osrmData);
+      return;
+    }
+
+    const resultCard = document.getElementById('route-results');
+    if (resultCard) resultCard.classList.add('hidden');
+    const summaryCard = document.getElementById('flood-summary-card');
+    if (summaryCard) summaryCard.classList.remove('hidden');
+    alert('Lỗi tìm đường: ' + err.message);
+  } finally {
+
+    btn.disabled = false;
+
+    btn.innerHTML = `<i data-lucide="compass" class="w-5 h-5"></i><span>Tìm Lộ Trình Né Ngập</span>`;
+
+    if (window.lucide) lucide.createIcons();
+
+  }
+
+}
+
+
+
+function onVehicleChange() {
+
+  if (coords.origin && coords.destination) {
+
+    calculateRoute();
+
+  }
+
+}
+
+
+
+// 8. Vẽ lộ trình lên bản đồ và quản lý tương tác chuyển đổi lộ trình
+let currentRouteData = null;
+let activeRouteMode = 'safe';
+
+/**
+ * Trích xuất an toàn mảng tọa độ [lat, lng] từ geometry GeoJSON của backend.
+ * Quy tắc:
+ * - Backend trả về GeoJSON: coordinates là [[lng, lat], ...]
+ * - Chuyển sang định dạng Leaflet: [[lat, lng], ...]
+ * - Giữ nguyên 100% tất cả các điểm trung gian và khúc cua, không tự nội suy đường chim bay
+ * - Không tự tạo đoạn thẳng nối điểm xuất phát và điểm đến
+ * - Bắt buộc mảng có ít nhất 2 tọa độ hợp lệ, ngược lại trả về null
+ */
+function extractValidLatLngs(routeObj) {
+  if (!routeObj || typeof routeObj !== 'object') return null;
+  if (!routeObj.geometry || routeObj.geometry.type !== 'LineString') return null;
+  const rawCoords = routeObj.geometry.coordinates;
+  if (!Array.isArray(rawCoords) || rawCoords.length < 2) return null;
+
+  const latlngs = [];
+  for (let i = 0; i < rawCoords.length; i++) {
+    const pt = rawCoords[i];
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const lng = Number(pt[0]);
+      const lat = Number(pt[1]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        latlngs.push([lat, lng]);
+      }
+    }
+  }
+
+  return latlngs.length >= 2 ? latlngs : null;
+}
+
+function displayRouteResults(data) {
+  currentRouteData = data;
+  window.lastRouteData = data;
+
+  const resultCard = document.getElementById('route-results');
+  const summaryCard = document.getElementById('flood-summary-card');
+
+  if (summaryCard) summaryCard.classList.add('hidden');
+  if (resultCard) resultCard.classList.remove('hidden');
+
+  // Xóa sạch các lớp lộ trình cũ trên bản đồ
+  if (routeLayers.safe && map) {
+    map.removeLayer(routeLayers.safe);
+    routeLayers.safe = null;
+  }
+  if (routeLayers.fastest && map) {
+    map.removeLayer(routeLayers.fastest);
+    routeLayers.fastest = null;
+  }
+  if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
+    VehicleSim.stop();
+  }
+
+  const { safe, fastest, same_route } = data;
+
+  // 1. Điền thông tin cho Lộ trình An Toàn
+  const safeDistEl = document.getElementById('safe-dist');
+  const safeTimeEl = document.getElementById('safe-time');
+  const safeSafetyEl = document.getElementById('safe-safety-level');
+  const safeFloodSegsEl = document.getElementById('safe-flood-segs');
+  const safeWarnings = document.getElementById('safe-warnings');
+
+  const safeLatLngs = extractValidLatLngs(safe);
+
+  if (safe && safe.found) {
+    if (safeDistEl) safeDistEl.innerText = (safe.distance_m / 1000).toFixed(2) + ' km';
+    if (safeTimeEl) safeTimeEl.innerText = safe.duration_min.toFixed(1) + ' phút';
+
+    const safeWarnList = safe.flood_warnings || [];
+    if (safeFloodSegsEl) safeFloodSegsEl.innerText = `${safeWarnList.length} đoạn`;
+
+    if (safeSafetyEl) {
+      if (safeWarnList.length === 0) {
+        safeSafetyEl.innerText = 'Rất cao (Khô ráo)';
+        safeSafetyEl.className = 'text-[11px] font-bold text-emerald-700';
+      } else {
+        safeSafetyEl.innerText = 'Tương đối (Mép ngập)';
+        safeSafetyEl.className = 'text-[11px] font-bold text-teal-700';
+      }
+    }
+
+    if (safeWarnings) {
+      if (safeWarnList.length > 0) {
+        const warnNames = safeWarnList.map(w => typeof w === 'string' ? w : (w.street || w.source || 'Mép ngập')).join(', ');
+        safeWarnings.innerHTML = `⚠️ <em>Chú ý:</em> Tuyến đi qua mép ngập nhẹ (${warnNames}) nhưng vẫn an toàn cho xe.`;
+      } else {
+        safeWarnings.innerHTML = `✨ Tuyến đường hoàn toàn khô ráo, không bị ngập.`;
+      }
+    }
+
+    if (safeLatLngs) {
+      routeLayers.safe = L.polyline(safeLatLngs, {
+        color: '#2563eb', // Blue-600 truyền thống của FloodNav
+        weight: 6,
+        opacity: 0.95,
+        lineJoin: 'round'
+      });
+    } else {
+      if (safeWarnings) {
+        safeWarnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường an toàn do thiếu dữ liệu hình học.</span>`;
+      }
+    }
+  } else {
+    if (safeDistEl) safeDistEl.innerText = 'Không thể đi';
+    if (safeTimeEl) safeTimeEl.innerText = 'Bị chặn';
+    if (safeSafetyEl) {
+      safeSafetyEl.innerText = 'Không an toàn';
+      safeSafetyEl.className = 'text-[11px] font-bold text-rose-600';
+    }
+    if (safeFloodSegsEl) safeFloodSegsEl.innerText = 'Bị chặn';
+    if (safeWarnings) safeWarnings.innerText = (safe && safe.reason) || 'Nước ngập quá sâu, mọi ngả đường đều bị chặn!';
+  }
+
+  // 2. Điền thông tin cho Lộ trình Nhanh Nhất (Gốc)
+  const fastestDistEl = document.getElementById('fastest-dist');
+  const fastestTimeEl = document.getElementById('fastest-time');
+  const fastestSafetyEl = document.getElementById('fastest-safety-level');
+  const fastestFloodSegsEl = document.getElementById('fastest-flood-segs');
+  const badge = document.getElementById('fastest-badge');
+  const warnings = document.getElementById('fastest-warnings');
+
+  const fastestLatLngs = extractValidLatLngs(fastest);
+
+  if (fastest && fastest.found) {
+    if (fastestDistEl) fastestDistEl.innerText = (fastest.distance_m / 1000).toFixed(2) + ' km';
+    if (fastestTimeEl) fastestTimeEl.innerText = fastest.duration_min.toFixed(1) + ' phút';
+
+    const fastestWarnList = fastest.flood_warnings || [];
+    if (fastestFloodSegsEl) fastestFloodSegsEl.innerText = `${fastestWarnList.length} đoạn có nguy cơ`;
+
+    if (same_route) {
+      if (badge) {
+        badge.innerText = 'Trùng lộ trình an toàn';
+        badge.className = 'text-[10px] font-semibold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full';
+      }
+      if (fastestSafetyEl) {
+        fastestSafetyEl.innerText = 'An toàn (Khô ráo)';
+        fastestSafetyEl.className = 'text-[11px] font-bold text-emerald-700';
+      }
+      if (warnings) warnings.innerText = 'Đường ngắn nhất hiện không bị ngập.';
+    } else {
+      if (badge) {
+        badge.innerText = 'Bị ngập sâu!';
+        badge.className = 'text-[10px] font-semibold px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full';
+      }
+      if (fastestSafetyEl) {
+        fastestSafetyEl.innerText = 'Nguy hiểm (Bị ngập)';
+        fastestSafetyEl.className = 'text-[11px] font-bold text-rose-600';
+      }
+      const warnNames = fastestWarnList.map(w => {
+        const name = typeof w === 'string' ? w : (w.street || w.source || 'Đoạn trũng');
+        const d = w.depth_cm ? ` (${w.depth_cm}cm)` : '';
+        return `${name}${d}`;
+      }).join(', ');
+      if (warnings) warnings.innerHTML = `⚠️ Bị ngập tại: ${warnNames || 'Đoạn trũng'}`;
+    }
+
+    if (fastestLatLngs) {
+      routeLayers.fastest = L.polyline(fastestLatLngs, {
+        color: same_route ? '#2563eb' : '#dc2626',
+        weight: 6,
+        opacity: 0.95,
+        dashArray: same_route ? null : '8, 8',
+        lineJoin: 'round'
+      });
+    } else {
+      if (warnings) {
+        warnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường nhanh nhất do thiếu dữ liệu hình học.</span>`;
+      }
+    }
+  }
+
+  // 3. Mặc định kích hoạt hiển thị một lộ trình duy nhất (An toàn hoặc Nhanh nhất)
+  // Không để hai lớp Polyline chồng đè lên nhau trên bản đồ
+  if (safe && safe.found && routeLayers.safe) {
+    selectActiveRoute('safe');
+  } else if (fastest && fastest.found && routeLayers.fastest) {
+    selectActiveRoute('fastest');
+  } else {
+    showToast('Không có dữ liệu hình học hợp lệ để hiển thị tuyến đường', 'warning');
+  }
+
+  // 4. Gọi module cảnh báo âm thanh
+  if (window.VoiceWarning) {
+    try {
+      if (typeof VoiceWarning.speakRouteResult === 'function') {
+        VoiceWarning.speakRouteResult(data);
+      } else if (typeof VoiceWarning.speakRoutePlan === 'function') {
+        VoiceWarning.speakRoutePlan(safe, same_route);
+      }
+    } catch (voiceErr) {
+      console.warn("Lỗi phát âm thanh cảnh báo:", voiceErr);
+    }
+  }
+
+  // 5. Tối ưu trải nghiệm Mobile
+  if (window.innerWidth < 640) {
+    const card = document.getElementById('mobile-route-floating-card');
+    const title = document.getElementById('mobile-card-title');
+    const sub = document.getElementById('mobile-card-subtitle');
+    if (card && title && sub) {
+      if (safe && safe.found) {
+        title.innerText = same_route ? 'Lộ trình tối ưu (Không ngập)' : 'Đã tìm thấy lộ trình né ngập';
+        sub.innerText = `${(safe.distance_m / 1000).toFixed(1)} km • ${Math.round(safe.duration_min)} phút di chuyển`;
+        card.classList.remove('hidden');
+      } else {
+        title.innerText = 'Cảnh báo: Bị chặn ngập';
+        sub.innerText = 'Không còn đường an toàn cho xe này';
+        card.classList.remove('hidden');
+      }
+    }
+    toggleMobilePanel(false);
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// Hàm chuyển đổi lựa chọn giữa các lộ trình (An toàn vs Nhanh nhất)
+// Đảm bảo chỉ hiển thị DUY NHẤT một lớp Polyline của tuyến đường đang chọn, không chồng đè
+function selectActiveRoute(mode) {
+  if (!currentRouteData) return;
+  activeRouteMode = mode;
+
+  const cardSafe = document.getElementById('card-safe-route');
+  const cardFastest = document.getElementById('card-fastest-route');
+  const badgeSafe = document.getElementById('safe-selected-badge');
+  const badgeFastest = document.getElementById('fastest-selected-badge');
+
+  const { safe, fastest, same_route } = currentRouteData;
+
+  if (mode === 'safe') {
+    if (!safe || !safe.found || !routeLayers.safe) {
+      showToast('Lộ trình an toàn hiện không khả dụng để hiển thị', 'warning');
+      return;
+    }
+
+    // Gỡ bỏ lớp nhanh nhất nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
+    if (routeLayers.fastest && map && map.hasLayer(routeLayers.fastest)) {
+      map.removeLayer(routeLayers.fastest);
+    }
+
+    // Đưa lớp an toàn lên bản đồ
+    if (map && !map.hasLayer(routeLayers.safe)) {
+      routeLayers.safe.addTo(map);
+    }
+    routeLayers.safe.setStyle({ color: '#2563eb', weight: 6, opacity: 0.95, lineJoin: 'round' });
+    routeLayers.safe.bringToFront();
+
+    try {
+      const bounds = routeLayers.safe.getBounds();
+      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+    } catch (e) {
+      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến an toàn:", e);
+    }
+
+    if (cardSafe) {
+      cardSafe.classList.remove('opacity-60', 'border-slate-300');
+      cardSafe.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-400', 'shadow-md');
+    }
+    if (badgeSafe) badgeSafe.classList.remove('hidden');
+
+    if (cardFastest) {
+      cardFastest.classList.remove('ring-2', 'ring-blue-400', 'border-blue-500', 'shadow-md');
+      cardFastest.classList.add('opacity-70', 'border-slate-300');
+    }
+    if (badgeFastest) badgeFastest.classList.add('hidden');
+
+    // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến an toàn
+    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
+      const latlngs = routeLayers.safe.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
+      const v = document.querySelector('input[name="vehicle"]:checked');
+      VehicleSim.start(latlngs, v ? v.value : 'motorbike');
+    }
+  } else if (mode === 'fastest') {
+    if (!fastest || !fastest.found || !routeLayers.fastest) {
+      showToast('Lộ trình nhanh nhất hiện không khả dụng để hiển thị', 'warning');
+      return;
+    }
+
+    // Gỡ bỏ lớp an toàn nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
+    if (routeLayers.safe && map && map.hasLayer(routeLayers.safe)) {
+      map.removeLayer(routeLayers.safe);
+    }
+
+    // Đưa lớp nhanh nhất lên bản đồ
+    if (map && !map.hasLayer(routeLayers.fastest)) {
+      routeLayers.fastest.addTo(map);
+    }
+    routeLayers.fastest.setStyle({
+      color: same_route ? '#2563eb' : '#dc2626',
+      weight: 6,
+      opacity: 0.95,
+      dashArray: same_route ? null : '8, 8',
+      lineJoin: 'round'
+    });
+    routeLayers.fastest.bringToFront();
+
+    try {
+      const bounds = routeLayers.fastest.getBounds();
+      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+    } catch (e) {
+      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến nhanh nhất:", e);
+    }
+
+    if (cardFastest) {
+      cardFastest.classList.remove('opacity-70', 'border-slate-300');
+      cardFastest.classList.add('border-blue-500', 'ring-2', 'ring-blue-400', 'shadow-md');
+    }
+    if (badgeFastest) badgeFastest.classList.remove('hidden');
+
+    if (cardSafe) {
+      cardSafe.classList.remove('ring-2', 'ring-emerald-400', 'border-emerald-500', 'shadow-md');
+      cardSafe.classList.add('opacity-70', 'border-slate-300');
+    }
+    if (badgeSafe) badgeSafe.classList.add('hidden');
+
+    // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến nhanh nhất
+    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
+      const latlngs = routeLayers.fastest.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
+      const v = document.querySelector('input[name="vehicle"]:checked');
+      VehicleSim.start(latlngs, v ? v.value : 'motorbike');
+    }
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+
+
+// 9. Báo cáo ngập cộng đồng
+
+async function submitReport() {
+
+  if (!coords.report) {
+
+    alert('Vui lòng chọn vị trí ngập trên bản đồ trước!');
+
+    return;
+
+  }
+
+  const level = document.querySelector('input[name="report_level"]:checked').value;
+
+  try {
+
+    const res = await fetch('/api/reports', {
+
+      method: 'POST',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      body: JSON.stringify({
+
+        lng: coords.report.lng,
+
+        lat: coords.report.lat,
+
+        level: level
+
+      })
+
+    });
+
+    if (res.ok) {
+
+      alert('Cảm ơn bạn! Báo cáo ngập đã được gửi lên hệ thống.');
+
+      coords.report = null;
+
+      document.getElementById('report-coord-text').innerText = 'Nhấp vào đây rồi bấm lên bản đồ';
+
+      if (pickMarkers.report) map.removeLayer(pickMarkers.report);
+
+      loadFloodPoints();
+
+    }
+
+  } catch (err) {
+
+    alert('Lỗi gửi báo cáo: ' + err.message);
+
+  }
+
+}
+
+
+
+// 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
+function switchTab(tabId) {
+  ['route', 'points', 'report'].forEach(id => {
+    const tab = document.getElementById(`tab-${id}`);
+    const btn = document.getElementById(`tab-btn-${id}`);
+    const hdrBtn = document.getElementById(`hdr-btn-${id}`);
+
+    if (tab) tab.classList.add('hidden');
+    if (btn) btn.className = 'flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition text-xs font-semibold text-slate-600';
+    if (hdrBtn) {
+      hdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5';
+    }
+  });
+
+  const activeTab = document.getElementById(`tab-${tabId}`);
+  const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+  const activeHdrBtn = document.getElementById(`hdr-btn-${tabId}`);
+
+  if (activeTab) activeTab.classList.remove('hidden');
+  if (activeBtn) activeBtn.className = 'flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold text-xs';
+  if (activeHdrBtn) {
+    activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/25 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm border border-white/20';
+  }
+
+  // Cập nhật tiêu đề thanh điều khiển trên mobile tương ứng với tab
+  const mobTitle = document.getElementById('mobile-sidebar-title');
+  if (mobTitle) {
+    if (tabId === 'route') {
+      mobTitle.innerHTML = '<i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-blue-600"></i> Bảng điều khiển tìm đường';
+    } else if (tabId === 'points') {
+      mobTitle.innerHTML = '<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i> Danh sách 130 trạm quan trắc';
+    } else if (tabId === 'report') {
+      mobTitle.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5 text-emerald-500"></i> Báo cáo ngập tại hiện trường';
+    }
+  }
+
+  // Trên thiết bị di động, tự động mở sidebar khi người dùng chuyển tab
+  if (window.innerWidth < 640 && typeof toggleMobilePanel === 'function') {
+    toggleMobilePanel(true);
+  }
+
+  if (window.lucide) lucide.createIcons();
+
+  cancelPickMode();
+}
+
+
+
+// 11. Chuyển đổi Dark Mode nâng cao (CartoDB Dark Matter)
+
+function toggleDarkMode() {
+
+  document.body.classList.toggle('dark-mode');
+
+  const isDark = document.body.classList.contains('dark-mode');
+
+  const btn = document.getElementById('dark-mode-icon');
+
+  if (btn) {
+
+    btn.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+
+    if (window.lucide) lucide.createIcons();
+
+  }
+
+
+
+  // Chuyển đổi lớp nền bản đồ mượt mà
+
+  if (map) {
+
+    if (isDark) {
+
+      if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
+
+        map.removeLayer(currentBaseLayer);
+
+      }
+
+      darkBaseLayer.addTo(map);
+
+      currentBaseLayer = darkBaseLayer;
+
+    } else {
+
+      if (darkBaseLayer && map.hasLayer(darkBaseLayer)) {
+
+        map.removeLayer(darkBaseLayer);
+
+      }
+
+      osmFrLayer.addTo(map);
+
+      currentBaseLayer = osmFrLayer;
+
+    }
+
+  }
+
+}
+
+
+
+// 12. Modal Hướng Dẫn Sử Dụng Nhanh (Onboarding Guide - FE-05)
+
+function openHelpGuide() {
+
+  const modal = document.getElementById('onboarding-modal');
+
+  if (modal) modal.classList.remove('hidden'); if (window.lucide) lucide.createIcons();
+
+}
+
+
+
+function closeHelpGuide() {
+
+  const modal = document.getElementById('onboarding-modal');
+
+  if (modal) modal.classList.add('hidden');
+
+  try {
+
+    localStorage.setItem('floodnav_tour_seen', 'true');
+
+  } catch (e) {}
+
+}
+
+
+
+function checkFirstTimeVisitor() {
+
+  try {
+
+    const seen = localStorage.getItem('floodnav_tour_seen');
+
+    if (!seen) {
+
+      setTimeout(openHelpGuide, 500);
+
+    }
+
+  } catch (e) {}
+
+}
+
+
+
+
+
+// =================================================
+// 13. TÌM KIẾM ĐỊA CHỈ & GỢI Ý ĐỊA ĐIỂM (Address Geocoding - FE-02)
+
+// =================================================
+let addressDebounceTimer = null;
+
+
+
+// Danh bạ địa điểm trọng yếu Hà Nội phục vụ tìm kiếm tức thì và offline (FE-02: Trung)
+const HANOI_LANDMARKS = [
+  // 1. Trường Đại học & Học viện trọng điểm
+  { name: "Đại học Y Hà Nội", lat: 21.0028, lng: 105.8315, sub: "Số 1 Tôn Thất Tùng, Kim Liên, Đống Đa" },
+  { name: "Bệnh viện Đại học Y Hà Nội", lat: 21.0028, lng: 105.8315, sub: "Số 1 Tôn Thất Tùng, Kim Liên, Đống Đa" },
+  { name: "Đại học Quốc Gia Hà Nội (Xuân Thủy)", lat: 21.0372, lng: 105.7818, sub: "144 Xuân Thủy, Cầu Giấy" },
+  { name: "Đại học Sư Phạm Hà Nội", lat: 21.0365, lng: 105.7830, sub: "136 Xuân Thủy, Dịch Vọng Hậu" },
+  { name: "Đại học Bách Khoa Hà Nội", lat: 21.0050, lng: 105.8430, sub: "Số 1 Đại Cồ Việt, Bách Khoa, Hai Bà Trưng" },
+  { name: "Đại học Kinh Tế Quốc Dân (NEU)", lat: 21.0003, lng: 105.8427, sub: "207 Giải Phóng, Đồng Tâm, Hai Bà Trưng" },
+  { name: "Đại học Xây Dựng Hà Nội", lat: 21.0035, lng: 105.8433, sub: "55 Giải Phóng, Đồng Tâm, Hai Bà Trưng" },
+  { name: "Đại học Khoa Học Tự Nhiên (ĐHQGHN)", lat: 20.9953, lng: 105.8083, sub: "334 Nguyễn Trãi, Thanh Xuân Trung" },
+  { name: "Đại học Khoa Học Xã Hội và Nhân Văn", lat: 20.9950, lng: 105.8078, sub: "336 Nguyễn Trãi, Thanh Xuân Trung" },
+  { name: "Đại học Hà Nội (HANU)", lat: 20.9839, lng: 105.7915, sub: "Km 9 Nguyễn Trãi, Trung Văn, Nam Từ Liêm" },
+  { name: "Học viện Ngân Hàng", lat: 21.0085, lng: 105.8260, sub: "12 Chùa Bộc, Quang Trung, Đống Đa" },
+  { name: "Đại học Thủy Lợi", lat: 21.0076, lng: 105.8239, sub: "175 Tây Sơn, Trung Liệt, Đống Đa" },
+  { name: "Đại học Công Đoàn", lat: 21.0088, lng: 105.8231, sub: "169 Tây Sơn, Quang Trung, Đống Đa" },
+  { name: "Đại học Ngoại Thương", lat: 21.0235, lng: 105.8068, sub: "91 Chùa Láng, Láng Thượng, Đống Đa" },
+  { name: "Học viện Ngoại Giao", lat: 21.0226, lng: 105.8063, sub: "69 Chùa Láng, Láng Thượng, Đống Đa" },
+  { name: "Đại học Luật Hà Nội", lat: 21.0255, lng: 105.8105, sub: "87 Nguyễn Chí Thanh, Láng Thượng, Đống Đa" },
+  { name: "Đại học Giao Thông Vận Tải", lat: 21.0285, lng: 105.8035, sub: "Số 3 Cầu Giấy, Láng Thượng, Đống Đa" },
+  { name: "Học viện Báo chí và Tuyên truyền", lat: 21.0380, lng: 105.7870, sub: "36 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy" },
+  { name: "Đại học Thương Mại", lat: 21.0366, lng: 105.7748, sub: "79 Hồ Tùng Mậu, Mai Dịch, Cầu Giấy" },
+  { name: "Đại học Công Nghiệp Hà Nội", lat: 21.0537, lng: 105.7351, sub: "298 Cầu Diễn, Minh Khai, Bắc Từ Liêm" },
+  { name: "Học viện Tài Chính", lat: 21.0744, lng: 105.7745, sub: "58 Lê Văn Hiến, Đức Thắng, Bắc Từ Liêm" },
+  { name: "Học viện Bưu Chính Viễn Thông", lat: 20.9804, lng: 105.7877, sub: "Km 10 Trần Phú, Mộ Lao, Hà Đông" },
+  { name: "Học viện An Ninh Nhân Dân", lat: 20.9840, lng: 105.7901, sub: "125 Trần Phú, Văn Quán, Hà Đông" },
+  { name: "Đại học Kiến Trúc Hà Nội", lat: 20.9818, lng: 105.7895, sub: "Km 10 Nguyễn Trãi, Văn Quán, Hà Đông" },
+  { name: "Học viện Cảnh Sát Nhân Dân", lat: 21.0664, lng: 105.7668, sub: "Cổ Nhuế 2, Bắc Từ Liêm, Hà Nội" },
+
+  // 2. Bệnh viện lớn
+  { name: "Bệnh viện Bạch Mai", lat: 21.0028, lng: 105.8398, sub: "78 Giải Phóng, Phương Mai, Đống Đa" },
+  { name: "Bệnh viện Hữu nghị Việt Đức", lat: 21.0285, lng: 105.8488, sub: "40 Tràng Thi, Hàng Bông, Hoàn Kiếm" },
+  { name: "Bệnh viện Trung ương Quân đội 108", lat: 21.0182, lng: 105.8605, sub: "Số 1 Trần Hưng Đạo, Bạch Đằng, Hai Bà Trưng" },
+  { name: "Bệnh viện Nhi Trung Ương", lat: 21.0245, lng: 105.8080, sub: "18/879 La Thành, Láng Thượng, Đống Đa" },
+  { name: "Bệnh viện Phụ Sản Hà Nội", lat: 21.0270, lng: 105.8062, sub: "929 La Thành, Ngọc Khánh, Ba Đình" },
+  { name: "Bệnh viện K (Quán Sứ)", lat: 21.0253, lng: 105.8465, sub: "43 Quán Sứ, Hàng Bông, Hoàn Kiếm" },
+  { name: "Bệnh viện K (Tân Triều)", lat: 20.9658, lng: 105.7972, sub: "30 Cầu Bươu, Tân Triều, Thanh Trì" },
+  { name: "Bệnh viện Thanh Nhàn", lat: 21.0024, lng: 105.8617, sub: "42 Thanh Nhàn, Hai Bà Trưng, Hà Nội" },
+  { name: "Bệnh viện E", lat: 21.0506, lng: 105.7885, sub: "89 Trần Cung, Nghĩa Tân, Cầu Giấy" },
+  { name: "Bệnh viện Tim Hà Nội", lat: 21.0232, lng: 105.8460, sub: "92 Trần Hưng Đạo, Cửa Nam, Hoàn Kiếm" },
+  { name: "Bệnh viện Xanh Pôn (Saint Paul)", lat: 21.0321, lng: 105.8358, sub: "12 Chu Văn An, Điện Biên, Ba Đình" },
+  { name: "Bệnh viện Quân Y 103", lat: 20.9660, lng: 105.7880, sub: "261 Phùng Hưng, Phúc La, Hà Đông" },
+
+  // 3. Tòa nhà, Chung cư & Trung tâm thương mại
+  { name: "Chung cư 96A Định Công", lat: 20.9856, lng: 105.8378, sub: "96A Định Công, Phương Liệt, Thanh Xuân" },
+  { name: "Chung cư 360 Giải Phóng (Imperial Plaza)", lat: 20.9890, lng: 105.8405, sub: "360 Giải Phóng, Định Công, Thanh Xuân" },
+  { name: "Chung cư HH Linh Đàm", lat: 20.9650, lng: 105.8280, sub: "KĐT Linh Đàm, Hoàng Liệt, Hoàng Mai" },
+  { name: "Keangnam Landmark 72", lat: 21.0175, lng: 105.7840, sub: "Khu E6 Phạm Hùng, Cầu Giấy" },
+  { name: "Big C Thăng Long (GO!)", lat: 21.0070, lng: 105.7930, sub: "222 Trần Duy Hưng, Trung Hòa, Cầu Giấy" },
+  { name: "Vincom Mega Mall Royal City", lat: 21.0028, lng: 105.8152, sub: "72A Nguyễn Trãi, Thượng Đình, Thanh Xuân" },
+  { name: "Vincom Mega Mall Times City", lat: 20.9953, lng: 105.8672, sub: "458 Minh Khai, Vĩnh Tuy, Hai Bà Trưng" },
+  { name: "Vincom Center Bà Triệu", lat: 21.0116, lng: 105.8497, sub: "191 Bà Triệu, Lê Đại Hành, Hai Bà Trưng" },
+  { name: "Vincom Center Nguyễn Chí Thanh", lat: 21.0232, lng: 105.8105, sub: "54A Nguyễn Chí Thanh, Láng Thượng, Đống Đa" },
+  { name: "Vincom Mega Mall Smart City", lat: 20.9965, lng: 105.7423, sub: "Vinhomes Smart City, Tây Mỗ, Nam Từ Liêm" },
+  { name: "Vincom Mega Mall Ocean Park", lat: 20.9880, lng: 105.9450, sub: "Vinhomes Ocean Park, Đa Tốn, Gia Lâm" },
+  { name: "Aeon Mall Hà Đông", lat: 20.9804, lng: 105.7538, sub: "Khu đô thị Dương Nội, Hà Đông" },
+  { name: "Aeon Mall Long Biên", lat: 21.0267, lng: 105.9004, sub: "27 Cổ Linh, Long Biên, Hà Nội" },
+  { name: "Lotte Center Hà Nội (Liễu Giai)", lat: 21.0326, lng: 105.8130, sub: "54 Liễu Giai, Cống Vị, Ba Đình" },
+  { name: "Lotte Mall Tây Hồ", lat: 21.0772, lng: 105.8080, sub: "272 Võ Chí Công, Phú Thượng, Tây Hồ" },
+
+  // 4. Bến xe, Sân bay, Ga tàu & Nút giao trọng yếu
+  { name: "Bến xe Mỹ Đình", lat: 21.0288, lng: 105.7780, sub: "20 Phạm Hùng, Mỹ Đình 2, Nam Từ Liêm" },
+  { name: "Bến xe Giáp Bát", lat: 20.9806, lng: 105.8418, sub: "Đường Giải Phóng, Giáp Bát, Hoàng Mai" },
+  { name: "Bến xe Nước Ngầm", lat: 20.9634, lng: 105.8410, sub: "Số 1 Ngọc Hồi, Hoàng Liệt, Hoàng Mai" },
+  { name: "Bến xe Gia Lâm", lat: 21.0502, lng: 105.8770, sub: "Số 9 Ngô Gia Khảm, Ngọc Lâm, Long Biên" },
+  { name: "Bến xe Yên Nghĩa", lat: 20.9535, lng: 105.7510, sub: "Quốc lộ 6, Yên Nghĩa, Hà Đông" },
+  { name: "Ga Hà Nội", lat: 21.0246, lng: 105.8412, sub: "120 Lê Duẩn, Văn Miếu, Đống Đa" },
+  { name: "Sân bay Quốc tế Nội Bài", lat: 21.2212, lng: 105.8072, sub: "Xã Phú Minh, Huyện Sóc Sơn, Hà Nội" },
+  { name: "Sân vận động Quốc gia Mỹ Đình", lat: 21.0205, lng: 105.7640, sub: "Đường Lê Đức Thọ, Mỹ Đình 1, Nam Từ Liêm" },
+  { name: "Trung tâm Hội nghị Quốc gia", lat: 21.0055, lng: 105.7838, sub: "Đại lộ Thăng Long, Mễ Trì, Nam Từ Liêm" },
+  { name: "Hồ Gươm (Hồ Hoàn Kiếm)", lat: 21.0285, lng: 105.8542, sub: "Quận Hoàn Kiếm, Hà Nội" },
+  { name: "Hồ Tây (Đường Thanh Niên)", lat: 21.0450, lng: 105.8350, sub: "Quận Tây Hồ, Hà Nội" },
+  { name: "Lăng Chủ tịch Hồ Chí Minh (Lăng Bác)", lat: 21.0368, lng: 105.8346, sub: "Số 2 Hùng Vương, Điện Biên, Ba Đình" },
+  { name: "Văn Miếu Quốc Tử Giám", lat: 21.0286, lng: 105.8355, sub: "58 Quốc Tử Giám, Đống Đa, Hà Nội" },
+  { name: "Ngã Tư Sở", lat: 21.0035, lng: 105.8180, sub: "Giao lộ Trường Chinh - Tây Sơn - Láng - Nguyễn Trãi" },
+  { name: "Ngã Tư Vọng", lat: 20.9995, lng: 105.8415, sub: "Giao lộ Giải Phóng - Trường Chinh - Đại La" },
+  { name: "Ô Chợ Dừa", lat: 21.0202, lng: 105.8278, sub: "Giao lộ Tôn Đức Thắng - Xã Đàn - Khâm Thiên" },
+  { name: "Hầm chui Kim Liên", lat: 21.0105, lng: 105.8440, sub: "Đại Cồ Việt - Xã Đàn, Đống Đa / Hai Bà Trưng" },
+  { name: "Hầm chui Trung Hòa", lat: 21.0060, lng: 105.7900, sub: "Trần Duy Hưng - Đại lộ Thăng Long, Cầu Giấy" },
+  { name: "Hầm chui Thanh Xuân", lat: 20.9930, lng: 105.7985, sub: "Nguyễn Trãi - Khuất Duy Tiến, Thanh Xuân" },
+  { name: "Hầm chui Lê Văn Lương", lat: 21.0010, lng: 105.7940, sub: "Lê Văn Lương - Vành đai 3, Thanh Xuân" },
+
+  // 5. Tuyến phố & Đường huyết mạch
+  { name: "Đường Tôn Thất Tùng", lat: 21.0040, lng: 105.8310, sub: "Phường Kim Liên - Khương Thượng, Đống Đa" },
+  { name: "Đường Chùa Bộc", lat: 21.0085, lng: 105.8260, sub: "Phường Quang Trung, Đống Đa" },
+  { name: "Đường Thái Hà", lat: 21.0145, lng: 105.8185, sub: "Phường Trung Liệt, Đống Đa" },
+  { name: "Đường Tây Sơn", lat: 21.0105, lng: 105.8215, sub: "Phường Quang Trung, Đống Đa" },
+  { name: "Đường Láng Hạ", lat: 21.0115, lng: 105.8120, sub: "Phường Láng Hạ, Đống Đa" },
+  { name: "Đường Huỳnh Thúc Kháng", lat: 21.0190, lng: 105.8115, sub: "Phường Láng Hạ, Đống Đa" },
+  { name: "Phố Chùa Láng", lat: 21.0240, lng: 105.8035, sub: "Phường Láng Thượng, Đống Đa" },
+  { name: "Đường Trường Chinh", lat: 21.0010, lng: 105.8330, sub: "Phường Khương Mai - Phương Mai" },
+  { name: "Đường Xã Đàn", lat: 21.0165, lng: 105.8350, sub: "Phường Nam Đồng, Đống Đa" },
+  { name: "Đường Đại Cồ Việt", lat: 21.0100, lng: 105.8480, sub: "Phường Lê Đại Hành, Hai Bà Trưng" },
+  { name: "Đường Định Công", lat: 20.9880, lng: 105.8380, sub: "Phường Định Công, Hoàng Mai" },
+  { name: "Đường Giải Phóng", lat: 20.9964, lng: 105.8414, sub: "Quận Hoàng Mai / Hai Bà Trưng" },
+  { name: "Đường Phạm Ngọc Thạch", lat: 21.0090, lng: 105.8325, sub: "Phường Kim Liên, Đống Đa" },
+  { name: "Đường Nguyễn Chí Thanh", lat: 21.0255, lng: 105.8105, sub: "Quận Đống Đa / Ba Đình" },
+  { name: "Đường Trần Duy Hưng", lat: 21.0105, lng: 105.8010, sub: "Phường Trung Hòa, Cầu Giấy" },
+  { name: "Đường Lê Văn Lương", lat: 21.0040, lng: 105.7990, sub: "Phường Nhân Chính, Thanh Xuân" },
+  { name: "Đường Tố Hữu", lat: 20.9930, lng: 105.7820, sub: "Phường Trung Văn, Nam Từ Liêm" },
+  { name: "Đường Nguyễn Trãi", lat: 20.9960, lng: 105.8080, sub: "Quận Thanh Xuân, Hà Nội" },
+  { name: "Đường Khuất Duy Tiến", lat: 20.9985, lng: 105.7950, sub: "Phường Thanh Xuân Bắc, Thanh Xuân" },
+  { name: "Đường Nguyễn Xiển", lat: 20.9870, lng: 105.8085, sub: "Phường Hạ Đình, Thanh Xuân" },
+  { name: "Đường Láng", lat: 21.0165, lng: 105.8060, sub: "Phường Láng Thượng - Thịnh Quang, Đống Đa" },
+  { name: "Đường Cầu Giấy", lat: 21.0335, lng: 105.7950, sub: "Phường Quan Hoa - Dịch Vọng, Cầu Giấy" },
+  { name: "Đường Xuân Thủy", lat: 21.0370, lng: 105.7820, sub: "Phường Dịch Vọng Hậu, Cầu Giấy" },
+  { name: "Đường Hồ Tùng Mậu", lat: 21.0390, lng: 105.7680, sub: "Phường Mai Dịch, Cầu Giấy" },
+  { name: "Đường Phạm Hùng", lat: 21.0220, lng: 105.7810, sub: "Phường Mễ Trì - Mỹ Đình, Nam Từ Liêm" },
+  { name: "Đường Hoàng Quốc Việt", lat: 21.0465, lng: 105.7925, sub: "Phường Nghĩa Đô, Cầu Giấy" },
+  { name: "Đường Võ Chí Công", lat: 21.0650, lng: 105.8080, sub: "Phường Xuân La, Tây Hồ" },
+  { name: "Đường Lạc Long Quân", lat: 21.0580, lng: 105.8100, sub: "Phường Bưởi, Tây Hồ" },
+  { name: "Đường Âu Cơ", lat: 21.0680, lng: 105.8250, sub: "Phường Quảng An, Tây Hồ" },
+  { name: "Đường Nghi Tàm", lat: 21.0520, lng: 105.8380, sub: "Phường Yên Phụ, Tây Hồ" },
+  { name: "Đường Kim Mã", lat: 21.0315, lng: 105.8200, sub: "Phường Kim Mã, Ba Đình" },
+  { name: "Đường Giảng Võ", lat: 21.0260, lng: 105.8225, sub: "Phường Giảng Võ, Ba Đình" },
+  { name: "Đường Liễu Giai", lat: 21.0340, lng: 105.8140, sub: "Phường Cống Vị, Ba Đình" },
+  { name: "Đường Hoàng Hoa Thám", lat: 21.0420, lng: 105.8150, sub: "Quận Ba Đình / Tây Hồ" },
+  { name: "Đường Thụy Khuê", lat: 21.0430, lng: 105.8220, sub: "Phường Thụy Khuê, Tây Hồ" },
+  { name: "Đường Minh Khai", lat: 20.9980, lng: 105.8600, sub: "Phường Vĩnh Tuy, Hai Bà Trưng" },
+  { name: "Đường Bạch Mai", lat: 21.0030, lng: 105.8500, sub: "Phường Bạch Mai, Hai Bà Trưng" },
+  { name: "Đường Phố Huế", lat: 21.0150, lng: 105.8510, sub: "Quận Hai Bà Trưng, Hà Nội" },
+  { name: "Đường Bà Triệu", lat: 21.0180, lng: 105.8500, sub: "Quận Hoàn Kiếm / Hai Bà Trưng" },
+  { name: "Đường Tràng Thi", lat: 21.0280, lng: 105.8490, sub: "Phường Hàng Bông, Hoàn Kiếm" },
+  { name: "Đường Đinh Tiên Hoàng", lat: 21.0300, lng: 105.8530, sub: "Phường Tràng Tiền, Hoàn Kiếm" },
+  { name: "Đường Trần Hưng Đạo", lat: 21.0220, lng: 105.8510, sub: "Quận Hoàn Kiếm, Hà Nội" },
+  { name: "Đường Hai Bà Trưng", lat: 21.0260, lng: 105.8510, sub: "Quận Hoàn Kiếm, Hà Nội" },
+  { name: "Đường Phan Đình Phùng", lat: 21.0400, lng: 105.8400, sub: "Phường Quán Thánh, Ba Đình" }
+];
+
+
+
+// Chuẩn hóa chuỗi tìm kiếm tiếng Việt (bỏ dấu, chuyển đ->d, loại bỏ ký tự đặc biệt)
+function normalizeSearchText(str) {
+  if (!str) return '';
+  return str.toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Kiểm tra và tính điểm tương đồng giữa từ khóa và địa danh
+function scoreLocationMatch(name, sub, query) {
+  const qNorm = normalizeSearchText(query);
+  if (!qNorm) return 0;
+  const nNorm = normalizeSearchText(name);
+  const sNorm = normalizeSearchText(sub);
+
+  // 1. Khớp chính xác tuyệt đối
+  if (nNorm === qNorm) return 100;
+  // 2. Bắt đầu bằng từ khóa
+  if (nNorm.startsWith(qNorm)) return 85;
+  // 3. Chứa trọn vẹn từ khóa trong tên
+  if (nNorm.includes(qNorm)) return 75;
+  // 4. Từ khóa chứa trọn vẹn tên địa danh (ví dụ user gõ "trường đại học y hà nội")
+  if (qNorm.includes(nNorm) && nNorm.length >= 4) return 70;
+  // 5. Chứa trọn vẹn trong địa chỉ phụ (sub)
+  if (sNorm.includes(qNorm)) return 60;
+
+  // 6. Khớp theo tập hợp từ (token-based), bỏ qua các từ phụ phổ biến
+  const STOP_WORDS = new Set(['truong', 'khu', 'pho', 'duong', 'quan', 'tp', 'thanh', 'ha', 'noi', 'hn', 'so', 'nha', 'toa']);
+  const qTokens = qNorm.split(' ').filter(w => w.length > 0 && !STOP_WORDS.has(w));
+  if (qTokens.length === 0) return 0;
+
+  const nTokens = nNorm.split(' ');
+  const sTokens = sNorm.split(' ');
+  const allTargetTokens = new Set([...nTokens, ...sTokens]);
+
+  const matchedTokens = qTokens.filter(t => allTargetTokens.has(t) || [...allTargetTokens].some(target => target.includes(t)));
+  const matchRatio = matchedTokens.length / qTokens.length;
+
+  if (matchRatio === 1) return 55; // Khớp đủ tất cả từ khóa chính
+  if (matchRatio >= 0.6) return 30; // Khớp đa số từ khóa
+
+  return 0;
+}
+
+// Tìm kiếm danh bạ địa phương (HANOI_LANDMARKS + window.floodPoints) tức thì (<1ms)
+function getLocalAddressMatches(query) {
+  if (!query || query.trim().length < 2) return [];
+  const qClean = query.trim();
+  const results = [];
+
+  // 1. Quét danh bạ địa danh Hà Nội
+  if (typeof HANOI_LANDMARKS !== 'undefined' && Array.isArray(HANOI_LANDMARKS)) {
+    for (const item of HANOI_LANDMARKS) {
+      const score = scoreLocationMatch(item.name, item.sub, qClean);
+      if (score > 0) {
+        results.push({
+          name: item.name,
+          sub: item.sub,
+          lat: item.lat,
+          lng: item.lng,
+          score: score
+        });
+      }
+    }
+  }
+
+  // 2. Quét thêm từ 130 điểm trạm quan trắc ngập lụt hiện có trên bản đồ
+  if (typeof window !== 'undefined' && Array.isArray(window.floodPoints)) {
+    for (const pt of window.floodPoints) {
+      const ptName = pt.name || pt.location_desc || '';
+      const ptSub = pt.location_desc || pt.district || 'Hà Nội';
+      const score = scoreLocationMatch(ptName, ptSub, qClean);
+      if (score > 0) {
+        // Kiểm tra tránh trùng lặp tọa độ quá gần với địa danh đã có
+        const isDuplicate = results.some(r => Math.abs(r.lat - pt.lat) < 0.001 && Math.abs(r.lng - pt.lng) < 0.001);
+        if (!isDuplicate) {
+          results.push({
+            name: ptName,
+            sub: `${ptSub} (Điểm trạm)`,
+            lat: pt.lat,
+            lng: pt.lng,
+            score: score - 5
+          });
+        }
+      }
+    }
+  }
+
+  // Sắp xếp theo điểm tương đồng cao nhất
+  results.sort((a, b) => b.score - a.score);
+  return results.slice(0, 6);
+}
+
+// Helper đồng bộ ID phần tử cho cả 'destination' và 'dest'
+function getAddressElements(type) {
+  const isDest = (type === 'destination' || type === 'dest');
+  const prefix = isDest ? 'dest' : 'origin';
+  return {
+    targetType: isDest ? 'destination' : 'origin',
+    input: document.getElementById(`${prefix}-text`) || document.getElementById(`${type}-text`),
+    container: document.getElementById(`${prefix}-suggestions`) || document.getElementById(`${type}-suggestions`),
+    clearBtn: document.getElementById(`btn-clear-${prefix}`) || document.getElementById(`btn-clear-${type}`)
+  };
+}
+
+// Hiển thị danh sách gợi ý ra giao diện
+function renderAddressSuggestions(targetType, container, items) {
+  if (!container) return;
+  if (!items || items.length === 0) {
+    container.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs">Không tìm thấy địa chỉ phù hợp. Bạn có thể bấm "Chỉ định trên bản đồ".</div>`;
+    container.classList.remove('hidden');
+    return;
+  }
+
+  container.innerHTML = items.slice(0, 6).map(item => `
+    <div onclick="selectAddress('${targetType}', ${item.lat}, ${item.lng}, '${encodeURIComponent(item.name)}')" 
+         class="p-2.5 hover:bg-blue-50 cursor-pointer transition flex items-start gap-2.5 text-left group border-b border-slate-100 last:border-b-0">
+      <i data-lucide="map-pin" class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5 group-hover:scale-110 transition"></i>
+      <div class="flex-1 overflow-hidden">
+        <p class="font-bold text-slate-800 text-xs truncate group-hover:text-blue-600">${item.name}</p>
+        <p class="text-[11px] text-slate-500 truncate">${item.sub}</p>
+      </div>
+    </div>
+  `).join('');
+  container.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+// Tự động phân giải địa chỉ từ chuỗi người dùng đã nhập
+async function resolveAddressFromInput(type) {
+  const { targetType, input } = getAddressElements(type);
+  if (!input) return false;
+  const query = input.value.trim();
+  if (!query) return false;
+
+  // 1. Kiểm tra nếu là dạng tọa độ số "lat, lng"
+  const parts = query.split(',').map(s => parseFloat(s.trim()));
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    coords[targetType] = { lat: parts[0], lng: parts[1] };
+    const color = targetType === 'origin' ? '#10b981' : '#ef4444';
+    const label = targetType === 'origin' ? 'Điểm xuất phát' : 'Điểm đến';
+    updatePickMarker(targetType, parts[0], parts[1], color, label);
+    return true;
+  }
+
+  // 2. Tra cứu tức thì từ danh bạ địa phương (HANOI_LANDMARKS + floodPoints)
+  const localMatches = getLocalAddressMatches(query);
+  if (localMatches.length > 0) {
+    const best = localMatches[0];
+    coords[targetType] = { lat: best.lat, lng: best.lng };
+    const color = targetType === 'origin' ? '#10b981' : '#ef4444';
+    const label = targetType === 'origin' ? 'Điểm xuất phát' : 'Điểm đến';
+    updatePickMarker(targetType, best.lat, best.lng, color, label);
+    return true;
+  }
+
+  // 3. Tra cứu nhanh dự phòng qua Photon API (tối đa 2.0s timeout)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=21.0285&lon=105.8030&limit=1&lang=default`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        const f = data.features[0];
+        const lat = f.geometry.coordinates[1];
+        const lng = f.geometry.coordinates[0];
+        coords[targetType] = { lat, lng };
+        const color = targetType === 'origin' ? '#10b981' : '#ef4444';
+        const label = targetType === 'origin' ? 'Điểm xuất phát' : 'Điểm đến';
+        updatePickMarker(targetType, lat, lng, color, label);
+        return true;
+      }
+    }
+  } catch (e) {
+    console.debug("resolveAddressFromInput fallback status:", e.message || e);
+  }
+
+  return false;
+}
+
+// Xử lý sự kiện khi gõ vào ô địa chỉ
+function handleAddressInput(type, query) {
+  const { targetType, clearBtn, container } = getAddressElements(type);
+  if (!container) return;
+
+  if (clearBtn) {
+    if (query && query.trim().length > 0) clearBtn.classList.remove('hidden');
+    else clearBtn.classList.add('hidden');
+  }
+
+  // Nếu người dùng xóa sạch text, xóa luôn tọa độ tương ứng
+  if (!query || query.trim().length === 0) {
+    coords[targetType] = null;
+    if (pickMarkers[targetType]) {
+      map.removeLayer(pickMarkers[targetType]);
+      pickMarkers[targetType] = null;
+    }
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+
+  if (query.trim().length < 2) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+
+  // HIỂN THỊ TỨC THÌ (<1ms) KẾT QUẢ ĐỊA PHƯƠNG KHÔNG CẦN CHỜ ĐỢI
+  const instantMatches = getLocalAddressMatches(query);
+  if (instantMatches.length > 0) {
+    renderAddressSuggestions(targetType, container, instantMatches);
+  }
+
+  // Debounce gọi thêm API mở rộng để bổ sung địa chỉ hiếm (nếu cần)
+  clearTimeout(addressDebounceTimer);
+  addressDebounceTimer = setTimeout(() => {
+    executeAddressSearch(type, query.trim(), instantMatches);
+  }, 250);
+}
+
+// Tìm kiếm mở rộng kết hợp danh bạ và API
+async function executeAddressSearch(type, query, currentLocalMatches = []) {
+  const { targetType, container } = getAddressElements(type);
+  if (!container) return;
+
+  // Lấy kết quả địa phương mới nhất
+  const localMatches = (currentLocalMatches && currentLocalMatches.length > 0) 
+    ? currentLocalMatches 
+    : getLocalAddressMatches(query);
+
+  // Nếu chưa có kết quả địa phương nào, hiển thị spinner tìm kiếm
+  if (localMatches.length === 0) {
+    container.innerHTML = `<div class="p-2.5 text-center text-slate-400 text-xs flex items-center justify-center gap-1.5"><i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Đang tìm địa chỉ...</span></div>`;
+    container.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Nếu đã có 4+ kết quả địa phương khớp rất tốt (điểm >= 70), không cần chờ API để tránh làm chậm UX
+  if (localMatches.length >= 4 && localMatches[0].score >= 70) {
+    renderAddressSuggestions(targetType, container, localMatches);
+    return;
+  }
+
+  // Gọi Photon API mở rộng với timeout an toàn 2.0s
+  let apiMatches = [];
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=21.0285&lon=105.8030&limit=6&lang=default`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      apiMatches = (data.features || []).map(f => {
+        const p = f.properties || {};
+        const title = p.name || p.street || query;
+        const parts = [];
+        if (p.housenumber && p.street && !title.includes(p.street)) {
+          parts.push(`${p.housenumber} ${p.street}`);
+        } else if (p.street && !title.includes(p.street)) {
+          parts.push(p.street);
+        }
+        if (p.district) parts.push(p.district);
+        if (p.city) parts.push(p.city);
+        const sub = parts.join(', ') || 'Hà Nội, Việt Nam';
+        return {
+          name: title,
+          sub: sub,
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          score: 50
+        };
+      });
+    }
+  } catch (e) {
+    // Tuyệt đối không return ở đây - đảm bảo luôn cập nhật giao diện
+    console.debug("Address API search note:", e.message || e);
+  }
+
+  // Kết hợp và loại bỏ trùng lặp (ưu tiên danh bạ địa phương)
+  const combined = [...localMatches];
+  apiMatches.forEach(item => {
+    if (!combined.some(r => Math.abs(r.lat - item.lat) < 0.003 && Math.abs(r.lng - item.lng) < 0.003)) {
+      combined.push(item);
+    }
+  });
+
+  renderAddressSuggestions(targetType, container, combined);
+}
+
+function selectAddress(type, lat, lng, displayName) {
+
+  try {
+
+    displayName = decodeURIComponent(displayName);
+
+  } catch (e) {}
+
+  const { targetType, input, clearBtn, container } = getAddressElements(type);
+
+  coords[targetType] = { lat: Number(lat), lng: Number(lng) };
+
+  
+
+  if (input) input.value = displayName;
+
+  if (clearBtn) clearBtn.classList.remove('hidden');
+
+  if (container) container.classList.add('hidden');
+
+
+
+  const color = targetType === 'origin' ? '#10b981' : '#ef4444';
+
+  const label = targetType === 'origin' ? 'Điểm xuất phát' : 'Điểm đến';
+
+  updatePickMarker(targetType, lat, lng, color, label);
+
+
+
+  map.flyTo([lat, lng], 15, { duration: 0.8 });
+
+
+
+  // Tự động kích hoạt tính lộ trình nếu cả 2 điểm đã sẵn sàng
+
+  if (coords.origin && coords.destination) {
+
+    calculateRoute();
+
+  }
+
+}
+
+
+
+function clearLocation(type) {
+
+  const { targetType, input, clearBtn, container } = getAddressElements(type);
+
+  coords[targetType] = null;
+
+  if (input) input.value = '';
+
+  if (clearBtn) clearBtn.classList.add('hidden');
+
+  if (container) container.classList.add('hidden');
+
+
+
+  if (pickMarkers[targetType]) {
+
+    map.removeLayer(pickMarkers[targetType]);
+
+    pickMarkers[targetType] = null;
+
+  }
+
+}
+
+
+
+async function handleAddressKeydown(event, type) {
+
+  const { targetType, container } = getAddressElements(type);
+
+  if (event.key === 'Enter') {
+
+    event.preventDefault();
+
+    if (container && !container.classList.contains('hidden')) {
+
+      const firstItem = container.querySelector('[onclick]');
+
+      if (firstItem) {
+
+        firstItem.click();
+
+        return;
+
+      }
+
+    }
+
+    // Nếu dropdown chưa có hoặc người dùng nhấn Enter ngay
+
+    await resolveAddressFromInput(type);
+
+    if (coords.origin && coords.destination) {
+
+      calculateRoute();
+
+    }
+
+  } else if (event.key === 'Escape') {
+
+    if (container) container.classList.add('hidden');
+
+  }
+
+}
+
+
+
+// Đóng dropdown khi click ra ngoài
+
+document.addEventListener('click', (e) => {
+
+  ['origin', 'destination'].forEach(type => {
+
+    const { input, container } = getAddressElements(type);
+
+    if (container && !container.contains(e.target) && e.target !== input) {
+
+      container.classList.add('hidden');
+
+    }
+
+  });
+
+});
+
+
+
+// FE-01: Kiểm tra trạng thái PostGIS kết nối cho Floating Header
+async function checkPostGISConnection() {
+  const badge = document.getElementById('postgis-status-badge');
+  if (!badge) return;
+  try {
+    const res = await fetch('/api/health');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.database === 'connected') {
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>PostGIS Live</span>';
+        badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 rounded-lg text-[11px] font-semibold cursor-default';
+        badge.title = 'PostGIS Live: Cơ sở dữ liệu không gian PostgreSQL kết nối thành công';
+        return;
+      }
+    }
+  } catch (e) {}
+  badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>PostGIS Standby</span>';
+  badge.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-100 rounded-lg text-[11px] font-semibold cursor-default';
+  badge.title = 'PostGIS Standby: Đang hoạt động ở chế độ bộ nhớ dự phòng In-Memory / SQLite';
+}
+
+// FE-02: Tải thông tin thời tiết & lượng mưa thực tế cho Nhóm 2 (Giám sát)
+async function loadWeatherInfo() {
+  const el = document.getElementById('weather-badge');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/weather/hanoi');
+    if (res.ok) {
+      const data = await res.json();
+      const currentPrecip = data.hourly_forecast && data.hourly_forecast[0] ? data.hourly_forecast[0].precipitation_mm : 0;
+      const weatherText = currentPrecip > 0 ? `Mưa ${currentPrecip} mm` : `☀️ Tạnh ráo`;
+      el.innerHTML = `<i data-lucide="${currentPrecip > 0 ? 'cloud-rain' : 'cloud-sun'}" class="w-3.5 h-3.5 text-cyan-200"></i><span>Hà Nội: <b>${weatherText}</b></span>`;
+      el.title = `Dự báo lượng mưa tại Hà Nội: ${currentPrecip} mm/h (Open-Meteo API)`;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+  } catch (e) {}
+  el.innerHTML = `<i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i><span>Hà Nội: <b>28°C • Tạnh</b></span>`;
+  if (window.lucide) lucide.createIcons();
+}
+
+// FE-02: Điều khiển Menu phụ Dropdown trong Nhóm 3 (Tiện ích)
+function toggleHeaderMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const menu = document.getElementById('header-more-dropdown');
+  if (menu) menu.classList.toggle('hidden');
+}
+
+function closeHeaderMenu() {
+  const menu = document.getElementById('header-more-dropdown');
+  if (menu) menu.classList.add('hidden');
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('header-more-dropdown');
+  const btn = document.getElementById('btn-header-more');
+  if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+
+// =================================================
+// Xuất các biến và hàm điều khiển quan trọng ra window
+// =================================================
+window.floodPoints = floodPoints;
+window.coords = coords;
+if (typeof map !== 'undefined') window.map = map;
+window.renderFloodPoints = renderFloodPoints;
+window.switchTab = switchTab;
+window.toggleHeaderMenu = toggleHeaderMenu;
+window.closeHeaderMenu = closeHeaderMenu;
+window.loadWeatherInfo = loadWeatherInfo;
+window.renderPointsList = renderPointsList;
+window.updateViewportFloodAlert = updateViewportFloodAlert;
+window.calculateRoute = calculateRoute;
+window.loadFloodPoints = loadFloodPoints;
+
+
+// ========================================================
+// FE: Tiện ích Toast & Điều khiển Đặt lại Mặc định
+// ========================================================
+function showToast(message, type = 'info') {
+  let toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  
+  const bgClass = type === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/30' :
+                  type === 'warning' ? 'bg-amber-600 text-white shadow-amber-500/30' :
+                  type === 'error' ? 'bg-rose-600 text-white shadow-rose-500/30' :
+                  'bg-slate-800 text-white shadow-slate-900/30';
+  const icon = type === 'success' ? 'check-circle' : 'info';
+
+  toast.className = `fixed bottom-6 right-6 z-[9999] px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 transform translate-y-0 opacity-100 ${bgClass} pointer-events-auto`;
+  toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${message}</span>`;
+  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-10 opacity-0');
+  }, 3000);
+}
+
+function clearActiveRoute() {
+  if (routeLayers.safe && map) {
+    map.removeLayer(routeLayers.safe);
+    routeLayers.safe = null;
+  }
+  if (routeLayers.fastest && map) {
+    map.removeLayer(routeLayers.fastest);
+    routeLayers.fastest = null;
+  }
+  if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
+    VehicleSim.stop();
+  }
+  clearLocation('origin');
+  clearLocation('destination');
+  currentRouteData = null;
+
+  const resultCard = document.getElementById('route-results');
+  if (resultCard) resultCard.classList.add('hidden');
+
+  const summaryCard = document.getElementById('flood-summary-card');
+  if (summaryCard) summaryCard.classList.remove('hidden');
+
+  updateSidebarFloodSummary();
+  showToast('Đã xóa lộ trình & xem lại tình hình ngập', 'info');
+}
+
+window.showToast = showToast;
+window.clearActiveRoute = clearActiveRoute;
+window.selectActiveRoute = selectActiveRoute;
+window.updateSidebarFloodSummary = updateSidebarFloodSummary;
+window.resetToDefaultState = function() {
+  if (window.StormSimulator && typeof StormSimulator.resetToDefault === 'function') {
+    StormSimulator.resetToDefault();
+  }
+};

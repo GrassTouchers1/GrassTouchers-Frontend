@@ -1,0 +1,20 @@
+{
+  "name": "grasstouchers-frontend",
+  "version": "0.4.0",
+  "description": "Giao diện Web PWA bản đồ thông minh cảnh báo và dẫn đường tránh điểm ngập lụt Hà Nội (100% Mã nguồn mở)",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -l 3000 .",
+    "dev": "npx serve -l 3000 ."
+  },
+  "keywords": [
+    "leaflet",
+    "openstreetmap",
+    "pwa",
+    "smart-city",
+    "flood-navigation",
+    "open-source"
+  ],
+  "author": "GrassTouchers Team",
+  "license": "Apache-2.0"
+}

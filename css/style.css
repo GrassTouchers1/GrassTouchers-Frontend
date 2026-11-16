@@ -1,0 +1,573 @@
+/* ========================================================
+   FloodNav - Custom Styles & Animations
+   Phụ trách chính: Thành viên 1 & 2 (Frontend Collaboration)
+   ======================================================== */
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  background-color: #e2e8f0;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Hiệu ứng sóng ngập lan tỏa động (FE-04) */
+@keyframes pulse-wave {
+  0% { stroke-width: 1.5; stroke-opacity: 0.9; }
+  50% { stroke-width: 3.5; stroke-opacity: 0.35; }
+  100% { stroke-width: 1.5; stroke-opacity: 0.9; }
+}
+
+.animated-flood-ring {
+  animation: pulse-wave 2s infinite ease-in-out;
+}
+
+/* Vùng ngập nguy hiểm (Đỏ) */
+.flood-pulse-danger {
+  position: relative;
+}
+.flood-pulse-danger::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: rgba(239, 68, 68, 0.7);
+  border-radius: 50%;
+  animation: pulse-ring 1.3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  pointer-events: none;
+}
+
+/* Vùng ngập cảnh báo (Vàng / Cam) */
+.flood-pulse-warning {
+  position: relative;
+}
+.flood-pulse-warning::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: rgba(245, 158, 11, 0.65);
+  border-radius: 50%;
+  animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  pointer-events: none;
+}
+
+/* Custom Marker tròn */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+.custom-marker:hover {
+  transform: scale(1.2);
+  z-index: 1000 !important;
+}
+
+/* Chế độ Dark Mode cho Giao diện UI (FE-03) */
+body.dark-mode {
+  background-color: #090d16;
+  color: #f8fafc;
+}
+body.dark-mode aside {
+  background-color: #111827;
+  border-color: #1f2937;
+  color: #f8fafc;
+}
+body.dark-mode .bg-white {
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .bg-slate-50 {
+  background-color: #0b1120 !important;
+  color: #e2e8f0 !important;
+}
+body.dark-mode .border-slate-200,
+body.dark-mode .border-slate-300 {
+  border-color: #1f2937 !important;
+}
+body.dark-mode .text-slate-800,
+body.dark-mode .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+body.dark-mode .text-slate-700,
+body.dark-mode .text-slate-600 {
+  color: #94a3b8 !important;
+}
+body.dark-mode input[type="text"] {
+  background-color: #1f2937 !important;
+  color: #f1f5f9 !important;
+  border-color: #374151 !important;
+}
+
+/* Thanh cuộn mảnh mượt */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+/* Dark mode cho Dropdown gợi ý địa chỉ (FE-02) */
+body.dark-mode #origin-suggestions,
+body.dark-mode #dest-suggestions {
+  background-color: #111827 !important;
+  border-color: #374151 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode #origin-suggestions > div:hover,
+body.dark-mode #dest-suggestions > div:hover {
+  background-color: #1f2937 !important;
+}
+body.dark-mode #origin-suggestions p.text-slate-800,
+body.dark-mode #dest-suggestions p.text-slate-800 {
+  color: #f1f5f9 !important;
+}
+body.dark-mode #origin-suggestions p.text-slate-500,
+body.dark-mode #dest-suggestions p.text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* ========================================================
+   Tối ưu hóa Giao diện Di động (FE-02: Mobile Responsive)
+   ======================================================== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (max-width: 639px) {
+  .floating-header {
+    margin-top: 6px !important;
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+    max-height: 48px !important;
+  }
+  #sidebar-panel {
+    top: 58px !important;
+    height: calc(100vh - 58px) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.25);
+    border-top-left-radius: 1rem !important;
+    border-top-right-radius: 1rem !important;
+  }
+}
+
+body.dark-mode #sidebar-panel {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+}
+body.dark-mode #sidebar-panel .bg-slate-100 {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+body.dark-mode #mobile-route-floating-card {
+  background-color: rgba(17, 24, 39, 0.95) !important;
+  border-color: #374151 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode #mobile-route-floating-card #mobile-card-title {
+  color: #f1f5f9 !important;
+}
+
+/* Tinh chỉnh màu Dark Mode chi tiết cho các thẻ UI (FE-03) */
+body.dark-mode .bg-blue-50 {
+  background-color: rgba(30, 58, 138, 0.25) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  color: #93c5fd !important;
+}
+body.dark-mode .bg-blue-50\/50 {
+  background-color: rgba(30, 58, 138, 0.25) !important;
+}
+body.dark-mode .text-blue-800 {
+  color: #93c5fd !important;
+}
+body.dark-mode .border-blue-100 {
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+body.dark-mode label.border-slate-200 {
+  border-color: #334155 !important;
+}
+body.dark-mode label.border-slate-200:hover {
+  background-color: #1e293b !important;
+}
+body.dark-mode button.bg-white {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+body.dark-mode button.bg-white:hover {
+  background-color: #334155 !important;
+}
+body.dark-mode .leaflet-bar a,
+body.dark-mode .leaflet-control-layers {
+  background-color: #111827 !important;
+  color: #f1f5f9 !important;
+  border-color: #374151 !important;
+}
+body.dark-mode .leaflet-bar a {
+  color: #f1f5f9 !important;
+}
+body.dark-mode .leaflet-control-layers-expanded {
+  background-color: #111827 !important;
+  color: #f1f5f9 !important;
+}
+body.dark-mode .leaflet-control-attribution {
+  background-color: rgba(17, 24, 39, 0.8) !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode .leaflet-control-attribution a {
+  color: #60a5fa !important;
+}
+body.dark-mode #onboarding-modal > div > div,
+body.dark-mode #dashboard-modal > div {
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+  border-color: #374151 !important;
+}
+
+
+/* Viewport Flood Alert Animation (Real-time drag warning) */
+#viewport-flood-alert {
+  animation: slideDownFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+body.dark-mode #viewport-flood-alert.bg-rose-50\/95 {
+  background-color: rgba(69, 10, 10, 0.95) !important;
+  color: #fecdd3 !important;
+  border-color: #991b1b !important;
+}
+
+body.dark-mode #viewport-flood-alert.bg-amber-50\/95 {
+  background-color: rgba(69, 26, 3, 0.95) !important;
+  color: #fef3c7 !important;
+  border-color: #92400e !important;
+}
+
+body.dark-mode #viewport-flood-alert.bg-emerald-50\/95 {
+  background-color: rgba(6, 78, 59, 0.95) !important;
+  color: #d1fae5 !important;
+  border-color: #065f46 !important;
+}
+
+/* Tối ưu vị trí thanh cảnh báo ngập trong khung nhìn - không đè nút Zoom và Layer Switcher */
+#viewport-flood-alert {
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-width: min(440px, calc(100% - 140px)) !important;
+  z-index: 800 !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 639px) {
+  #viewport-flood-alert {
+    top: 54px !important;
+    max-width: calc(100% - 24px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+}
+
+.leaflet-top.leaflet-left {
+  top: 12px !important;
+  left: 12px !important;
+}
+
+.leaflet-top.leaflet-right {
+  top: 12px !important;
+  right: 12px !important;
+}
+
+
+/* ========================================================
+   Floating Navbar & Header Card (FE-01: Trung)
+   ======================================================== */
+.floating-header {
+  box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.35), 0 8px 10px -6px rgba(30, 58, 138, 0.2);
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .floating-header {
+  background: linear-gradient(to right, #0f172a, #1e1b4b, #0e3b43) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================================
+   Marker Clustering cho Điểm Ngập (FloodNav Blue & Cyan Theme)
+   ======================================================== */
+.flood-cluster-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.flood-cluster-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 4px 14px rgba(30, 64, 175, 0.45);
+  border: 2px solid #ffffff;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.flood-cluster-badge:hover {
+  transform: scale(1.15);
+  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.65);
+  z-index: 1000 !important;
+}
+
+/* Nhận diện màu sắc FloodNav: Xanh dương & Xanh ngọc */
+.flood-cluster-safe {
+  background: linear-gradient(135deg, #2563eb 0%, #0284c7 50%, #06b6d4 100%);
+}
+
+/* Cụm có điểm ngập nhẹ: Viền và ánh vàng cam */
+.flood-cluster-warning {
+  background: linear-gradient(135deg, #1d4ed8 0%, #0284c7 40%, #f59e0b 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45);
+}
+
+/* Cụm có điểm ngập nguy hiểm (≥20cm): Ánh đỏ cảnh báo */
+.flood-cluster-danger {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 30%, #ef4444 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.55);
+}
+
+/* Cụm chứa các điểm mất tín hiệu / chưa có dữ liệu */
+.flood-cluster-offline {
+  background: linear-gradient(135deg, #64748b 0%, #475569 50%, #334155 100%);
+  box-shadow: 0 4px 14px rgba(100, 116, 139, 0.45);
+}
+
+
+.cluster-num {
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+/* Dấu chấm đỏ báo hiệu có điểm ngập sâu trong cụm */
+.cluster-danger-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  background-color: #ef4444;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.9);
+  animation: cluster-pulse-danger 1.8s infinite;
+}
+
+@keyframes cluster-pulse-danger {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+/* Hiệu ứng spiderfy đường nối của Leaflet MarkerCluster */
+.leaflet-cluster-spider-leg {
+  stroke: #3b82f6 !important;
+  stroke-width: 1.5 !important;
+  stroke-opacity: 0.65 !important;
+  stroke-dasharray: 4, 4 !important;
+}
+
+body.dark-mode .flood-cluster-badge {
+  border-color: #1e293b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+}
+
+body.dark-mode .cluster-danger-dot {
+  border-color: #1e293b;
+}
+
+/* Header Dropdown Menu Phụ (FE-02) */
+#header-more-dropdown {
+  transform-origin: top right;
+  animation: dropdown-pop 0.15s ease-out;
+}
+@keyframes dropdown-pop {
+  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+body.dark-mode #header-more-dropdown {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+body.dark-mode #header-more-dropdown button:hover {
+  background-color: #1e293b !important;
+}
+
+/* Dark Mode cho Thẻ Tóm tắt ngập & Thẻ kết quả lộ trình trong Sidebar */
+body.dark-mode #flood-summary-card h3,
+body.dark-mode #route-results h3 {
+  color: #f1f5f9 !important;
+}
+body.dark-mode #summary-loading-view {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode #summary-content-view .bg-slate-50 {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode #summary-content-view .bg-cyan-50\/70 {
+  background-color: rgba(8, 51, 68, 0.4) !important;
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  color: #a5f3fc !important;
+}
+body.dark-mode #card-safe-route {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(15, 118, 110, 0.3)) !important;
+  border-color: #059669 !important;
+}
+body.dark-mode #card-safe-route span.text-slate-900 {
+  color: #ffffff !important;
+}
+body.dark-mode #card-safe-route span.text-slate-500 {
+  color: #94a3b8 !important;
+}
+body.dark-mode #card-fastest-route {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+body.dark-mode #card-fastest-route span.text-slate-900 {
+  color: #ffffff !important;
+}
+body.dark-mode #card-fastest-route span.text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* ========================================================
+   Custom Popup Styling cho FloodNav (FE-Popup)
+   ======================================================== */
+.flood-custom-popup .leaflet-popup-content-wrapper {
+  padding: 2px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.22), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+.flood-custom-popup .leaflet-popup-content {
+  margin: 6px 8px;
+  line-height: 1.35;
+}
+.flood-custom-popup .leaflet-popup-tip {
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.15);
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark mode cho Popup điểm ngập */
+body.dark-mode .flood-custom-popup .leaflet-popup-content-wrapper {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+body.dark-mode .flood-custom-popup .leaflet-popup-tip {
+  background-color: #0f172a !important;
+}
+body.dark-mode .flood-custom-popup h4 {
+  color: #f8fafc !important;
+}
+body.dark-mode .flood-custom-popup .bg-slate-50,
+body.dark-mode .flood-custom-popup .bg-slate-50\/90,
+body.dark-mode .flood-custom-popup .bg-slate-50\/80 {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .flood-custom-popup .bg-white,
+body.dark-mode .flood-custom-popup .bg-white\/90,
+body.dark-mode .flood-custom-popup .bg-white\/95 {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .flood-custom-popup .border-slate-100,
+body.dark-mode .flood-custom-popup .border-slate-200,
+body.dark-mode .flood-custom-popup .border-slate-200\/70,
+body.dark-mode .flood-custom-popup .border-slate-200\/80 {
+  border-color: #334155 !important;
+}
+body.dark-mode .flood-custom-popup .text-slate-900,
+body.dark-mode .flood-custom-popup .text-slate-800,
+body.dark-mode .flood-custom-popup .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+body.dark-mode .flood-custom-popup .text-slate-600,
+body.dark-mode .flood-custom-popup .text-slate-500 {
+  color: #94a3b8 !important;
+}
+body.dark-mode .flood-custom-popup .bg-indigo-50\/70,
+body.dark-mode .flood-custom-popup .bg-indigo-50\/60 {
+  background-color: rgba(49, 46, 129, 0.35) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+body.dark-mode .flood-custom-popup .text-indigo-900 {
+  color: #c7d2fe !important;
+}
+body.dark-mode .flood-custom-popup .text-indigo-600 {
+  color: #818cf8 !important;
+}
+
+
