@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
   './js/vehicle_sim.js',
   './js/voice_warning.js',
   './js/rescue_manager.js',
+  './js/demo_suite.js',
   './manifest.json'
 ];
 
