@@ -33,8 +33,8 @@ const AIAssistant = (function () {
     const dotEl = document.getElementById('ai-provider-dot');
     if (!labelEl || !dotEl) return;
 
-    if (data.status === 'online' && data.active_provider.includes('groq')) {
-      labelEl.textContent = '⚡ Groq LLaMA 3.3';
+    if (data.status === 'online') {
+      labelEl.textContent = '⚡ Groq AI (Online)';
       dotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
     } else if (data.status === 'offline_fallback' || data.active_provider.includes('mock')) {
       labelEl.textContent = '🛡️ Ngoại tuyến';
