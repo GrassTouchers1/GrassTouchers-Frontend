@@ -1,4 +1,47 @@
 /* ========================================================
+   Font chữ Tiêu chuẩn Quốc gia cho Tiếng Việt (Be Vietnam Pro & Inter)
+   Đảm bảo toàn bộ chữ tiếng Việt hiển thị tròn trịa, sắc nét, chuẩn thiết kế
+   ======================================================== */
+:root {
+  --font-main: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html, body, button, input, select, textarea, .font-sans {
+  font-family: var(--font-main) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ép font chữ cao cấp cho tất cả thành phần Leaflet Maps & Popups */
+.leaflet-container,
+.leaflet-popup,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-content,
+.leaflet-tooltip,
+.leaflet-control {
+  font-family: var(--font-main) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.leaflet-popup-content {
+  font-family: var(--font-main) !important;
+  line-height: 1.45;
+}
+
+.leaflet-popup-content h1,
+.leaflet-popup-content h2,
+.leaflet-popup-content h3,
+.leaflet-popup-content h4,
+.leaflet-popup-content h5,
+.leaflet-popup-content h6 {
+  font-family: var(--font-main) !important;
+  letter-spacing: -0.015em;
+  font-weight: 800;
+}
+
+/* ========================================================
    FloodNav - Custom Styles & Animations
    Phụ trách chính: Thành viên 1 & 2 (Frontend Collaboration)
    ======================================================== */

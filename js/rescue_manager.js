@@ -150,19 +150,39 @@ const NorthStarRescue = (function () {
 
       const marker = L.marker(latLng, { icon: customIcon });
 
+      const hazardLabels = {
+        flood: 'LŨ LỤT & NGẬP SÂU',
+        landslide: 'SẠT LỞ ĐẤT',
+        storm: 'BÃO & DÔNG LỐC',
+        surge: 'TRIỀU CƯỜNG'
+      };
+      const hazardName = hazardLabels[String(p.hazard_type).toLowerCase()] || String(p.hazard_type).toUpperCase();
+
+      let severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-extrabold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">CẢNH BÁO</span>';
+      if (p.severity === 'critical') {
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-rose-100 text-rose-800 border border-rose-300 uppercase tracking-wide animate-pulse">ĐẶC BIỆT NGUY CẤP</span>';
+      } else if (p.severity === 'high') {
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wide">RẤT NGUY HIỂM</span>';
+      }
+
       const popupHtml = `
-        <div class="p-2 max-w-xs text-slate-800">
-          <div class="flex items-center gap-1.5 font-bold text-xs uppercase" style="color: ${color}">
-            <span>⚠️ CẢNH BÁO: ${p.hazard_type.toUpperCase()}</span>
-            <span class="text-[10px] px-1 py-0.2 rounded bg-slate-100 text-slate-700">${p.severity}</span>
+        <div class="p-2.5 max-w-[310px] text-slate-800 dark:text-slate-100 font-sans">
+          <div class="flex items-center justify-between gap-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+            <span class="font-extrabold text-xs uppercase tracking-tight flex items-center gap-1" style="color: ${color}">
+              <span>⚠️ CẢNH BÁO: ${hazardName}</span>
+            </span>
+            ${severityBadge}
           </div>
-          <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.title}</h4>
-          <p class="text-xs text-slate-600 mt-1">${p.description || 'Khu vực nguy cơ cao, hạn chế di chuyển qua lại.'}</p>
-          <div class="text-[10px] text-slate-400 mt-2">Bán kính ảnh hưởng: ~${radius}m</div>
+          <h4 class="font-black text-[14.5px] text-slate-900 dark:text-white mt-2 leading-snug tracking-tight">${p.title}</h4>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed font-normal">${p.description || 'Khu vực nguy cơ cao, hạn chế di chuyển qua lại.'}</p>
+          <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            <span class="flex items-center gap-1">📡 Bán kính ảnh hưởng:</span>
+            <b class="text-slate-700 dark:text-slate-200 font-bold font-mono">~${radius}m</b>
+          </div>
         </div>
       `;
-      circle.bindPopup(popupHtml);
-      marker.bindPopup(popupHtml);
+      circle.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280 });
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280 });
 
       disasterLayerGroup.addLayer(circle);
       disasterLayerGroup.addLayer(marker);
@@ -263,12 +283,12 @@ const NorthStarRescue = (function () {
             ${p.contact_phone ? `<div class="text-[11px] text-slate-700"><b>Hotline:</b> <a href="tel:${p.contact_phone}" class="text-blue-600 font-bold hover:underline">${p.contact_phone}</a></div>` : ''}
           </div>
 
-          <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="w-full mt-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition flex items-center justify-center gap-1.5">
+          <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="w-full mt-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
             <span>Dẫn đường sơ tán tới đây</span>
           </button>
         </div>
       `;
-      marker.bindPopup(popupHtml);
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280 });
       shelterLayerGroup.addLayer(marker);
     });
   }
@@ -388,7 +408,7 @@ const NorthStarRescue = (function () {
           </div>
         </div>
       `;
-      marker.bindPopup(popupHtml);
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280 });
       sosLayerGroup.addLayer(marker);
     });
   }
