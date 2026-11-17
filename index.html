@@ -1759,6 +1759,12 @@
     </div>
   </div>
 
+  <!-- Banner hướng dẫn chấm vị trí trên bản đồ cho Voice SOS -->
+  <div id="voice-sos-map-picker-banner" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-[1300] bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-2xl font-bold text-xs flex items-center gap-2 border-2 border-white animate-bounce cursor-pointer">
+    <span>🎯 Hãy nhấp chuột vào vị trí bất kỳ trên bản đồ để ghim điểm cứu hộ!</span>
+    <button type="button" onclick="VoiceSOSManager.cancelMapPick()" class="ml-2 px-2 py-0.5 bg-black/40 hover:bg-black/60 rounded text-[11px] cursor-pointer">Hủy</button>
+  </div>
+
   <!-- ========================================================
        MODAL CẤP CỨU BẰNG GIỌNG NÓI (AI VOICE EMERGENCY SOS)
        ======================================================== -->
@@ -1840,6 +1846,41 @@
             <div>
               <label class="text-[10.5px] font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Người liên hệ:</label>
               <input type="text" id="voice-sos-contact-name" value="Nạn nhân Voice SOS" placeholder="Họ và tên..." class="w-full py-1.5 px-2.5 text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-1 focus:ring-rose-500 outline-none">
+            </div>
+          </div>
+
+          <!-- KHUNG XÁC NHẬN VỊ TRÍ GẶP NẠN (Tránh gửi sai vị trí) -->
+          <div class="w-full text-left space-y-1.5 p-3 rounded-2xl bg-rose-50/70 dark:bg-slate-800/80 border border-rose-200 dark:border-rose-900/60 shadow-sm">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-600"></i>
+                <span>Vị trí ghim cứu hộ trên bản đồ:</span>
+              </label>
+              <span id="voice-sos-loc-tag" class="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 font-bold border border-rose-300">
+                Định vị tự động
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <input type="text" id="voice-sos-location-display" readonly
+                class="flex-1 py-2 px-2.5 text-xs font-mono font-bold bg-white dark:bg-slate-900 text-slate-800 dark:text-cyan-300 rounded-xl border border-slate-300 dark:border-slate-700 outline-none select-all"
+                value="Đang xác định tọa độ...">
+              <button type="button" onclick="VoiceSOSManager.pickLocationOnMap()"
+                class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap shadow-sm hover:shadow"
+                title="Bấm vào bản đồ để chọn chính xác vị trí nhà bạn">
+                <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                <span>Chấm bản đồ</span>
+              </button>
+            </div>
+
+            <!-- Các nút chọn nhanh điểm thiên tai nóng -->
+            <div class="flex flex-wrap items-center gap-1 pt-0.5">
+              <span class="text-[10px] text-slate-400 font-medium">Chọn nhanh:</span>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('map_center')" class="px-2 py-0.5 text-[10.5px] bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer">🎯 Tâm bản đồ</button>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('thai_nguyen')" class="px-2 py-0.5 text-[10.5px] bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer">📍 Thái Nguyên</button>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('lang_nu')" class="px-2 py-0.5 text-[10.5px] bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer">📍 Làng Nủ</button>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('cau_giay')" class="px-2 py-0.5 text-[10.5px] bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer">📍 Cầu Giấy</button>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('device_gps')" class="px-2 py-0.5 text-[10.5px] bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer">📡 GPS Máy</button>
             </div>
           </div>
         </div>

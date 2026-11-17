@@ -5,9 +5,10 @@
  * 1. Thu âm qua MediaRecorder + SpeechRecognition thời gian thực
  * 2. Hiển thị văn bản nhận diện được vào ô nhập liệu có thể chỉnh sửa
  * 3. Chuyển âm thanh sang văn bản qua Groq Whisper LPU (~0.3s)
- * 4. Người dùng có quyền xem, sửa từ ngữ, số người, địa chỉ trước khi gửi
- * 5. Bóc tách thực thể khẩn cấp và tự động ghim Beacon SOS lên bản đồ tác chiến
- * 6. Phản hồi giọng nói trấn an nạn nhân qua Web Speech Synthesis
+ * 4. Tự động nhận diện địa danh từ lời nói và nắn chỉnh tọa độ chính xác
+ * 5. Cho phép nạn nhân tự do chọn/chấm vị trí chính xác trên bản đồ
+ * 6. Bóc tách thực thể khẩn cấp và ghim Beacon SOS chuẩn xác lên bản đồ tác chiến
+ * 7. Phản hồi giọng nói tiếng Việt qua Web Speech Synthesis
  * 
  * Giấy phép: Apache-2.0 License (100% Mã nguồn mở)
  * ===================================================================
@@ -20,6 +21,33 @@ const VoiceSOSManager = (function () {
   let isRecording = false;
   let currentTranscript = '';
   let recordingStartTime = 0;
+
+  // Tọa độ vị trí cứu hộ đã chọn
+  let selectedLat = 21.0285;
+  let selectedLng = 105.8542;
+  let selectedLocLabel = 'Tâm bản đồ';
+  let isMapPicking = false;
+  let tempSOSMarker = null;
+
+  // Bản đồ địa danh cứu nạn khẩn cấp tại Việt Nam
+  const VIETNAM_GEO_LOOKUP = [
+    { keys: ['thái nguyên', 'thai nguyen', 'hoàng văn thụ', 'quang vinh', 'chùa hang', 'gia bẩy', 'sông cầu'], lat: 21.5928, lng: 105.8442, name: 'TP. Thái Nguyên' },
+    { keys: ['làng nủ', 'lang nu', 'bảo yên', 'bao yen', 'phố ràng'], lat: 22.3167, lng: 104.3833, name: 'Thôn Làng Nủ, Bảo Yên, Lào Cai' },
+    { keys: ['lào cai', 'lao cai'], lat: 22.4856, lng: 103.9707, name: 'TP. Lào Cai' },
+    { keys: ['yên bái', 'yen bai', 'hồng hà', 'sông thao'], lat: 21.7167, lng: 104.8833, name: 'TP. Yên Bái' },
+    { keys: ['cầu giấy', 'cau giay', 'hoa bằng', 'yên hòa'], lat: 21.0370, lng: 105.7800, name: 'Quận Cầu Giấy, Hà Nội' },
+    { keys: ['chương mỹ', 'chuong my', 'nam phương tiến', 'sông bùi'], lat: 20.8920, lng: 105.6580, name: 'Huyện Chương Mỹ, Hà Nội' },
+    { keys: ['nam từ liêm'], lat: 21.0120, lng: 105.7650, name: 'Quận Nam Từ Liêm, Hà Nội' },
+    { keys: ['ba đình', 'ba dinh'], lat: 21.0340, lng: 105.8250, name: 'Quận Ba Đình, Hà Nội' },
+    { keys: ['đống đa', 'dong da'], lat: 21.0180, lng: 105.8280, name: 'Quận Đống Đa, Hà Nội' },
+    { keys: ['hoàn kiếm', 'hoan kiem'], lat: 21.0285, lng: 105.8542, name: 'Quận Hoàn Kiếm, Hà Nội' },
+    { keys: ['phong châu', 'phú thọ', 'tam nông'], lat: 21.3117, lng: 105.2890, name: 'Cầu Phong Châu, Phú Thọ' },
+    { keys: ['tuyên quang'], lat: 21.8200, lng: 105.2200, name: 'TP. Tuyên Quang' },
+    { keys: ['hạ long', 'quảng ninh'], lat: 20.9500, lng: 107.0800, name: 'TP. Hạ Long, Quảng Ninh' },
+    { keys: ['cát hải', 'hải phòng'], lat: 20.8000, lng: 106.9100, name: 'Huyện Cát Hải, Hải Phòng' },
+    { keys: ['hiệp hòa', 'bắc giang'], lat: 21.3200, lng: 106.0500, name: 'Huyện Hiệp Hòa, Bắc Giang' },
+    { keys: ['nguyên bình', 'cao bằng'], lat: 22.6100, lng: 105.9700, name: 'Huyện Nguyên Bình, Cao Bằng' }
+  ];
 
   // Khởi tạo nhận diện giọng nói Web Speech API (Client-side real-time stream)
   function initSpeechRecognition() {
@@ -41,6 +69,7 @@ const VoiceSOSManager = (function () {
         }
         const fullText = (currentTranscript + interimTranscript).trim();
         updateTextInput(fullText);
+        detectLocationFromText(fullText);
       };
 
       speechRecognizer.onerror = (event) => {
@@ -54,11 +83,13 @@ const VoiceSOSManager = (function () {
     if (!modal) return;
     modal.classList.remove('hidden');
     resetState();
+    initLocation();
     if (window.lucide) lucide.createIcons();
   }
 
   function closeModal() {
     stopRecording(false);
+    cancelMapPick();
     const modal = document.getElementById('voice-sos-modal');
     if (modal) modal.classList.add('hidden');
   }
@@ -71,6 +102,186 @@ const VoiceSOSManager = (function () {
     if (inputEl) inputEl.value = '';
     onTextInputChange();
     setUIState('idle');
+  }
+
+  /**
+   * Khởi tạo tọa độ cứu hộ ban đầu dựa theo vị trí người dùng trên bản đồ:
+   * 1. Ưu tiên điểm bắt đầu người dùng đã ghim (coords.origin)
+   * 2. Nếu không có, lấy tâm bản đồ đang xem
+   */
+  function initLocation() {
+    let lat = null;
+    let lng = null;
+    let label = 'Tâm bản đồ';
+
+    if (window.coords && window.coords.origin) {
+      const o = window.coords.origin;
+      const oLat = o.lat !== undefined ? o.lat : (Array.isArray(o) ? o[0] : null);
+      const oLng = o.lng !== undefined ? o.lng : (Array.isArray(o) ? o[1] : null);
+      if (oLat && oLng) {
+        lat = parseFloat(oLat);
+        lng = parseFloat(oLng);
+        label = 'Điểm đã ghim';
+      }
+    }
+
+    if ((!lat || !lng) && window.map) {
+      const c = window.map.getCenter();
+      lat = c.lat;
+      lng = c.lng;
+      label = 'Tâm bản đồ';
+    }
+
+    if (!lat || !lng) {
+      lat = 21.0285;
+      lng = 105.8542;
+      label = 'Mặc định';
+    }
+
+    selectedLat = lat;
+    selectedLng = lng;
+    selectedLocLabel = label;
+    updateLocationDisplay();
+  }
+
+  function updateLocationDisplay() {
+    const input = document.getElementById('voice-sos-location-display');
+    const tag = document.getElementById('voice-sos-loc-tag');
+    if (input) {
+      input.value = `${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)} (${selectedLocLabel})`;
+    }
+    if (tag) {
+      tag.innerText = selectedLocLabel;
+    }
+  }
+
+  /**
+   * Bóc tách địa danh cứu nạn trực tiếp từ văn bản lời nói:
+   * Ví dụ: "Tôi ở số 15 Hoàng Văn Thụ Thái Nguyên..." -> Nhận diện Thái Nguyên
+   */
+  function detectLocationFromText(text) {
+    if (!text) return;
+    const lower = text.toLowerCase();
+    for (const item of VIETNAM_GEO_LOOKUP) {
+      if (item.keys.some(k => lower.includes(k))) {
+        selectedLat = item.lat;
+        selectedLng = item.lng;
+        selectedLocLabel = item.name;
+        updateLocationDisplay();
+        const tag = document.getElementById('voice-sos-loc-tag');
+        if (tag) {
+          tag.innerText = `✓ Nhận diện: ${item.name}`;
+          tag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 font-bold border border-emerald-300 animate-pulse';
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Cho phép nạn nhân trực tiếp bấm chấm vị trí trên bản đồ Leaflet
+   */
+  function pickLocationOnMap() {
+    const modal = document.getElementById('voice-sos-modal');
+    const banner = document.getElementById('voice-sos-map-picker-banner');
+    if (!window.map) {
+      alert('Bản đồ chưa sẵn sàng.');
+      return;
+    }
+
+    isMapPicking = true;
+    if (modal) modal.classList.add('hidden');
+    if (banner) banner.classList.remove('hidden');
+
+    window.map.getContainer().style.cursor = 'crosshair';
+
+    // Đăng ký sự kiện nhấp chuột 1 lần trên Leaflet map
+    window.map.once('click', handleMapClickPick);
+  }
+
+  function handleMapClickPick(e) {
+    if (!isMapPicking) return;
+    selectedLat = e.latlng.lat;
+    selectedLng = e.latlng.lng;
+    selectedLocLabel = 'Điểm chấm trên bản đồ';
+
+    // Ghim marker tạm thời để nạn nhân thấy rõ
+    if (tempSOSMarker && window.map) {
+      window.map.removeLayer(tempSOSMarker);
+    }
+    if (window.L && window.map) {
+      tempSOSMarker = L.circleMarker([selectedLat, selectedLng], {
+        radius: 12,
+        color: '#e11d48',
+        fillColor: '#f43f5e',
+        fillOpacity: 0.9,
+        weight: 3
+      }).addTo(window.map);
+    }
+
+    finishMapPick();
+  }
+
+  function finishMapPick() {
+    isMapPicking = false;
+    if (window.map) {
+      window.map.getContainer().style.cursor = '';
+    }
+    const banner = document.getElementById('voice-sos-map-picker-banner');
+    const modal = document.getElementById('voice-sos-modal');
+    if (banner) banner.classList.add('hidden');
+    if (modal) modal.classList.remove('hidden');
+    updateLocationDisplay();
+  }
+
+  function cancelMapPick() {
+    if (!isMapPicking) return;
+    isMapPicking = false;
+    if (window.map) {
+      window.map.getContainer().style.cursor = '';
+      window.map.off('click', handleMapClickPick);
+    }
+    const banner = document.getElementById('voice-sos-map-picker-banner');
+    const modal = document.getElementById('voice-sos-modal');
+    if (banner) banner.classList.add('hidden');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function setLocationPreset(presetKey) {
+    if (presetKey === 'map_center' && window.map) {
+      const c = window.map.getCenter();
+      selectedLat = c.lat;
+      selectedLng = c.lng;
+      selectedLocLabel = 'Tâm bản đồ';
+    } else if (presetKey === 'thai_nguyen') {
+      selectedLat = 21.5928;
+      selectedLng = 105.8442;
+      selectedLocLabel = 'TP. Thái Nguyên';
+    } else if (presetKey === 'lang_nu') {
+      selectedLat = 22.3167;
+      selectedLng = 104.3833;
+      selectedLocLabel = 'Thôn Làng Nủ, Lào Cai';
+    } else if (presetKey === 'cau_giay') {
+      selectedLat = 21.0370;
+      selectedLng = 105.7800;
+      selectedLocLabel = 'Quận Cầu Giấy, Hà Nội';
+    } else if (presetKey === 'device_gps') {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            selectedLat = pos.coords.latitude;
+            selectedLng = pos.coords.longitude;
+            selectedLocLabel = 'GPS Thiết bị';
+            updateLocationDisplay();
+          },
+          (err) => {
+            alert('Không thể lấy GPS từ thiết bị. Đang sử dụng tọa độ bản đồ.');
+          },
+          { timeout: 4000, enableHighAccuracy: true }
+        );
+      }
+    }
+    updateLocationDisplay();
   }
 
   function updateTextInput(text) {
@@ -98,6 +309,9 @@ const VoiceSOSManager = (function () {
         clearBtn.classList.add('hidden');
       }
     }
+
+    // Nhận diện địa danh ngay khi người dùng gõ
+    detectLocationFromText(inputEl.value);
   }
 
   function clearText() {
@@ -149,11 +363,11 @@ const VoiceSOSManager = (function () {
       if (resultBox) resultBox.classList.add('hidden');
     } else if (state === 'transcribing') {
       micBtn.className = 'w-20 h-20 rounded-full bg-indigo-600 text-white flex flex-col items-center justify-center shadow-lg opacity-90 cursor-wait';
-      statusText.innerHTML = '<span class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 justify-center"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Đang nhận diện qua Groq Whisper...</span><span class="text-xs text-slate-500 block mt-0.5">Đang nạp văn bản vào ô chỉnh sửa</span>';
+      statusText.innerHTML = '<span class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 justify-center"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Đang nhận diện qua Groq Whisper...</span><span class="text-xs text-slate-500 block mt-0.5">Đang nạp văn bản & định vị địa danh</span>';
       if (waveEl) waveEl.classList.add('hidden');
     } else if (state === 'review') {
       micBtn.className = 'w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex flex-col items-center justify-center shadow-md cursor-pointer transition';
-      statusText.innerHTML = '<span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1"><span>✏️</span> Vui lòng kiểm tra lại nội dung</span><span class="text-xs text-slate-500 block mt-0.5">Bạn có thể sửa chữ bên dưới rồi bấm <b>Gửi Cứu Hộ</b></span>';
+      statusText.innerHTML = '<span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1"><span>✏️</span> Vui lòng kiểm tra lại nội dung & vị trí</span><span class="text-xs text-slate-500 block mt-0.5">Kiểm tra tọa độ bên dưới rồi bấm <b>Gửi Cứu Hộ</b></span>';
       if (waveEl) waveEl.classList.add('hidden');
       if (resultBox) resultBox.classList.add('hidden');
       if (submitBtn) {
@@ -167,7 +381,7 @@ const VoiceSOSManager = (function () {
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-60', 'cursor-wait');
       }
-      statusText.innerHTML = '<span class="font-bold text-blue-600 dark:text-cyan-400 flex items-center justify-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span> Đang gửi lệnh cứu hộ tới Ban Chỉ huy...</span>';
+      statusText.innerHTML = '<span class="font-bold text-blue-600 dark:text-cyan-400 flex items-center justify-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span> Đang truyền tin cứu hộ tới Ban Chỉ huy...</span>';
     } else if (state === 'success') {
       micBtn.className = 'w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-4 border-emerald-200';
       statusText.innerHTML = '<span class="font-black text-emerald-600">✓ ĐÃ TIẾP NHẬN TÍN HIỆU CỨU HỘ!</span>';
@@ -197,7 +411,6 @@ const VoiceSOSManager = (function () {
       audioChunks = [];
       recordingStartTime = Date.now();
 
-      // Sử dụng WebM hoặc MP4 container tùy hỗ trợ của trình duyệt
       const options = { mimeType: 'audio/webm' };
       if (!MediaRecorder.isTypeSupported('audio/webm')) {
         options.mimeType = 'audio/mp4';
@@ -215,7 +428,6 @@ const VoiceSOSManager = (function () {
       mediaRecorder.start(250);
       isRecording = true;
 
-      // Khởi động nhận diện giọng nói trình duyệt Web Speech song song
       if (speechRecognizer) {
         try { speechRecognizer.start(); } catch (e) {}
       }
@@ -223,7 +435,7 @@ const VoiceSOSManager = (function () {
       setUIState('recording');
     } catch (err) {
       console.error('[VoiceSOS] Lỗi mở microphone:', err);
-      alert('Không thể mở Microphone. Vui lòng kiểm tra quyền truy cập của trình duyệt hoặc bạn có thể tự tay gõ lời kêu cứu vào ô bên dưới!');
+      alert('Không thể mở Microphone. Vui lòng cho phép quyền truy cập hoặc bạn có thể tự tay gõ lời kêu cứu vào ô bên dưới!');
     }
   }
 
@@ -246,15 +458,14 @@ const VoiceSOSManager = (function () {
 
     setUIState('transcribing');
 
-    // Chờ 300ms gom đủ chunk âm thanh cuối cùng
     setTimeout(async () => {
       await fetchAudioTranscription();
       setUIState('review');
 
-      // Tự động focus vào ô văn bản để người dùng nhận biết rõ ràng họ có thể sửa
       const inputEl = document.getElementById('voice-sos-text-input');
       if (inputEl) {
         inputEl.focus();
+        detectLocationFromText(inputEl.value);
       }
     }, 350);
   }
@@ -278,11 +489,11 @@ const VoiceSOSManager = (function () {
         if (data.status === 'success' && data.transcript && data.transcript.trim().length > 0) {
           currentTranscript = data.transcript.trim();
           updateTextInput(currentTranscript);
+          detectLocationFromText(currentTranscript);
         }
       }
     } catch (err) {
       console.warn('[VoiceSOS] Whisper cloud transcription warning:', err);
-      // Giữ nguyên transcript từ Web Speech API nếu Whisper không phản hồi
     }
   }
 
@@ -292,8 +503,7 @@ const VoiceSOSManager = (function () {
   }
 
   /**
-   * Bước quan trọng: Người dùng đã xem xét nội dung (đã sửa hoặc đồng ý)
-   * và bấm nút "XÁC NHẬN & GỬI CỨU HỘ NGAY".
+   * Phát tín hiệu cứu hộ SOS chính xác tuyệt đối theo vị trí đã xác nhận
    */
   async function confirmAndSend() {
     const inputEl = document.getElementById('voice-sos-text-input');
@@ -305,33 +515,13 @@ const VoiceSOSManager = (function () {
       return;
     }
 
+    // Kiểm tra và bảo đảm tọa độ hợp lệ
+    if (!selectedLat || !selectedLng || isNaN(selectedLat) || isNaN(selectedLng)) {
+      initLocation();
+    }
+
     setUIState('dispatching');
-
-    // Lấy tọa độ GPS thiết bị hoặc tâm bản đồ
-    let userLat = 21.0285;
-    let userLng = 105.8542;
-
-    if (window.map) {
-      const center = window.map.getCenter();
-      userLat = center.lat;
-      userLng = center.lng;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          userLat = pos.coords.latitude;
-          userLng = pos.coords.longitude;
-          dispatchValidatedSOS(textToSend, userLat, userLng);
-        },
-        () => {
-          dispatchValidatedSOS(textToSend, userLat, userLng);
-        },
-        { timeout: 3000, enableHighAccuracy: true }
-      );
-    } else {
-      dispatchValidatedSOS(textToSend, userLat, userLng);
-    }
+    dispatchValidatedSOS(textToSend, selectedLat, selectedLng);
   }
 
   async function dispatchValidatedSOS(text, lat, lng) {
@@ -360,7 +550,9 @@ const VoiceSOSManager = (function () {
 
       const data = await res.json();
       if (data && data.status === 'success') {
-        renderSuccessResult(data, lat, lng);
+        const finalLat = data.resolved_lat || lat;
+        const finalLng = data.resolved_lng || lng;
+        renderSuccessResult(data, finalLat, finalLng);
       } else {
         throw new Error(data ? data.message : 'Lỗi phân tích cứu nạn');
       }
@@ -374,8 +566,15 @@ const VoiceSOSManager = (function () {
   function renderSuccessResult(data, lat, lng) {
     setUIState('success');
 
+    // Xóa marker tạm nếu có
+    if (tempSOSMarker && window.map) {
+      window.map.removeLayer(tempSOSMarker);
+      tempSOSMarker = null;
+    }
+
     const cls = data.classification || {};
     const prioColor = cls.urgency === 'critical' ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-200' : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200';
+    const locTag = data.location_label ? `<span class="text-rose-600 font-bold">(${data.location_label})</span>` : '';
 
     const resultBox = document.getElementById('voice-sos-result');
     if (resultBox) {
@@ -401,7 +600,7 @@ const VoiceSOSManager = (function () {
           </div>
 
           <div class="pt-1.5 border-t border-rose-200/60 dark:border-slate-700 flex items-center justify-between text-[10.5px] text-slate-500">
-            <span>Đã ghim mốc GPS: <b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b></span>
+            <span>Tọa độ đã ghim: <b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b> ${locTag}</span>
             <span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <span>✓ Đã truyền tin tới 114</span>
             </span>
@@ -415,7 +614,7 @@ const VoiceSOSManager = (function () {
       window.NorthStarRescue.loadSOSBeacons();
     }
 
-    // Tự động bay camera tới điểm SOS vừa tạo
+    // Tự động bay camera tới điểm SOS vừa tạo với zoom rõ ràng
     if (window.map) {
       window.map.flyTo([lat, lng], 16, { duration: 1.5 });
     }
@@ -441,6 +640,12 @@ const VoiceSOSManager = (function () {
     clearText,
     appendQuickTag,
     onTextInputChange,
+    initLocation,
+    updateLocationDisplay,
+    detectLocationFromText,
+    pickLocationOnMap,
+    cancelMapPick,
+    setLocationPreset,
     confirmAndSend
   };
 })();
