@@ -1531,12 +1531,38 @@ function toggleMobilePanel(show) {
 
 
   setTimeout(() => {
-
     if (window.map) map.invalidateSize();
-
   }, 320);
-
 }
+
+// 5b. Thu gọn / Mở rộng Sidebar trên Desktop & Mobile
+function toggleSidebarCollapse() {
+  const panel = document.getElementById('sidebar-panel');
+  const icon = document.getElementById('sidebar-collapse-icon');
+  if (!panel) return;
+
+  if (window.innerWidth < 640) {
+    const isClosed = panel.classList.contains('translate-y-full');
+    toggleMobilePanel(isClosed);
+    return;
+  }
+
+  const isCollapsed = panel.classList.contains('sm:-ml-[420px]');
+  if (isCollapsed) {
+    panel.classList.remove('sm:-ml-[420px]');
+    if (icon) icon.setAttribute('data-lucide', 'chevron-left');
+  } else {
+    panel.classList.add('sm:-ml-[420px]');
+    if (icon) icon.setAttribute('data-lucide', 'chevron-right');
+  }
+
+  if (window.lucide) lucide.createIcons();
+
+  setTimeout(() => {
+    if (window.map) window.map.invalidateSize();
+  }, 320);
+}
+window.toggleSidebarCollapse = toggleSidebarCollapse;
 
 
 
@@ -2374,6 +2400,17 @@ function switchTab(tabId) {
     NorthStarRescue.loadShelters();
     NorthStarRescue.loadDisasters();
     NorthStarRescue.loadSOSBeacons();
+  }
+
+  // Tự động mở lại sidebar nếu đang thu gọn trên desktop
+  const panel = document.getElementById('sidebar-panel');
+  if (panel && panel.classList.contains('sm:-ml-[420px]')) {
+    panel.classList.remove('sm:-ml-[420px]');
+    const icon = document.getElementById('sidebar-collapse-icon');
+    if (icon) icon.setAttribute('data-lucide', 'chevron-left');
+    setTimeout(() => {
+      if (window.map) window.map.invalidateSize();
+    }, 320);
   }
 
   // Trên thiết bị di động, tự động mở sidebar khi người dùng chuyển tab

@@ -219,82 +219,60 @@
 
 
     <!-- Left Sidebar Control Panel (Thành viên 1) -->
+    <aside id="sidebar-panel" class="fixed inset-x-0 bottom-0 top-[58px] sm:top-0 sm:relative sm:inset-auto w-full sm:w-[420px] bg-white shadow-2xl z-30 flex flex-col h-[calc(100vh-58px)] sm:h-full border-r border-slate-200 rounded-t-2xl sm:rounded-none transition-all duration-300 translate-y-0">
 
-    <aside id="sidebar-panel" class="fixed inset-x-0 bottom-0 top-[58px] sm:top-0 sm:relative sm:inset-auto w-full sm:w-[420px] bg-white shadow-2xl z-30 flex flex-col h-[calc(100vh-58px)] sm:h-full border-r border-slate-200 rounded-t-2xl sm:rounded-none transition-transform duration-300 translate-y-0">
-
-      
+      <!-- Nút Thu gọn / Mở rộng Sidebar Desktop (Google Maps style) -->
+      <button type="button" id="btn-toggle-sidebar" onclick="toggleSidebarCollapse()" title="Thu gọn / Mở rộng bảng điều khiển"
+              class="hidden sm:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-50 w-7 h-14 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 rounded-r-xl border border-l-0 border-slate-300 shadow-xl items-center justify-center cursor-pointer transition-all hover:w-8 group">
+        <i id="sidebar-collapse-icon" data-lucide="chevron-left" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110"></i>
+      </button>
 
       <!-- Mobile Bar: Drag indicator & Thu gọn xem bản đồ (sm:hidden) -->
-
       <div class="sm:hidden flex items-center justify-between px-4 py-2 bg-slate-100 border-b border-slate-200 rounded-t-2xl flex-shrink-0">
-
         <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5" id="mobile-sidebar-title">
-
           <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-blue-600"></i> Bảng điều khiển tìm đường
-
         </span>
-
         <button type="button" onclick="toggleMobilePanel(false)" class="flex items-center gap-1 text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 active:scale-95 shadow-sm transition">
-
           <i data-lucide="map" class="w-3.5 h-3.5"></i>
-
           <span>Xem bản đồ</span>
-
         </button>
-
       </div>
 
-      
-
       <!-- Tabs Navigation -->
-
       <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
-
         <button onclick="switchTab('route')" id="tab-btn-route" class="flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold">
-
           <i data-lucide="navigation" class="w-4 h-4"></i>
-
           <span>Tìm đường</span>
-
         </button>
-
         <button onclick="switchTab('points')" id="tab-btn-points" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
-
           <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-
           <span>Điểm ngập (<span id="points-count">130</span>)</span>
-
         </button>
-
         <button onclick="switchTab('report')" id="tab-btn-report" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
           <i data-lucide="send" class="w-4 h-4"></i>
           <span>Báo ngập</span>
         </button>
-
         <button onclick="switchTab('rescue')" id="tab-btn-rescue" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
           <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
           <span>Cứu hộ SOS</span>
         </button>
-
+        <!-- Nút thu gọn nhanh trên thanh tab -->
+        <button type="button" onclick="toggleSidebarCollapse()" title="Thu gọn bảng điều khiển" class="hidden sm:flex px-2.5 py-3 text-slate-400 hover:text-slate-700 hover:bg-slate-100 border-l border-slate-200 transition items-center justify-center flex-shrink-0">
+          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+        </button>
       </div>
 
-
-
       <!-- Tab Contents Area -->
-
       <div class="flex-1 overflow-y-auto p-4 space-y-4">
 
-
-
         <!-- TAB 1: TÌM ĐƯỜNG TRÁNH NGẬP -->
-
         <div id="tab-route" class="space-y-4">
-
-          <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 flex items-start gap-2">
+          <div id="algo-info-card" class="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-800 flex items-start gap-2 relative transition-all">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600"></i>
-            <div class="leading-relaxed">
+            <div class="leading-relaxed flex-1 text-[11px]">
               Thuật toán <strong>A* (A-Star)</strong> tự động <strong>phạt chi phí</strong> đoạn ngập nhẹ (&ge; 5cm) và <strong>chặn hoàn toàn</strong> đoạn ngập vượt ngưỡng xe (Xe máy &ge; 20cm, Ô tô &ge; 30cm) để tìm lộ trình né ngập tối ưu.
             </div>
+            <button type="button" onclick="document.getElementById('algo-info-card').style.display='none'" title="Đóng thông báo này" class="text-blue-400 hover:text-blue-700 font-bold text-sm leading-none p-0.5">&times;</button>
           </div>
 
 
