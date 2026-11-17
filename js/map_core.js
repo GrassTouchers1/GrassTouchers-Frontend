@@ -582,13 +582,13 @@ function renderAiForecastHtml(pred, threshold_cm) {
     return `
       <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 text-[10px]">
         <div class="flex items-center justify-between text-slate-700 font-bold mb-1">
-          <span class="flex items-center gap-1">
+          <span class="flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             DỰ ĐOÁN NGẬP BẰNG AI
           </span>
-          <span class="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">Chưa có kết quả</span>
+          <span class="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">Đang chờ tính toán</span>
         </div>
-        <p class="text-[10px] text-slate-500 italic">Chưa có dữ liệu dự đoán</p>
+        <p class="text-[10px] text-slate-500 italic">Đang cập nhật mô hình hồi quy thủy văn...</p>
       </div>
     `;
   }
@@ -599,22 +599,22 @@ function renderAiForecastHtml(pred, threshold_cm) {
   const risk60 = getRiskBadge(f60.predicted_depth_cm, f60.risk_score, f60.exceeds_threshold);
 
   return `
-    <div class="bg-indigo-50/70 rounded-lg p-2 border border-indigo-100">
-      <div class="flex items-center justify-between pb-1.5 border-b border-indigo-100/80">
+    <div class="bg-indigo-50/70 rounded-lg p-2.5 border border-indigo-100">
+      <div class="flex items-center justify-between pb-1.5 border-b border-indigo-100">
         <div class="flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
           </svg>
-          <span class="text-[10px] font-bold text-indigo-900 tracking-wider uppercase">Dự đoán ngập bằng AI</span>
+          <span class="text-[10.5px] font-bold text-indigo-900 tracking-wider uppercase">Dự đoán ngập bằng AI</span>
         </div>
-        <span class="text-[9px] font-semibold text-indigo-600 bg-indigo-100/70 px-1.5 py-0.2 rounded border border-indigo-200">
+        <span class="text-[9.5px] font-semibold text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-full border border-indigo-200">
           Đã cập nhật
         </span>
       </div>
 
-      <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+      <div class="grid grid-cols-2 gap-2 mt-2">
         <!-- Cột 30 phút -->
-        <div class="bg-white/95 rounded p-1.5 border border-indigo-100/80 text-center shadow-2xs">
+        <div class="bg-white/95 rounded-lg p-2 border border-indigo-100 text-center shadow-xs">
           <span class="text-[10px] text-slate-500 font-medium block">Sau 30 phút</span>
           <div class="flex items-baseline justify-center gap-0.5 my-0.5">
             <span class="text-base font-black ${risk30.colorClass}">${f30.predicted_depth_cm}</span>
@@ -623,11 +623,11 @@ function renderAiForecastHtml(pred, threshold_cm) {
           <div class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold border ${risk30.badgeClass}">
             ${risk30.label}
           </div>
-          <div class="text-[9px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f30.risk_score).toFixed(2)}</div>
+          <div class="text-[9.5px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f30.risk_score).toFixed(2)}</div>
         </div>
 
         <!-- Cột 60 phút -->
-        <div class="bg-white/95 rounded p-1.5 border border-indigo-100/80 text-center shadow-2xs">
+        <div class="bg-white/95 rounded-lg p-2 border border-indigo-100 text-center shadow-xs">
           <span class="text-[10px] text-slate-500 font-medium block">Sau 60 phút</span>
           <div class="flex items-baseline justify-center gap-0.5 my-0.5">
             <span class="text-base font-black ${risk60.colorClass}">${f60.predicted_depth_cm}</span>
@@ -636,12 +636,12 @@ function renderAiForecastHtml(pred, threshold_cm) {
           <div class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold border ${risk60.badgeClass}">
             ${risk60.label}
           </div>
-          <div class="text-[9px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f60.risk_score).toFixed(2)}</div>
+          <div class="text-[9.5px] text-slate-400 mt-0.5">Chỉ số rủi ro: ${Number(f60.risk_score).toFixed(2)}</div>
         </div>
       </div>
 
-      <p class="text-[9px] text-indigo-600/80 mt-1.5 text-center leading-tight">
-        * Dự báo xu thế theo mô hình thủy văn & lượng mưa Open-Meteo
+      <p class="text-[9.5px] text-indigo-700/80 mt-1.5 text-center leading-normal break-words px-1">
+        * Dự báo xu thế theo mô hình thủy văn &amp; lượng mưa Open-Meteo
       </p>
     </div>
   `;
@@ -739,6 +739,8 @@ function renderDrainageForecastHtml(fp) {
   // Trích xuất xu hướng và thời gian nước rút từ API (hỗ trợ cả cấu trúc phẳng lẫn object lồng nhau)
   const trend = (fp && (fp.water_trend || (fp.drainage_forecast && fp.drainage_forecast.water_trend))) || null;
   const drainTime = (fp && (fp.estimated_drainage_time || (fp.drainage_forecast && fp.drainage_forecast.estimated_drainage_time))) || null;
+  const depth = (fp && (fp.depth_cm !== undefined && fp.depth_cm !== null ? Number(fp.depth_cm) : (fp.current_depth_cm !== undefined && fp.current_depth_cm !== null ? Number(fp.current_depth_cm) : null)));
+  const isCurrentlyFlooded = (depth !== null && depth >= 5);
 
   let trendLabel = 'Chưa xác định';
   let trendClass = 'text-slate-700';
@@ -758,48 +760,129 @@ function renderDrainageForecastHtml(fp) {
     trendDot = 'bg-emerald-500';
   }
 
-  const drainTimeDisplay = drainTime || 'Chưa đủ dữ liệu để dự đoán';
   const isSupported = Boolean(trend || drainTime);
+
+  // Nếu điểm không ngập và không có thời gian rút phức tạp -> hiển thị gọn 1 dòng thanh lịch
+  if (!isCurrentlyFlooded && (!drainTime || drainTime.includes('Không ngập') || drainTime.includes('Đã cạn') || !isSupported)) {
+    return `
+      <div class="bg-slate-50/80 rounded-lg px-2.5 py-1.5 border border-slate-200/80 flex items-center justify-between text-[11px]">
+        <div class="flex items-center gap-1.5 text-slate-600 font-medium">
+          <svg class="w-3.5 h-3.5 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
+          <span>Dự đoán nước rút:</span>
+        </div>
+        <span class="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+          ${drainTime || 'Đã cạn / Không ngập (< 5cm)'}
+        </span>
+      </div>
+    `;
+  }
+
+  // Trường hợp đang ngập hoặc có dự báo chi tiết -> hiển thị đầy đủ 2 cột
+  const drainTimeDisplay = drainTime || 'Đang phân tích...';
   const statusBadge = isSupported 
-    ? '<span class="text-[9px] font-semibold text-cyan-700 bg-cyan-100/70 px-1.5 py-0.2 rounded border border-cyan-200">Đã cập nhật</span>'
-    : '<span class="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">Chưa hỗ trợ API</span>';
+    ? '<span class="text-[9.5px] font-semibold text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-full border border-cyan-200">Đã cập nhật</span>'
+    : '<span class="text-[9.5px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">Chờ dữ liệu đo</span>';
 
   return `
-    <div class="bg-slate-50/90 rounded-lg p-2 border border-slate-200">
+    <div class="bg-slate-50/90 rounded-lg p-2.5 border border-slate-200">
       <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/70">
         <div class="flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
           </svg>
-          <span class="text-[10px] font-bold text-slate-800 tracking-wider uppercase">Dự đoán nước rút</span>
+          <span class="text-[10.5px] font-bold text-slate-800 tracking-wider uppercase">Dự đoán nước rút</span>
         </div>
         ${statusBadge}
       </div>
 
-      <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+      <div class="grid grid-cols-2 gap-2 mt-2">
         <!-- Xu hướng mực nước -->
-        <div class="bg-white rounded p-1.5 border border-slate-200/80 shadow-2xs">
+        <div class="bg-white rounded-lg p-2 border border-slate-200/80 shadow-xs">
           <span class="text-[10px] text-slate-500 font-medium block">Xu hướng mực nước</span>
           <div class="mt-1 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full ${trendDot} flex-shrink-0"></span>
             <span class="text-xs font-bold ${trendClass}">${trendLabel}</span>
           </div>
-          <p class="text-[9px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Dự báo theo mô hình AI' : 'Cần chuỗi đo lịch sử'}</p>
+          <p class="text-[9.5px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Dự báo theo mô hình AI' : 'Cần chuỗi đo lịch sử'}</p>
         </div>
 
         <!-- Thời gian nước rút dự kiến -->
-        <div class="bg-white rounded p-1.5 border border-slate-200/80 shadow-2xs">
+        <div class="bg-white rounded-lg p-2 border border-slate-200/80 shadow-xs">
           <span class="text-[10px] text-slate-500 font-medium block">Thời gian nước rút</span>
           <div class="mt-1">
-            <span class="text-[11px] font-bold ${drainTime ? 'text-cyan-700 font-mono' : 'text-slate-600'} block leading-tight">
+            <span class="text-[11px] font-bold ${drainTime ? 'text-cyan-700' : 'text-slate-600'} block leading-tight">
               ${drainTimeDisplay}
             </span>
           </div>
-          <p class="text-[9px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Về ngưỡng an toàn (< 5cm)' : 'Chưa có mô hình tính'}</p>
+          <p class="text-[9.5px] text-slate-400 mt-0.5 leading-tight">${isSupported ? 'Về ngưỡng an toàn (< 5cm)' : 'Chưa có mô hình tính'}</p>
         </div>
       </div>
     </div>
   `;
+}
+
+// Helper nhận diện địa bàn hiển thị chính xác (Hà Nội, các quận huyện, hoặc tỉnh thành miền Bắc)
+function getStationLocationDisplay(name, lat, lng) {
+  if (!name) return 'Hà Nội';
+
+  // Nhận diện theo từ khóa các tỉnh / thành miền Bắc
+  const northernProvinces = [
+    'Lào Cai', 'Yên Bái', 'Thái Nguyên', 'Bắc Giang', 'Cao Bằng', 
+    'Phú Thọ', 'Quảng Ninh', 'Hải Phòng', 'Hòa Bình', 'Tuyên Quang',
+    'Lạng Sơn', 'Bắc Kạn', 'Hà Giang', 'Sơn La', 'Điện Biên', 
+    'Lai Châu', 'Nam Định', 'Ninh Bình', 'Thái Bình', 'Hà Nam', 
+    'Hưng Yên', 'Hải Dương', 'Vĩnh Phúc', 'Bắc Ninh'
+  ];
+
+  for (const prov of northernProvinces) {
+    if (name.includes(prov)) {
+      const match = name.match(/\((.*?)\)/);
+      if (match && match[1]) {
+        const inside = match[1];
+        if (inside.includes(prov)) {
+          return inside; // VD: "Lào Cai - Sông Hồng", "Phổ Yên - Thái Nguyên"
+        }
+        return `${inside}, ${prov}`;
+      }
+      return prov;
+    }
+  }
+
+  // Điểm mốc đặc biệt
+  if (name.includes('Làng Nủ') || name.includes('Bảo Yên')) return 'Bảo Yên, Lào Cai';
+  if (name.includes('Phong Châu') || name.includes('Tam Nông')) return 'Tam Nông, Phú Thọ';
+  if (name.includes('Nguyên Bình')) return 'Nguyên Bình, Cao Bằng';
+
+  // Nhận diện nếu có tên huyện/quận trong ngoặc
+  const match = name.match(/\((.*?)\)/);
+  if (match && match[1]) {
+    const inside = match[1];
+    if (inside.includes('Hà Nội')) return inside;
+    // Nếu trong ngoặc là tên sông hoặc hồ chứa
+    if (inside.startsWith('Sông ') || inside.startsWith('Kênh ') || inside.startsWith('Hồ ')) {
+      return `Lưu vực ${inside}`;
+    }
+    return `${inside}, Hà Nội`;
+  }
+
+  // Nhận diện theo tên các quận huyện phổ biến của Hà Nội
+  const hanoiDistricts = [
+    'Ba Đình', 'Hoàn Kiếm', 'Tây Hồ', 'Long Biên', 'Cầu Giấy', 'Đống Đa', 'Hai Bà Trưng', 
+    'Hoàng Mai', 'Thanh Xuân', 'Sóc Sơn', 'Đông Anh', 'Gia Lâm', 'Nam Từ Liêm', 'Thanh Trì', 
+    'Bắc Từ Liêm', 'Mê Linh', 'Hà Đông', 'Sơn Tây', 'Ba Vì', 'Phúc Thọ', 'Đan Phượng', 
+    'Hoài Đức', 'Quốc Oai', 'Thạch Thất', 'Chương Mỹ', 'Thanh Oai', 'Thường Tín', 'Phú Xuyên', 
+    'Ứng Hòa', 'Mỹ Đức', 'Tiên Dương', 'Nhật Tân'
+  ];
+
+  for (const dist of hanoiDistricts) {
+    if (name.includes(dist)) {
+      return `${dist}, Hà Nội`;
+    }
+  }
+
+  return 'Hà Nội';
 }
 
 function renderFloodPoints(data) {
@@ -868,7 +951,7 @@ function renderFloodPoints(data) {
       bgColor = '#94a3b8'; // Xám bạc
       pulseClass = '';
       markerText = '--';
-      statusLabel = 'Chưa có DL';
+      statusLabel = 'Chờ dữ liệu';
       badgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
       depthColorClass = 'text-slate-500';
       depthDisplay = 'Chưa có dữ liệu quan trắc';
