@@ -2534,6 +2534,22 @@ function closeHelpGuide() {
 
 }
 
+// 12.1. Modal Danh Mục Nguồn Dữ Liệu Mở & Bản Quyền (Open Data Compliance)
+function openOpenDataModal() {
+  const modal = document.getElementById('open-data-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function closeOpenDataModal() {
+  const modal = document.getElementById('open-data-modal');
+  if (modal) modal.classList.add('hidden');
+}
+window.openOpenDataModal = openOpenDataModal;
+window.closeOpenDataModal = closeOpenDataModal;
+
 
 
 function checkFirstTimeVisitor() {

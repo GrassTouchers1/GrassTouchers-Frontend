@@ -64,6 +64,17 @@ Khi triển khai lên server production, bạn chỉ cần thay đổi địa ch
 
 ---
 
-## 📄 4. Giấy phép Bản quyền (License)
+## 🌍 4. Nguồn Dữ liệu Mở & Tính Pháp lý Bản quyền (Open Data Compliance)
+
+Hệ thống giao diện tích hợp Modal thông tin pháp lý bản quyền minh bạch (`#open-data-modal`) và kết nối trực tiếp với các nguồn dữ liệu mở:
+- **[OpenStreetMap (OSM)](https://www.openstreetmap.org)**: Giấy phép ODbL 1.0 (Open Data) - Mạng lưới giao thông, tile bản đồ nền.
+- **[Copernicus Data Space (Sentinel-1 SAR)](https://dataspace.copernicus.eu)**: EU Copernicus Open Access Policy - Ảnh vệ tinh radar khẩu độ tổng hợp xuyên mây bão bóc tách vết ngập bề mặt.
+- **[Trung tâm Dự báo Khí tượng Thủy văn Quốc gia (NCHMF)](https://nchmf.gov.vn)**: Dữ liệu công ích (Nghị định 47/2020/NĐ-CP & Luật Tiếp cận thông tin) - Cấp độ báo động lũ & cảnh báo khẩn cấp.
+- **[Open Development Mekong (ODM)](https://data.vietnam.opendevelopmentmekong.net)**: Giấy phép CC-BY 4.0 - Bản đồ lưu vực sông ngòi tự nhiên và hồ đập thủy điện.
+- **[Open-Meteo Weather API](https://open-meteo.com)**: Giấy phép CC-BY 4.0 - Lượng mưa mở thời gian thực.
+
+---
+
+## 📄 5. Giấy phép Bản quyền (License)
 Phát hành theo giấy phép **Apache License 2.0 (OSI-Approved)**. Xem chi tiết tại [LICENSE](LICENSE).  
 Quy định đóng góp: [CONTRIBUTING.md](CONTRIBUTING.md).
