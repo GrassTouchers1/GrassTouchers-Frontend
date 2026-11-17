@@ -359,20 +359,32 @@ const NorthStarRescue = (function () {
 
       const marker = L.marker(latLng, { icon: sosIcon });
       const popupHtml = `
-        <div class="p-2.5 max-w-xs text-slate-800 font-sans">
-          <div class="flex items-center justify-between text-rose-600 font-bold text-xs">
-            <span>🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
-            <span class="text-[10px] px-1 py-0.2 rounded bg-rose-100 text-rose-700">${p.priority.toUpperCase()}</span>
+        <div class="p-2.5 max-w-[290px] text-slate-800 font-sans">
+          <div class="flex items-center justify-between text-rose-600 font-bold text-xs pb-1 border-b border-rose-100">
+            <span class="flex items-center gap-1">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-rose-100 text-rose-700 border border-rose-200">${p.priority.toUpperCase()}</span>
           </div>
-          <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.contact_name} - ${p.phone}</h4>
-          <div class="text-xs text-slate-600 mt-1 space-y-0.5">
-            <div><b>Số người mắc kẹt:</b> ${p.people_count} người ${p.has_elderly_or_children ? '⚠️ (Có trẻ nhỏ / người già)' : ''}</div>
-            <div><b>Mực nước:</b> ~${p.water_level_cm} cm</div>
-            ${p.notes ? `<div><b>Ghi chú:</b> ${p.notes}</div>` : ''}
+          <h4 class="font-extrabold text-sm text-slate-900 mt-1.5 leading-snug">${p.contact_name} - ${p.phone}</h4>
+          <div class="text-xs text-slate-600 mt-1.5 space-y-1 bg-slate-50/80 p-2 rounded-lg border border-slate-200/70">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-500 font-medium">Số người mắc kẹt:</span>
+              <span class="font-bold text-slate-800">${p.people_count} người ${p.has_elderly_or_children ? '⚠️' : ''}</span>
+            </div>
+            ${p.has_elderly_or_children ? '<div class="text-[10.5px] text-amber-700 font-semibold">(Có trẻ nhỏ / người già neo đơn)</div>' : ''}
+            <div class="flex justify-between items-center">
+              <span class="text-slate-500 font-medium">Mực nước ngập:</span>
+              <span class="font-bold text-rose-600">~${p.water_level_cm} cm</span>
+            </div>
+            ${p.notes ? `<div class="pt-1 mt-1 border-t border-slate-200/60 text-[11px] text-slate-600 leading-relaxed italic">"${p.notes}"</div>` : ''}
           </div>
-          <div class="mt-2.5 pt-2 border-t border-slate-100 flex gap-1.5">
-            <a href="tel:${p.phone}" class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-center text-xs font-bold transition">Gọi nạn nhân</a>
-            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold transition">Đã an toàn</button>
+          <div class="mt-2.5 pt-2 border-t border-slate-100 flex gap-2">
+            <a href="tel:${p.phone}" style="color: #ffffff !important; text-decoration: none !important;" class="flex-1 py-2 px-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 active:from-emerald-800 active:to-green-800 !text-white rounded-lg text-center text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer no-underline">
+              <svg class="w-3.5 h-3.5 flex-shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+              <span class="!text-white font-black" style="color: #ffffff !important;">Gọi nạn nhân</span>
+            </a>
+            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer">
+              <span>Đã an toàn</span>
+            </button>
           </div>
         </div>
       `;

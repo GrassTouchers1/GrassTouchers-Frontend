@@ -603,4 +603,22 @@ body.dark-mode .flood-custom-popup .text-indigo-600 {
   color: #818cf8 !important;
 }
 
+/* ========================================================
+   Leaflet Popup Button & Link Contrast Protection
+   ======================================================== */
+.leaflet-popup-content a.text-white,
+.leaflet-popup-content a[class*="text-white"],
+.leaflet-popup-content a[class*="bg-blue"],
+.leaflet-popup-content a[class*="bg-emerald"],
+.leaflet-popup-content a[class*="bg-green"] {
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+.leaflet-popup-content a.text-white:hover,
+.leaflet-popup-content a[class*="text-white"]:hover {
+  color: #ffffff !important;
+}
+
+
 
