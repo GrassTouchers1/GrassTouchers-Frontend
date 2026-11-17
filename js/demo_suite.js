@@ -269,10 +269,14 @@ const NorthStarDemo = (function () {
         if (typeof window.switchTab === 'function') window.switchTab('rescue');
         if (typeof window.jumpToRegion === 'function') window.jumpToRegion('all');
         showToast('Phím tắt [5]: Giám sát Toàn Miền Bắc', 'info', 1500);
+      } else if (e.key.toLowerCase() === 'v') {
+        if (window.VoiceSOSManager) window.VoiceSOSManager.openModal();
+        showToast('Phím tắt [V]: Mở Cấp cứu Giọng nói Voice SOS', 'danger', 2000);
       } else if (e.key.toLowerCase() === 'd') {
         toggleDemoModal();
       } else if (e.key === 'Escape') {
         toggleDemoModal(false);
+        if (window.VoiceSOSManager) window.VoiceSOSManager.closeModal();
       }
     });
   }
