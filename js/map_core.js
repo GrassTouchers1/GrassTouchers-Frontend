@@ -126,15 +126,15 @@ function syncFloodCirclesWithZoom() {
 
 function initMap() {
 
-  // Tâm bản đồ tại trung tâm khu vực nghiên cứu Hà Nội (Cầu Giấy - Đống Đa)
+  // Tâm bản đồ bao quát toàn bộ địa bàn các tỉnh Miền Bắc (NorthStar Northern Vietnam Ecosystem)
 
   map = L.map('map', {
     // FE: gán map vào window
     
 
-    center: [21.020, 105.815],
+    center: [21.45, 105.70],
 
-    zoom: 13,
+    zoom: 8,
 
     zoomControl: true
 
@@ -1298,6 +1298,33 @@ function onViewportAlertClick() {
 }
 
 
+
+const NORTHERN_REGIONAL_PRESETS = {
+  all: { center: [21.50, 105.70], zoom: 8, name: 'Toàn Miền Bắc (Tổng quan)' },
+  hanoi: { center: [21.0285, 105.8542], zoom: 12, name: 'Hà Nội & Phụ cận' },
+  taybac: { center: [22.05, 104.35], zoom: 9, name: 'Tây Bắc (Lào Cai - Yên Bái)' },
+  vietbac: { center: [21.45, 105.95], zoom: 10, name: 'Việt Bắc (Thái Nguyên - Bắc Giang)' },
+  dongbac: { center: [22.40, 106.10], zoom: 9, name: 'Đông Bắc (Cao Bằng - Lạng Sơn)' },
+  quangninh: { center: [20.95, 107.05], zoom: 10, name: 'Duyên Hải (Quảng Ninh - Hải Phòng)' },
+  songda: { center: [21.05, 105.30], zoom: 10, name: 'Sông Đà (Phú Thọ - Hòa Bình)' }
+};
+
+function jumpToRegion(regionKey) {
+  if (!map) return;
+  const target = NORTHERN_REGIONAL_PRESETS[regionKey] || NORTHERN_REGIONAL_PRESETS.all;
+  map.flyTo(target.center, target.zoom, { duration: 1.2 });
+
+  const selEl = document.getElementById('region-jump-select');
+  if (selEl && selEl.value !== regionKey) {
+    selEl.value = regionKey;
+  }
+
+  if (typeof window.showNorthStarToast === 'function') {
+    window.showNorthStarToast(`📍 Chuyển vùng quan trắc: ${target.name}`, 'info', 2500);
+  }
+}
+window.jumpToRegion = jumpToRegion;
+window.NORTHERN_REGIONAL_PRESETS = NORTHERN_REGIONAL_PRESETS;
 
 function zoomToAllPoints() {
 

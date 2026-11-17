@@ -177,9 +177,9 @@
               <i data-lucide="refresh-cw" class="w-4 h-4 text-blue-600"></i>
               <span>Làm mới dữ liệu</span>
             </button>
-            <button onclick="zoomToAllPoints(); closeHeaderMenu();" title="Xem toàn cảnh 130 điểm ngập Hà Nội" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium border-t border-slate-100 dark:border-slate-800">
+            <button onclick="window.jumpToRegion ? window.jumpToRegion('all') : zoomToAllPoints(); closeHeaderMenu();" title="Xem toàn cảnh mạng lưới quan trắc và thiên tai Miền Bắc" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium border-t border-slate-100 dark:border-slate-800">
               <i data-lucide="maximize" class="w-4 h-4 text-indigo-600"></i>
-              <span>Toàn cảnh 130 trạm</span>
+              <span>Toàn cảnh Miền Bắc (Overview)</span>
             </button>
             <button onclick="FloodDashboard.openDashboard(); closeHeaderMenu();" title="Mở Dashboard thống kê" class="2xl:hidden w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
               <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-600"></i>
@@ -940,6 +940,23 @@
 
       <div id="map" class="w-full h-full"></div>
 
+      <!-- Floating Regional Focus Selector (NorthStar Giám sát Miền Bắc) -->
+      <div id="regional-focus-control" class="absolute top-4 left-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold hidden sm:flex items-center gap-2">
+        <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-1">
+          <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
+          <span class="text-[11px] uppercase tracking-wider">Phân vùng:</span>
+        </div>
+        <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2.5 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+          <option value="all">🌐 Toàn Miền Bắc (Tổng quan)</option>
+          <option value="hanoi">📍 Hà Nội & Đồng Bằng</option>
+          <option value="taybac">⛰️ Tây Bắc (Lào Cai - Yên Bái)</option>
+          <option value="vietbac">🌊 Việt Bắc (Thái Nguyên - Bắc Giang)</option>
+          <option value="dongbac">🏔️ Đông Bắc (Cao Bằng - Lạng Sơn)</option>
+          <option value="quangninh">🏖️ Duyên Hải (Quảng Ninh - Hải Phòng)</option>
+          <option value="songda">🏞️ Sông Đà (Phú Thọ - Hòa Bình)</option>
+        </select>
+      </div>
+
       <!-- Floating Multi-Hazard Layer Control (NorthStar) -->
       <div id="multi-hazard-layer-control" class="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2.5 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold space-y-1.5 hidden sm:block">
         <div class="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
@@ -948,7 +965,7 @@
         </div>
         <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
           <input type="checkbox" id="layer-toggle-floods" checked onchange="window.toggleFloodPointsLayer ? window.toggleFloodPointsLayer(this.checked) : null" class="rounded text-blue-600 focus:ring-blue-500">
-          <span>🌊 Trạm ngập lụt IoT (130 trạm)</span>
+          <span>🌊 Trạm thủy văn & quan trắc ngập</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
           <input type="checkbox" id="layer-toggle-disasters" checked onchange="NorthStarRescue.toggleLayer('disasters', this.checked)" class="rounded text-amber-500 focus:ring-amber-500">
@@ -1345,12 +1362,34 @@
           </div>
         </div>
 
+        <!-- Kịch bản 5 -->
+        <div onclick="NorthStarDemo.runScenario5()" class="sm:col-span-2 p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 hover:border-cyan-500 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 hover:bg-cyan-500/20 cursor-pointer transition shadow-sm hover:shadow-md group">
+          <div class="flex items-center justify-between">
+            <span class="w-7 h-7 rounded-xl bg-cyan-600 text-white font-black text-xs flex items-center justify-center shadow">5</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 font-bold border border-cyan-400">NORTHERN ECOSYSTEM (155 TRẠM & ĐA THIÊN TAI)</span>
+          </div>
+          <h4 class="font-bold text-sm text-slate-900 dark:text-white mt-2 group-hover:text-cyan-600 transition flex items-center gap-1.5">
+            <span>Giám sát Toàn Miền Bắc & Phân Vùng Thiên Tai</span>
+            <span class="text-xs">🌐</span>
+          </h4>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-1">Bao quát toàn cảnh 155 trạm quan trắc, 12 tâm chấn thiên tai (Làng Nủ Lào Cai, lũ sông Thao Yên Bái, sông Cầu Thái Nguyên, vịnh Hạ Long...) & tự động chuyển camera tới tâm chấn Tây Bắc.</p>
+          <div class="mt-3 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1 group-hover:translate-x-1 transition">
+            <span>Kích hoạt kịch bản toàn cảnh</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+
       </div>
 
       <!-- Footer Hướng dẫn phím tắt -->
       <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
         <div class="flex items-center gap-2">
           <span>Phím tắt presenter:</span>
+          <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[10px] font-bold border">1</kbd>
+          <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[10px] font-bold border">2</kbd>
+          <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[10px] font-bold border">3</kbd>
+          <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[10px] font-bold border">4</kbd>
+          <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[10px] font-bold border">5</kbd>
           <kbd class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 rounded font-mono text-[10px] font-bold">1</kbd>
           <kbd class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 rounded font-mono text-[10px] font-bold">2</kbd>
           <kbd class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 rounded font-mono text-[10px] font-bold">3</kbd>

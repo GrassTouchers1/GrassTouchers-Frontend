@@ -180,7 +180,32 @@ const NorthStarDemo = (function () {
     showToast('📝 Đã điền thông tin cứu hộ khẩn cấp mẫu. Bấm "Phát tín hiệu SOS" để gửi!', 'info', 4000);
   }
 
-  // 7. PHÍM TẮT DÀNH CHO BÁO CÁO VIÊN (PRESENTER SHORTCUTS)
+  // 7. KỊCH BẢN 5: GIÁM SÁT TOÀN MIỀN BẮC & PHÂN VÙNG THIÊN TAI (NORTHERN ECOSYSTEM)
+  async function runScenario5() {
+    toggleDemoModal(false);
+    showToast('Đang chạy Kịch bản 5: Giám sát Hệ sinh thái Toàn Miền Bắc & Phân vùng thiên tai...', 'info');
+
+    if (typeof window.switchTab === 'function') window.switchTab('rescue');
+
+    // 1. Phóng to toàn cảnh Miền Bắc
+    if (typeof window.jumpToRegion === 'function') {
+      window.jumpToRegion('all');
+    }
+
+    setTimeout(() => {
+      showToast('🌐 Toàn cảnh 155 trạm quan trắc, 12 tâm chấn thiên tai & 15 điểm sơ tán trọng điểm Miền Bắc!', 'success', 4500);
+    }, 1500);
+
+    // 2. Chuyển camera tới tâm chấn sạt lở Tây Bắc (Lào Cai - Làng Nủ & Yên Bái)
+    setTimeout(() => {
+      if (typeof window.jumpToRegion === 'function') {
+        window.jumpToRegion('taybac');
+      }
+      showToast('⛰️ Chuyển camera tới Tâm chấn sạt lở & lũ sông Thao (Lào Cai - Làng Nủ & TP Yên Bái)', 'warning', 4500);
+    }, 4500);
+  }
+
+  // 8. PHÍM TẮT DÀNH CHO BÁO CÁO VIÊN (PRESENTER SHORTCUTS)
   function initKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
       // Tránh bắt phím khi đang nhập liệu trong ô input/textarea
@@ -191,13 +216,17 @@ const NorthStarDemo = (function () {
         showToast('Phím tắt [1]: Tab Tìm đường', 'info', 1500);
       } else if (e.key === '2') {
         if (typeof window.switchTab === 'function') window.switchTab('points');
-        showToast('Phím tắt [2]: Tab 130 Điểm ngập', 'info', 1500);
+        showToast('Phím tắt [2]: Tab 155 Trạm quan trắc', 'info', 1500);
       } else if (e.key === '3') {
         if (typeof window.switchTab === 'function') window.switchTab('report');
         showToast('Phím tắt [3]: Tab Báo ngập', 'info', 1500);
       } else if (e.key === '4') {
         if (typeof window.switchTab === 'function') window.switchTab('rescue');
         showToast('Phím tắt [4]: Tab Cứu hộ SOS', 'info', 1500);
+      } else if (e.key === '5') {
+        if (typeof window.switchTab === 'function') window.switchTab('rescue');
+        if (typeof window.jumpToRegion === 'function') window.jumpToRegion('all');
+        showToast('Phím tắt [5]: Giám sát Toàn Miền Bắc', 'info', 1500);
       } else if (e.key.toLowerCase() === 'd') {
         toggleDemoModal();
       } else if (e.key === 'Escape') {
@@ -213,6 +242,7 @@ const NorthStarDemo = (function () {
     runScenario2,
     runScenario3,
     runScenario4,
+    runScenario5,
     initKeyboardShortcuts
   };
 })();
