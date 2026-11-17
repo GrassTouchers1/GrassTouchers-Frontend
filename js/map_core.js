@@ -1161,25 +1161,21 @@ function renderFloodPoints(data) {
 
     const drainageHtml = renderDrainageForecastHtml(fp);
 
-    let districtName = 'Hà Nội';
-    const districtMatch = name.match(/\((.*?)\)/);
-    if (districtMatch && districtMatch[1]) {
-      districtName = `${districtMatch[1]}, Hà Nội`;
-    }
+    const districtName = getStationLocationDisplay(name, lat, lng);
 
     marker.bindPopup(`
-      <div class="text-xs space-y-1.5 p-0.5 min-w-[250px] max-w-[275px] max-h-[385px] overflow-y-auto pr-0.5 custom-scrollbar">
+      <div class="text-xs space-y-2 p-1 min-w-[305px] max-w-[340px] max-h-[520px] overflow-y-auto pr-1 custom-scrollbar">
         <!-- Header: Tên trạm, Địa bàn & Badge mức độ nguy hiểm -->
-        <div class="border-b border-slate-100 pb-1.5">
+        <div class="border-b border-slate-100 pb-1.5 pr-6">
           <div class="flex items-start justify-between gap-1.5">
-            <h4 class="font-bold text-slate-900 text-sm leading-tight flex-1">${name}</h4>
+            <h4 class="font-bold text-slate-900 text-[13px] leading-snug flex-1">${name}</h4>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass} flex-shrink-0 shadow-xs">
               ${statusLabel}
             </span>
           </div>
           <div class="text-[11px] text-slate-500 flex items-center justify-between gap-1 mt-1">
             <div class="flex items-center gap-1 min-w-0" title="Địa bàn: ${districtName}">
-              <svg class="w-3 h-3 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              <svg class="w-3.5 h-3.5 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
               <span class="truncate text-slate-600 font-medium">${districtName}</span>
             </div>
             <span class="font-mono text-slate-500 text-[10px] flex-shrink-0">${lat.toFixed(4)}°B, ${lng.toFixed(4)}°Đ</span>
@@ -1190,14 +1186,16 @@ function renderFloodPoints(data) {
         ${centerBoxHtml}
 
         <!-- Thông tin chi tiết: Thời gian cập nhật & Nguồn dữ liệu -->
-        <div class="space-y-1 text-[11px] text-slate-600 border-b border-slate-100 pb-1.5">
+        <div class="space-y-1.5 text-[11px] text-slate-600 border-b border-slate-100 pb-2">
           <div class="flex justify-between items-center">
             <span class="text-slate-500">Cập nhật:</span>
-            <span class="font-medium text-slate-700 font-mono">${timeDisplay}</span>
+            ${(timeDisplay === 'Chưa có bản ghi') 
+              ? '<span class="text-slate-400 italic text-[11px]">Chưa có bản ghi</span>' 
+              : `<span class="font-medium text-slate-700 font-mono text-[11px]">${timeDisplay}</span>`}
           </div>
           <div class="flex justify-between items-center">
             <span class="text-slate-500">Nguồn dữ liệu:</span>
-            <span class="font-medium text-cyan-800 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-100 text-[10px]">${sourceDisplay}</span>
+            <span class="font-medium text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 text-[10px]">${sourceDisplay}</span>
           </div>
         </div>
 
@@ -1212,20 +1210,22 @@ function renderFloodPoints(data) {
         </div>
 
         <!-- Nút thao tác nhanh lộ trình -->
-        <div class="pt-0.5 flex gap-1.5">
-          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'origin')" class="flex-1 px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+        <div class="pt-2 flex gap-2 border-t border-slate-100">
+          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'origin')" class="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer" title="Đặt làm điểm xuất phát">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
             <span>Điểm Đi</span>
           </button>
-          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'destination')" class="flex-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+          <button onclick="setAsRouteTarget(${lng}, ${lat}, 'destination')" class="flex-1 py-1.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer" title="Đặt làm điểm đến">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
             <span>Điểm Đến</span>
           </button>
         </div>
       </div>
     `, {
-      maxWidth: 290,
-      minWidth: 260,
+      maxWidth: 360,
+      minWidth: 320,
       autoPan: true,
-      autoPanPadding: [25, 25],
+      autoPanPadding: [30, 30],
       className: 'flood-custom-popup'
     });
 
