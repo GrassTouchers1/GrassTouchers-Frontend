@@ -373,12 +373,12 @@ const SitRepReporter = (function () {
 
           <!-- Danh sách trạm ngập nguy cấp -->
           <div>
-            <h5 class="font-extrabold text-slate-900 mb-1.5 uppercase text-[11px] flex items-center gap-1.5">
+            <h5 class="font-extrabold text-slate-900 dark:text-slate-100 mb-1.5 uppercase text-[11px] flex items-center gap-1.5">
               <span>⚠️ DANH SÁCH ĐIỂM NGẬP ĐẶC BIỆT NGUY CẤP (VƯỢT NGƯỠNG AN TOÀN)</span>
             </h5>
-            <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <div class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 rounded-lg overflow-hidden">
               <table class="w-full text-left text-[11px]">
-                <thead class="bg-slate-100 font-bold text-slate-700 border-b border-slate-200">
+                <thead class="bg-slate-100 dark:bg-slate-700/80 font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600">
                   <tr>
                     <th class="p-1.5 pl-2">STT</th>
                     <th class="p-1.5">Tên trạm / Vị trí</th>
@@ -387,14 +387,14 @@ const SitRepReporter = (function () {
                     <th class="p-1.5 pr-2">Điều tiết giao thông</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/70">
                   ${d.critical_hotspots.map((p, idx) => `
-                    <tr class="hover:bg-slate-50">
-                      <td class="p-1.5 pl-2 font-bold text-slate-400">${idx + 1}</td>
-                      <td class="p-1.5 font-bold text-slate-900">${p.name}</td>
-                      <td class="p-1.5 text-center font-bold text-rose-600">${p.depth_cm} cm</td>
-                      <td class="p-1.5 text-center text-slate-500 font-mono">${p.threshold_cm} cm</td>
-                      <td class="p-1.5 pr-2 text-rose-700 font-bold text-[10px]">CẤM XE MÁY & Ô TÔ</td>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                      <td class="p-1.5 pl-2 font-bold text-slate-400 dark:text-slate-400">${idx + 1}</td>
+                      <td class="p-1.5 font-bold text-slate-900 dark:text-white">${p.name}</td>
+                      <td class="p-1.5 text-center font-bold text-rose-600 dark:text-rose-400">${p.depth_cm} cm</td>
+                      <td class="p-1.5 text-center text-slate-500 dark:text-slate-400 font-mono">${p.threshold_cm} cm</td>
+                      <td class="p-1.5 pr-2 text-rose-700 dark:text-rose-300 font-bold text-[10px]">CẤM XE MÁY & Ô TÔ</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -404,8 +404,8 @@ const SitRepReporter = (function () {
 
           <!-- Mệnh lệnh tác chiến -->
           <div>
-            <h5 class="font-extrabold text-slate-900 mb-1.5 uppercase text-[11px]">📋 MỆNH LỆNH & PHƯƠNG ÁN TÁC CHIẾN TRỌNG TÂM</h5>
-            <ul class="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 text-[11px] text-slate-700">
+            <h5 class="font-extrabold text-slate-900 dark:text-slate-100 mb-1.5 uppercase text-[11px]">📋 MỆNH LỆNH & PHƯƠNG ÁN TÁC CHIẾN TRỌNG TÂM</h5>
+            <ul class="space-y-1 bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-200">
               ${d.tactical_directives.map(dir => `<li class="flex items-start gap-1.5"><span>•</span><span>${dir}</span></li>`).join('')}
             </ul>
           </div>

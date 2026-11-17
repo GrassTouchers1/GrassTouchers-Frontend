@@ -205,7 +205,49 @@ const NorthStarDemo = (function () {
     }, 4500);
   }
 
-  // 8. PHÍM TẮT DÀNH CHO BÁO CÁO VIÊN (PRESENTER SHORTCUTS)
+  // 8. TÍCH HỢP AI REPORT ANALYSIS (Groq / Offline)
+  async function runAIReportAnalysis() {
+    const inputEl = document.getElementById('ai-report-input');
+    const resultEl = document.getElementById('ai-report-result');
+    if (!inputEl || !resultEl) return;
+
+    const content = inputEl.value.trim();
+    if (!content) {
+      showToast('Vui lòng nhập nội dung báo cáo để AI phân tích!', 'warning');
+      return;
+    }
+
+    resultEl.classList.remove('hidden');
+    resultEl.innerHTML = '<div class="text-indigo-600 dark:text-cyan-400 font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span> AI đang bóc tách thực thể và phân loại...</div>';
+
+    try {
+      const data = await window.AIAssistant.analyzeReport(content);
+      if (!data) throw new Error("Không nhận được phản hồi");
+
+      const badgeColor = data.urgency_level === 'critical' ? 'bg-rose-100 text-rose-800' : (data.urgency_level === 'high' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800');
+
+      resultEl.innerHTML = `
+        <div class="flex items-center justify-between border-b border-indigo-100 dark:border-slate-700 pb-1">
+          <span class="font-bold text-slate-800 dark:text-white uppercase text-[10px]">Kết quả thẩm tra AI</span>
+          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${badgeColor}">Ưu tiên: ${data.urgency_level.toUpperCase()}</span>
+        </div>
+        <div class="text-[10.5px] space-y-0.5 pt-1">
+          <div><b>Loại thiên tai:</b> <span class="text-indigo-700 dark:text-cyan-300 capitalize">${data.disaster_type}</span></div>
+          <div><b>Địa bàn nhận diện:</b> <span>${data.location.district ? data.location.district + ', ' : ''}${data.location.province || 'Chưa rõ tỉnh'}</span></div>
+          ${data.missing_info && data.missing_info.length ? `<div class="text-amber-700 dark:text-amber-400 text-[10px]">⚠️ <b>Thiếu:</b> ${data.missing_info.join('; ')}</div>` : ''}
+          <div class="text-[9px] text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800 flex justify-between">
+            <span>Provider: ${data.provider_used}</span>
+            <span>Tin cậy: ${(data.confidence_score * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      `;
+      showToast('AI đã thẩm tra xong báo cáo!', 'success');
+    } catch (e) {
+      resultEl.innerHTML = '<div class="text-rose-600 font-semibold">Lỗi khi gọi AI thẩm tra báo cáo.</div>';
+    }
+  }
+
+  // 9. PHÍM TẮT DÀNH CHO BÁO CÁO VIÊN (PRESENTER SHORTCUTS)
   function initKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
       // Tránh bắt phím khi đang nhập liệu trong ô input/textarea
@@ -243,6 +285,7 @@ const NorthStarDemo = (function () {
     runScenario3,
     runScenario4,
     runScenario5,
+    runAIReportAnalysis,
     initKeyboardShortcuts
   };
 })();

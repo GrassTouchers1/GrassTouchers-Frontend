@@ -713,17 +713,25 @@
 
 
           <div>
-
-            <label class="block text-xs font-bold text-slate-700 mb-1">Vị trí điểm ngập</label>
-
-            <button onclick="setPickMode('report')" id="btn-pick-report" class="w-full py-2 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5">
-
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Vị trí điểm ngập</label>
+            <button onclick="setPickMode('report')" id="btn-pick-report" class="w-full py-2 px-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center justify-center gap-1.5 cursor-pointer">
               <i data-lucide="map-pin" class="w-4 h-4 text-rose-500"></i>
-
               <span id="report-coord-text">Nhấp vào đây rồi bấm lên bản đồ</span>
-
             </button>
+          </div>
 
+          <!-- Khối Thẩm tra & Phân tích Báo cáo Bằng AI -->
+          <div class="p-3 bg-indigo-50/70 dark:bg-slate-800/80 border border-indigo-200/80 dark:border-slate-700 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-extrabold text-indigo-950 dark:text-cyan-200 flex items-center gap-1.5">
+                <span>🤖 Thẩm tra Ngữ nghĩa AI (Groq / Offline)</span>
+              </label>
+              <button type="button" onclick="NorthStarDemo.runAIReportAnalysis()" class="text-[10.5px] px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-95">
+                <span>Phân tích ngay</span>
+              </button>
+            </div>
+            <textarea id="ai-report-input" rows="2" placeholder="Ví dụ: 'Mưa lũ tràn qua đê Chã ngập sâu 40cm tại phường Quang Vinh, có 4 người già cần sơ tán khẩn cấp...'" class="w-full p-2 text-xs bg-white dark:bg-slate-900 border border-indigo-200 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"></textarea>
+            <div id="ai-report-result" class="hidden p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-200 space-y-1"></div>
           </div>
 
 
@@ -1637,7 +1645,7 @@
   <script src="js/ai_assistant.js"></script>
 
   <!-- Floating AI Emergency Dispatcher Button & Panel -->
-  <div id="ai-assistant-widget" class="fixed bottom-6 right-6 z-[1000] select-none">
+  <div id="ai-assistant-widget" class="fixed bottom-20 right-6 z-[1000] select-none">
     <button onclick="AIAssistant.toggle()" class="relative p-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80" title="Trợ lý AI Trực ban Thiên tai 24/7">
       <i data-lucide="bot" class="w-6 h-6"></i>
       <span id="ai-assistant-badge" class="absolute -top-1 -right-1 flex h-4 w-4">
@@ -1659,7 +1667,13 @@
             <span class="text-[9.5px] text-cyan-200">Hỗ trợ khẩn cấp & Điều phối 24/7</span>
           </div>
         </div>
-        <button onclick="AIAssistant.toggle()" class="text-white/80 hover:text-white p-1 text-base leading-none">&times;</button>
+        <div class="flex items-center gap-1.5">
+          <span id="ai-provider-badge" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white/20 text-cyan-100 flex items-center gap-1">
+            <span id="ai-provider-dot" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            <span id="ai-provider-label">AI Ready</span>
+          </span>
+          <button onclick="AIAssistant.toggle()" class="text-white/80 hover:text-white p-1 text-base leading-none cursor-pointer">&times;</button>
+        </div>
       </div>
 
       <!-- Quick suggestion chips -->
