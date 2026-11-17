@@ -3295,6 +3295,22 @@ function closeHeaderMenu() {
   if (menu) menu.classList.add('hidden');
 }
 
+// Điều khiển Bật/Tắt Bảng Lớp Bản Đồ Thiên Tai (Dấu 3 lớp / Layers icon)
+function toggleHazardLayersPanel(forceState) {
+  const panel = document.getElementById('multi-hazard-layer-control');
+  if (!panel) return;
+  if (typeof forceState === 'boolean') {
+    if (forceState) {
+      panel.classList.remove('hidden');
+    } else {
+      panel.classList.add('hidden');
+    }
+  } else {
+    panel.classList.toggle('hidden');
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('header-more-dropdown');
   const btn = document.getElementById('btn-header-more');
@@ -3311,6 +3327,7 @@ window.coords = coords;
 if (typeof map !== 'undefined') window.map = map;
 window.renderFloodPoints = renderFloodPoints;
 window.switchTab = switchTab;
+window.toggleHazardLayersPanel = toggleHazardLayersPanel;
 window.toggleHeaderMenu = toggleHeaderMenu;
 window.closeHeaderMenu = closeHeaderMenu;
 window.loadWeatherInfo = loadWeatherInfo;
