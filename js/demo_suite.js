@@ -13,7 +13,7 @@ const NorthStarDemo = (function () {
     if (!container) {
       container = document.createElement('div');
       container.id = 'northstar-toast-container';
-      container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4';
+      container.className = 'fixed bottom-20 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4';
       document.body.appendChild(container);
     }
 

@@ -85,12 +85,6 @@
         </button>
       </nav>
 
-      <!-- NÚT KỊCH BẢN DEMO NHANH CHO HỘI ĐỒNG (NORTHSTAR DEMO SUITE) -->
-      <button onclick="NorthStarDemo.toggleDemoModal()" title="Mở bộ Kịch bản Demo Trình diễn Trực tiếp (Phím tắt: D)" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs transition shadow-lg border border-white/30 cursor-pointer animate-pulse">
-        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i>
-        <span>🎯 Kịch bản Demo</span>
-      </button>
-
       <!-- NHÓM 2 – GIÁM SÁT (Trạng thái PostGIS, Thời tiết, Điều chỉnh mô phỏng mưa) -->
       <div id="header-group-monitoring" class="hidden lg:flex items-center gap-2 bg-black/20 p-1 px-2.5 rounded-xl border border-white/10 flex-shrink-0">
         <!-- 1. Trạng thái PostGIS -->
@@ -1290,6 +1284,16 @@
     </div>
 
   </div>
+
+  <!-- ========================================================
+       NÚT KỊCH BẢN DEMO NỔI GÓC PHẢI DƯỚI MÀN HÌNH (FLOATING ACTION BUTTON)
+       ======================================================== -->
+  <button id="floating-demo-btn" onclick="NorthStarDemo.toggleDemoModal()" title="Mở bộ Kịch bản Demo Trình diễn Trực tiếp (Phím tắt: D)"
+          class="fixed bottom-6 right-6 z-[1000] flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full shadow-2xl border border-white/40 text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md group">
+    <span class="text-sm">🎯</span>
+    <span class="font-extrabold text-[11px] tracking-wide">Demo</span>
+    <kbd class="hidden sm:inline-block px-1 py-0.2 bg-black/25 text-amber-200 rounded font-mono text-[9px] font-bold border border-white/20">D</kbd>
+  </button>
 
   <!-- ========================================================
        MODAL BỘ KỊCH BẢN TRÌNH DIỄN DEMO TRỰC TIẾP (NorthStar Live Demo Suite)
