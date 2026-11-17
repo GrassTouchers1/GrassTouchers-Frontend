@@ -1410,7 +1410,58 @@
       <!-- Danh sách 5 nguồn dữ liệu mở -->
       <div class="space-y-3 text-xs">
         
-        <!-- Nguồn 1: OpenStreetMap -->
+        <!-- Nguồn 1: Open-Meteo Weather & Flood API -->
+        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
+              <span class="text-base">🌦️</span>
+              <a href="https://open-meteo.com/en/terms" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
+                <span>Open-Meteo Weather & Flood API</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
+              </a>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 text-[10px] font-mono font-bold">CC-BY 4.0 (Open-Meteo Terms)</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <b>Vai trò trong hệ thống:</b> Cung cấp chuỗi số liệu lượng mưa theo giờ (mm/h) và dự báo lưu lượng dòng chảy sông ngòi (River Discharge m³/s). Tuân thủ 100% điều khoản <a href="https://open-meteo.com/en/terms" target="_blank" class="underline text-blue-600 dark:text-cyan-400">Open-Meteo Terms</a>, hỗ trợ phi thương mại & nghiên cứu mở, tích hợp bộ nhớ đệm Cache 5 phút để bảo vệ tài nguyên máy chủ.
+          </p>
+        </div>
+
+        <!-- Nguồn 2: Copernicus GloFAS (Global Flood Awareness System) -->
+        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
+              <span class="text-base">🌊</span>
+              <a href="https://global-flood.emergency.copernicus.eu" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
+                <span>Copernicus GloFAS (Global Flood Awareness System)</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
+              </a>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 text-[10px] font-mono font-bold">Copernicus Open Access</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <b>Vai trò trong hệ thống:</b> Hệ thống dự báo lũ toàn cầu của Ủy ban Châu Âu (ECMWF & CEMS), cung cấp mô hình thủy văn tính toán vượt ngưỡng chu kỳ lặp lũ (2 năm, 5 năm, 20 năm) cho toàn bộ các lưu vực sông ngòi Việt Nam (Sông Hồng, Sông Cầu, Sông Thao, Sông Lô, Sông Mê Kông).
+          </p>
+        </div>
+
+        <!-- Nguồn 3: NASA GPM Data (Global Precipitation Measurement) -->
+        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
+              <span class="text-base">🛰️</span>
+              <a href="https://gpm.nasa.gov/data" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
+                <span>NASA GPM Data (Global Precipitation Measurement)</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
+              </a>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 text-[10px] font-mono font-bold">NASA Open Data Policy</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <b>Vai trò trong hệ thống:</b> Sử dụng tập dữ liệu viễn thám không gian đa vệ tinh IMERG từ NASA phục vụ quan trắc mưa bão cực đoan trên diện rộng, đánh giá nguy cơ sạt lở đất và lũ quét thượng nguồn. Tuân thủ chính sách dữ liệu mở của NASA (Public Domain / Free & Open Access).
+          </p>
+        </div>
+
+        <!-- Nguồn 4: OpenStreetMap (OSM) -->
         <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
@@ -1420,78 +1471,27 @@
                 <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
               </a>
             </div>
-            <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 text-[10px] font-mono font-bold">ODbL 1.0 (Open Data)</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-mono font-bold">ODbL 1.0 (Open Data)</span>
           </div>
           <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
             <b>Vai trò trong hệ thống:</b> Cung cấp mạng lưới hình học đường bộ, các nút giao thông và phân cấp tuyến đường. Thư viện <code>grasstoucher_core</code> trích xuất qua OSMnx/NetworkX để xây dựng đồ thị toán học cho thuật toán tìm đường né ngập <b>A*</b> và sơ tán cứu hộ khẩn cấp <b>Dijkstra đa nguồn</b>.
           </p>
         </div>
 
-        <!-- Nguồn 2: Copernicus Data Space (Sentinel-1 SAR) -->
-        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
+        <!-- Nguồn 5: Danh Sách Giấy Phép Chuẩn OSI (Open Source Initiative) -->
+        <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 space-y-1.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
-              <span class="text-base">🛰️</span>
-              <a href="https://dataspace.copernicus.eu" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
-                <span>Copernicus Data Space (Vệ tinh Sentinel-1 SAR)</span>
+              <span class="text-base">⚖️</span>
+              <a href="https://opensource.org/licenses" target="_blank" class="hover:text-amber-600 dark:hover:text-amber-400 hover:underline flex items-center gap-1">
+                <span>Chuẩn Giấy Phép Mở OSI (Open Source Initiative)</span>
                 <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
               </a>
             </div>
-            <span class="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 text-[10px] font-mono font-bold">EU Open Access Policy</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200 text-[10px] font-mono font-bold">OSI Approved • Zero Scraping</span>
           </div>
           <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
-            <b>Vai trò trong hệ thống:</b> Sử dụng cảm biến Radar khẩu độ tổng hợp (C-band SAR) với ưu thế vượt trội <b>xuyên qua mây mù, mưa bão 24/7</b> (khi ảnh quang học bị che khuất). Ứng dụng phân tích vết ngập nước (Water Inundation Mask) để định vị và tự động khoanh vùng bán kính rủi ro đa thiên tai (Multi-Hazard Zones).
-          </p>
-        </div>
-
-        <!-- Nguồn 3: Trung tâm Dự báo KTTV Quốc gia (NCHMF) -->
-        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
-              <span class="text-base">🌧️</span>
-              <a href="https://nchmf.gov.vn" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
-                <span>Trung tâm Dự báo Khí tượng Thủy văn Quốc gia (NCHMF)</span>
-                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
-              </a>
-            </div>
-            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-mono font-bold">Dữ liệu Công ích (NĐ 47/2020)</span>
-          </div>
-          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
-            <b>Vai trò trong hệ thống:</b> Cung cấp các cấp báo động lũ chuẩn quốc gia (Báo động 1, 2, 3) trên các lưu vực sông Miền Bắc (Sông Thao, Sông Cầu, Sông Thương, Sông Hồng, Sông Đáy, Sông Lô) và bản tin cảnh báo lũ quét, sạt lở đất khẩn cấp từ Tổng cục Khí tượng Thủy văn Việt Nam.
-          </p>
-        </div>
-
-        <!-- Nguồn 4: Open Development Mekong (ODM) -->
-        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
-              <span class="text-base">🌊</span>
-              <a href="https://data.vietnam.opendevelopmentmekong.net" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
-                <span>Open Development Mekong (ODM)</span>
-                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
-              </a>
-            </div>
-            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-mono font-bold">Creative Commons CC-BY 4.0</span>
-          </div>
-          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
-            <b>Vai trò trong hệ thống:</b> Bộ dữ liệu mở địa lý không gian về mạng lưới lưu vực sông ngòi tự nhiên, hệ thống đê điều, vị trí các hồ chứa thủy điện lớn (Hòa Bình, Tuyên Quang, Thác Bà) và vùng trũng thấp dễ bị tổn thương khi xả lũ.
-          </p>
-        </div>
-
-        <!-- Nguồn 5: Open-Meteo API -->
-        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
-              <span class="text-base">🌦️</span>
-              <a href="https://open-meteo.com" target="_blank" class="hover:text-blue-600 dark:hover:text-cyan-400 hover:underline flex items-center gap-1">
-                <span>Open-Meteo Weather API</span>
-                <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60"></i>
-              </a>
-            </div>
-            <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 text-[10px] font-mono font-bold">CC-BY 4.0 (Open API)</span>
-          </div>
-          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
-            <b>Vai trò trong hệ thống:</b> Cung cấp chuỗi số liệu lượng mưa thực tế theo giờ (mm/h) nạp vào mô hình AI Machine Learning (Gradient Boosting) dự báo mực nước dâng sau 30/60 phút với cơ chế In-Memory Cache 5 phút.
+            <b>Cam kết Pháp lý & Bản quyền:</b> Dự án áp dụng các giấy phép chuẩn theo <a href="https://opensource.org/licenses" target="_blank" class="underline text-amber-700 dark:text-amber-400 font-semibold">Danh sách Giấy phép OSI</a> (Apache-2.0, GNU AGPL-3.0, MIT). <b>Cam kết 100% KHÔNG cào dữ liệu trái phép (Zero Web Scraping)</b> từ bất kỳ cổng thông tin đóng nào; toàn bộ nguồn cấp đều thông qua giao diện API mở chính thức và tuân thủ bản quyền quốc tế.
           </p>
         </div>
 
