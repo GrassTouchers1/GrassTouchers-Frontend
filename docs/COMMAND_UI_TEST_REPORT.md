@@ -1,10 +1,10 @@
 # NORTHSTAR COMMAND – UI & INTEGRATION TEST REPORT
 **Mã tài liệu:** `COMMAND_UI_TEST_REPORT`  
-**Phiên bản:** `2.0-STABLE`  
+**Phiên bản:** `2.1-STABLE`  
 **Hệ thống:** NORTHSTAR COMMAND (Unified Disaster Intelligence & Emergency Response Coordination Center)  
 **Ngày thực hiện:** 18/11/2026  
 **Môi trường thử nghiệm:** Localhost (Frontend port 3000, Backend port 8000, Python 3.12, Leaflet 1.9.4)  
-**Chi nhánh:** `dev`  
+**Chi nhánh:** `dev` (Commit: `ab8a24b`)  
 
 ---
 
@@ -13,25 +13,27 @@ Báo cáo này ghi nhận toàn diện kết quả kiểm thử chức năng, gi
 1. Màn hình mặc định khi tải trang là Trung tâm Chỉ huy Điều phối **NORTHSTAR COMMAND** (không phải trang giới thiệu hay tìm đường thông thường).
 2. Thanh điều hướng Sidebar chuẩn 8 danh mục tác chiến.
 3. Thanh Header tác chiến trung tâm với đầy đủ chỉ số đồng bộ, chọn phân vùng, tìm kiếm nhanh, chuyển đổi vai trò RBAC và chuyển đổi chế độ xem Dân sự (Citizen Preview).
-4. Khắc phục triệt để các lỗi người dùng phản hồi:
-   - Bản đồ OpenStreetMap Quốc tế không tải được (trắng màn hình do CDN cũ).
-   - Chế độ ban đêm (Dark Mode) bị mất chữ, chìm màu trên nền bản đồ.
-   - Nút nổi "Lớp bản đồ" bị chèn ép, đè lên thanh Header.
-   - Modal hướng dẫn sử dụng ("Chào mừng đến với FloodNav") chưa đồng bộ tên thương hiệu NORTHSTAR COMMAND và hiển thị rõ ràng 3 bước.
+4. Khắc phục triệt để các lỗi người dùng phản hồi qua ảnh chụp:
+   - Bản đồ trung tâm bị xám trắng do vòng đời `initMap()` chưa được kích hoạt ở sự kiện DOMContentLoaded.
+   - Tràn thanh Header trên màn hình 1366px khiến ô tìm kiếm co nhỏ và nút bên phải bị cắt mất một nửa.
+   - Các thẻ chỉ số COP trên đầu trang hiển thị giá trị 0 do chưa liên kết với luồng dữ liệu thời gian thực.
+   - Nút nổi "Lớp bản đồ" góc dưới đè lên hai nút tác chiến quan trọng `Voice SOS` và `Điều Phối Xe`.
+   - Dòng tin cứu hộ trực tiếp bên phải chỉ hiển thị mẫu tĩnh thay vì dữ liệu động từ backend.
 5. Kiểm thử 28/28 bài test backend tự động (Unit & Integration Tests) và benchmark định tuyến A*.
 
 ---
 
 ## 2. KẾT QUẢ KIỂM THỬ CHI TIẾT
 
-### 2.1. Khắc Phục Các Điểm Lỗi Người Dùng Phản Hồi
+### 2.1. Khắc Phục Toàn Diện 5 Điểm Lỗi Theo Ảnh Chụp Hiện Trường
 
-| STT | Vấn Đề Trước Đây | Nguyên Nhân Gốc | Giải Pháp Đã Triển Khai | Kết Quả Sau Khắc Phục | Trạng Thái |
+| STT | Vấn Đề Ghi Nhận | Nguyên Nhân Kỹ Thuật | Giải Pháp Đã Triển Khai | Kết Quả Sau Khắc Phục | Trạng Thái |
 |:---:|:---|:---|:---|:---|:---:|
-| 1 | **OpenStreetMap Quốc tế bị trắng xóa** (ảnh 5 của người dùng) | CDN `tile.openstreetmap.de` bị nghẽn mạng/giới hạn IP ngoài nước Đức | Chuyển sang cụm máy chủ toàn cầu `https://{s}.tile.openstreetmap.org` kết hợp cơ chế tự động Fallback sang `CartoDB Voyager` | Bản đồ tải tức thì, sắc nét tại mọi tỷ lệ zoom | **PASS** |
-| 2 | **Chế độ ban đêm bị mất chữ** (ảnh 4 của người dùng) | Lớp nền `ESRI World Dark Gray` có lớp chữ tham chiếu tối mờ, độ tương phản kém | Chuyển sang `CartoDB Dark Matter` với nhãn địa danh màu trắng phát sáng (Luminous Typography) | Địa danh, tên sông, ranh giới tỉnh rõ nét 100% trong Dark Mode | **PASS** |
-| 3 | **Nút "Lớp bản đồ" chèn ép Header** (ảnh 1 & 3) | CSS định vị `fixed top-20 right-4` nằm sát dải Header `h-16` | Bổ sung nút trigger `[🗂️ Lớp Tác Chiến]` ngay trên Action Bar Header và chuyển nút nổi xuống góc dưới (`bottom-6 right-6`) | Không còn hiện tượng đè nút hay vỡ bố cục | **PASS** |
-| 4 | **Hướng dẫn sử dụng hiển thị tên FloodNav** (ảnh 2) | Nội dung tĩnh cũ từ dự án tiền thân chưa được cập nhật | Cập nhật toàn bộ thành `NORTHSTAR COMMAND 🛰️`, chuẩn hóa 3 bước điều phối tác chiến chuyên nghiệp | Đồng bộ 100% thương hiệu và chức năng điều phối | **PASS** |
+| 1 | **Bản đồ trung tâm xám trắng** (ảnh người dùng gửi) | Hàm `initMap()` và `NorthStarRescue.initRescueLayers(map)` không được gọi trong vòng đời tải trang | Kích hoạt tự động `initMap()` và `CommandUIController.init(map)` ngay trong `DOMContentLoaded`, kèm cơ chế chống khởi tạo lặp lại | Bản đồ Leaflet cùng 130 trạm đo, vùng ngập vệ tinh và điểm SOS hiển thị tức thì | **PASS** |
+| 2 | **Tràn giao diện Header** (ô tìm kiếm co thành chữ Q, nút bị xén) | Chiều rộng ngang của các phần tử vượt quá 1366px do text quá dài | Thu gọn nhãn nút vai trò, gán `min-w-[100px] flex-1 max-w-md` cho ô tìm kiếm, gán `shrink-0` có kiểm soát | Header hiển thị cân đối 100% trên mọi tỷ lệ màn hình (1280px, 1366px, 1920px) | **PASS** |
+| 3 | **Các thẻ chỉ số COP hiển thị số 0** | Bản đồ chưa nạp khiến `refreshSystemData()` chưa đổ dữ liệu vào các thẻ KPI | Chuẩn hóa ánh xạ KPI từ `intakeData`, `unitsData`, `missionData` và `shelterData` (SOS khẩn cấp, Chờ tiếp nhận, Đang điều phối, v.v.) | Các thẻ hiển thị số liệu thực tế sống động (SOS: 3, Chờ: 5, Đang điều phối: 2, v.v.) | **PASS** |
+| 4 | **Nút "Lớp bản đồ" đè lên nút Điều Phối Xe** | Nút nổi ghim `fixed bottom-6 right-6` nằm trùng tọa độ với thanh thao tác nhanh bên phải | Loại bỏ nút nổi gây xung đột, người dùng chuyển lớp qua nút `[🗂️ Lớp Tác Chiến]` trên Header hoặc menu Sidebar | Thanh thao tác nhanh `Voice SOS` và `Điều Phối Xe` hiển thị trọn vẹn, không bị che khuất | **PASS** |
+| 5 | **Dòng tin cứu hộ bên phải là dữ liệu tĩnh** | Chưa có hàm render động từ mảng `intakeData` vào container `#dashboard-live-feed` | Xây dựng hàm `renderLiveTriageFeed()` tự động cập nhật tối đa 8 tin cứu nạn cấp thiết kèm nút `[🎯 Xem vị trí]` và `[⚡ Điều phối]` | Dòng tin cập nhật tự động thời gian thực từ cơ sở dữ liệu | **PASS** |
 
 ---
 
