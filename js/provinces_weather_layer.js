@@ -183,6 +183,7 @@
       });
 
       updateProvinceLabels();
+      updateWeatherPaneCards();
       console.log('[ProvinceWeather] Đã cập nhật thành công dữ liệu Khí tượng & AQI trực tiếp cho 26 tỉnh thành miền Bắc.');
     } catch (err) {
       console.warn('[ProvinceWeather] Lỗi tải Open-Meteo trực tiếp, duy trì cache nội suy chuẩn:', err);
@@ -459,6 +460,68 @@
     }
   }
 
+  function updateWeatherPaneCards() {
+    const hanoiCard = document.getElementById('weather-card-hanoi');
+    const hanoiData = weatherCache['Hà Nội'];
+    if (hanoiCard && hanoiData) {
+      hanoiCard.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-slate-200">🏛️ TP. Hà Nội</div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-mono">Live Open-Meteo</span>
+        </div>
+        <div class="text-2xl font-black text-amber-300 mt-1.5 flex items-center gap-2">
+          <span>${hanoiData.weatherIcon}</span>
+          <span>${hanoiData.temp}°C</span>
+          <span class="text-xs font-normal text-slate-300">- ${hanoiData.weatherDesc}</span>
+        </div>
+        <div class="text-slate-400 mt-1 text-[11px] space-y-0.5">
+          <div>Lượng mưa: <span class="font-bold text-slate-200">${hanoiData.rain} mm</span> | Cảm nhận: ${hanoiData.feelsLike}°C | Độ ẩm: ${hanoiData.humidity}%</div>
+          <div>Gió: ${hanoiData.windSpeed} km/h | Không khí: <span class="font-bold text-amber-300">AQI ${hanoiData.aqi}</span> (PM2.5: ${hanoiData.pm25} µg/m³)</div>
+        </div>
+      `;
+    }
+
+    const laocaiCard = document.getElementById('weather-card-laocai');
+    const laocaiData = weatherCache['Lào Cai'];
+    if (laocaiCard && laocaiData) {
+      laocaiCard.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-slate-200">⛰️ Tỉnh Lào Cai (Bảo Yên, Sa Pa)</div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-mono">Live Open-Meteo</span>
+        </div>
+        <div class="text-2xl font-black text-rose-400 mt-1.5 flex items-center gap-2">
+          <span>${laocaiData.weatherIcon}</span>
+          <span>${laocaiData.temp}°C</span>
+          <span class="text-xs font-normal text-slate-300">- ${laocaiData.weatherDesc}</span>
+        </div>
+        <div class="text-slate-400 mt-1 text-[11px] space-y-0.5">
+          <div>Lượng mưa: <span class="font-bold text-slate-200">${laocaiData.rain} mm</span> | Cảm nhận: ${laocaiData.feelsLike}°C | Độ ẩm: ${laocaiData.humidity}%</div>
+          <div>Gió: ${laocaiData.windSpeed} km/h | Không khí: <span class="font-bold text-emerald-300">AQI ${laocaiData.aqi}</span> (PM2.5: ${laocaiData.pm25} µg/m³)</div>
+        </div>
+      `;
+    }
+
+    const qnCard = document.getElementById('weather-card-quangninh');
+    const qnData = weatherCache['Quảng Ninh'];
+    if (qnCard && qnData) {
+      qnCard.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-slate-200">🌊 Tỉnh Quảng Ninh (Hạ Long, Cẩm Phả)</div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-mono">Live Open-Meteo</span>
+        </div>
+        <div class="text-2xl font-black text-cyan-300 mt-1.5 flex items-center gap-2">
+          <span>${qnData.weatherIcon}</span>
+          <span>${qnData.temp}°C</span>
+          <span class="text-xs font-normal text-slate-300">- ${qnData.weatherDesc}</span>
+        </div>
+        <div class="text-slate-400 mt-1 text-[11px] space-y-0.5">
+          <div>Lượng mưa: <span class="font-bold text-slate-200">${qnData.rain} mm</span> | Cảm nhận: ${qnData.feelsLike}°C | Độ ẩm: ${qnData.humidity}%</div>
+          <div>Gió: ${qnData.windSpeed} km/h | Không khí: <span class="font-bold text-emerald-300">AQI ${qnData.aqi}</span> (PM2.5: ${qnData.pm25} µg/m³)</div>
+        </div>
+      `;
+    }
+  }
+
   function updateTheme(isDark) {
     if (geoJsonLayer) {
       geoJsonLayer.setStyle(getFeatureStyle);
@@ -469,6 +532,7 @@
     init: init,
     toggle: toggle,
     updateTheme: updateTheme,
+    updatePaneCards: updateWeatherPaneCards,
     refreshData: fetchLiveOpenMeteo,
     getCache: () => weatherCache,
     getLayerGroup: () => provincesLayerGroup

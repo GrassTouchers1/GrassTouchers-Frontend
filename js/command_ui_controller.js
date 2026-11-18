@@ -794,6 +794,10 @@ const CommandUIController = (function () {
       }
     }, 150);
 
+    if (viewId === 'cmd_weather' && window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.updatePaneCards === 'function') {
+      window.ProvinceWeatherLayer.updatePaneCards();
+    }
+
     renderAllComponents();
   }
 
