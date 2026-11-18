@@ -163,22 +163,19 @@ function initMap() {
 
 
 
-  // Lớp bản đồ Dark Mode chuyên nghiệp (CartoDB Dark Matter - High Contrast Labels, Luminous Typography)
-  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  // Lớp bản đồ Dark Mode tác chiến cao cấp (Esri World Dark Gray Canvas - 100% Miễn phí, Không API Key, Chuẩn phòng chỉ huy)
+  const esriDarkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    maxNativeZoom: 16,
+    maxZoom: 19
+  });
+  const esriDarkLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '',
+    maxNativeZoom: 16,
     maxZoom: 19,
-    subdomains: 'abcd'
+    pane: 'shadowPane'
   });
-  cartoDark.on('tileerror', function(error) {
-    if (error.tile && !error.tile.dataset.fallbackTried) {
-      error.tile.dataset.fallbackTried = 'true';
-      const coords = error.coords;
-      if (coords) {
-        error.tile.src = `https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
-      }
-    }
-  });
-  darkBaseLayer = cartoDark;
+  darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkLabels]);
 
   // Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
   const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
@@ -199,7 +196,7 @@ function initMap() {
       error.tile.dataset.fallbackTried = 'true';
       const coords = error.coords;
       if (coords) {
-        error.tile.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${coords.z}/${coords.x}/${coords.y}.png`;
+        error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
       }
     }
   });
@@ -2556,7 +2553,7 @@ function switchTab(tabId) {
 
 
 
-// 11. Chuyển đổi Dark Mode nâng cao (CartoDB Dark Matter)
+// 11. Chuyển đổi Dark Mode nâng cao (Esri World Dark Gray Canvas)
 
 function toggleDarkMode() {
 

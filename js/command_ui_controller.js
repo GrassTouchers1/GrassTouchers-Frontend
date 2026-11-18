@@ -231,6 +231,10 @@ const CommandUIController = (function () {
     if (initialView && initialView !== 'cmd_dashboard') {
       switchView(initialView);
     }
+    const initialBaseMap = urlParams.get('basemap');
+    if (initialBaseMap && typeof window.switchBaseLayer === 'function') {
+      setTimeout(() => window.switchBaseLayer(initialBaseMap), 200);
+    }
     const initialModal = urlParams.get('modal');
     if (initialModal) {
       setTimeout(() => openDispatchModal(initialModal), 300);
