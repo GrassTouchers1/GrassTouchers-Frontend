@@ -1449,7 +1449,7 @@ function updateViewportFloodAlert() {
   const safeInView = inView.filter(fp => fp.status === 'safe');
 
   alertEl.classList.remove('hidden');
-  const baseClass = 'absolute px-3.5 py-2 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2.5 border transition-all duration-300 pointer-events-auto ';
+  const baseClass = 'pointer-events-auto max-w-full px-3.5 py-1.5 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 ';
 
   if (dangerInView.length > 0) {
     dangerInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));

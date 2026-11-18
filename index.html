@@ -463,73 +463,102 @@
           <div class="flex-1 h-full relative min-w-0" id="map-container">
             <div id="map" class="w-full h-full z-0"></div>
 
-            <!-- Floating Mini-HUD (Hiển thị khi thu gọn thanh chỉ số trên đỉnh) -->
-            <div id="floating-stats-hud" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-slate-700/90 px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md z-[990] items-center gap-3 text-xs select-none pointer-events-auto">
-              <div class="flex items-center gap-1 text-rose-400 font-bold" title="SOS Khẩn cấp">
-                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-[10px] text-slate-400">SOS:</span>
-                <span id="mini-val-sos" class="font-black text-rose-300">0</span>
+            <!-- ============================================== -->
+            <!-- MAP TOP FLOATING CONTROLS DOCK (NON-OVERLAPPING FLEX BAR) -->
+            <!-- ============================================== -->
+            <div id="map-top-bar" class="absolute top-3 inset-x-3 z-[990] flex items-start justify-between gap-2 pointer-events-none select-none">
+              
+              <!-- Left: Phân Vùng Tác Chiến (Compact & Clean) -->
+              <div id="regional-focus-control" class="pointer-events-auto bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-1.5 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md text-xs font-semibold flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-0.5 select-none pointer-events-none">
+                  <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
+                  <span class="text-[11px] uppercase tracking-wider hidden lg:inline">Phân vùng:</span>
+                </div>
+                <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition max-w-[145px] sm:max-w-[175px] truncate">
+                  <option value="all">🌐 Toàn Miền Bắc</option>
+                  <option value="hanoi">📍 Hà Nội & ĐB</option>
+                  <option value="taybac">⛰️ Tây Bắc (Lào Cai - YB)</option>
+                  <option value="vietbac">🌊 Việt Bắc (TN - BG)</option>
+                  <option value="dongbac">🏔️ Đông Bắc (CB - LS)</option>
+                  <option value="quangninh">🏖️ Duyên Hải (QN - HP)</option>
+                  <option value="songda">🏞️ Sông Đà (PT - HB)</option>
+                </select>
               </div>
-              <div class="flex items-center gap-1 text-amber-300 font-bold" title="Chờ tiếp nhận">
-                <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
-                <span class="text-[10px] text-slate-400">Chờ:</span>
-                <span id="mini-val-intake" class="font-black">0</span>
+
+              <!-- Center: Stacking Alerts & Mini-HUD (Flex-col, Centered, Truncate, No Clashing!) -->
+              <div class="flex-1 flex flex-col items-center gap-1.5 min-w-0 pointer-events-none px-1">
+                
+                <!-- Floating Mini-HUD (Hiển thị khi thu gọn thanh chỉ số trên đỉnh) -->
+                <div id="floating-stats-hud" class="hidden pointer-events-auto bg-slate-900/95 border border-slate-700/90 px-3.5 py-1 rounded-full shadow-2xl backdrop-blur-md items-center gap-2.5 text-xs select-none max-w-full">
+                  <div class="flex items-center gap-1 text-rose-400 font-bold" title="SOS Khẩn cấp">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                    <span class="text-[10px] text-slate-400">SOS:</span>
+                    <span id="mini-val-sos" class="font-black text-rose-300">0</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-amber-300 font-bold" title="Chờ tiếp nhận">
+                    <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
+                    <span class="text-[10px] text-slate-400">Chờ:</span>
+                    <span id="mini-val-intake" class="font-black">0</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-blue-300 font-bold" title="Đang điều phối">
+                    <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
+                    <span class="text-[10px] text-slate-400">Điều phối:</span>
+                    <span id="mini-val-missions" class="font-black">0</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-emerald-300 font-bold" title="Lực lượng trực">
+                    <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
+                    <span class="text-[10px] text-slate-400">Trực:</span>
+                    <span id="mini-val-units" class="font-black">0/0</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-teal-300 font-bold hidden md:flex" title="Điểm sơ tán an toàn">
+                    <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
+                    <span class="text-[10px] text-slate-400">Trú ẩn:</span>
+                    <span id="mini-val-shelters" class="font-black">0</span>
+                  </div>
+                  <button onclick="CommandUIController.toggleTopStatsCollapse()" class="ml-1 px-2 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold border border-slate-700 cursor-pointer flex items-center gap-1 transition" title="Mở rộng chi tiết chỉ số (Phím \)">
+                    <span>Mở rộng</span>
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                  </button>
+                </div>
+
+                <!-- Cảnh báo Điểm ngập Khung nhìn (Viewport Flood Alert) -->
+                <div id="viewport-flood-alert" class="hidden pointer-events-auto max-w-full text-xs font-semibold px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md flex items-center gap-2 border transition-all duration-300">
+                  <div id="viewport-alert-icon" class="p-1 rounded-full flex-shrink-0">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  </div>
+                  <div class="flex-1 truncate" id="viewport-alert-text">
+                    Đang quét điểm ngập khu vực...
+                  </div>
+                  <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2.5 py-1 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow">
+                    Xem
+                  </button>
+                </div>
+
               </div>
-              <div class="flex items-center gap-1 text-blue-300 font-bold" title="Đang điều phối">
-                <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
-                <span class="text-[10px] text-slate-400">Điều phối:</span>
-                <span id="mini-val-missions" class="font-black">0</span>
+
+              <!-- Right: Tối đa hóa bản đồ (Compact Icon Button) -->
+              <div class="pointer-events-auto flex items-center gap-1.5 shrink-0">
+                <button onclick="CommandUIController.toggleZenMapMode()" id="btn-map-zen-mode" class="p-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 hover:text-emerald-400 border border-slate-200/80 dark:border-slate-800 shadow-xl backdrop-blur-md cursor-pointer transition active:scale-95 flex items-center gap-1 text-xs font-bold" title="Chế độ Giám sát Bản đồ: Tối đa hóa 100% diện tích (Phím Z hoặc M)">
+                  <i data-lucide="maximize" class="w-4 h-4" id="btn-map-zen-icon"></i>
+                  <span class="hidden md:inline" id="btn-map-zen-text">Tối đa</span>
+                </button>
               </div>
-              <div class="flex items-center gap-1 text-emerald-300 font-bold" title="Lực lượng trực">
-                <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
-                <span class="text-[10px] text-slate-400">Trực:</span>
-                <span id="mini-val-units" class="font-black">0/0</span>
-              </div>
-              <div class="flex items-center gap-1 text-teal-300 font-bold hidden md:flex" title="Điểm sơ tán an toàn">
-                <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
-                <span class="text-[10px] text-slate-400">Trú ẩn:</span>
-                <span id="mini-val-shelters" class="font-black">0</span>
-              </div>
-              <button onclick="CommandUIController.toggleTopStatsCollapse()" class="ml-1 px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold border border-slate-700 cursor-pointer flex items-center gap-1 transition" title="Mở rộng chi tiết chỉ số (Phím \)">
-                <span>Mở rộng</span>
-                <i data-lucide="chevron-down" class="w-3 h-3"></i>
-              </button>
+
             </div>
 
             <!-- Floating Expand Left Sidebar Button (Khi sidebar bị thu gọn) -->
-            <button id="floating-btn-expand-sidebar" onclick="CommandUIController.toggleSidebarCollapse()" class="hidden absolute top-20 left-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Menu điều hướng tác chiến (Phím [)">
+            <button id="floating-btn-expand-sidebar" onclick="CommandUIController.toggleSidebarCollapse()" class="hidden absolute top-16 left-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Menu điều hướng tác chiến (Phím [)">
               <i data-lucide="chevrons-right" class="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition"></i>
               <span class="text-xs font-bold">Menu Tác Chiến</span>
             </button>
 
             <!-- Floating Expand Right Feed Button (Khi dòng tin bị thu gọn) -->
-            <button id="floating-btn-expand-feed" onclick="CommandUIController.toggleRightFeedCollapse()" class="hidden absolute top-20 right-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Dòng tin cứu hộ trực tiếp (Phím ])">
+            <button id="floating-btn-expand-feed" onclick="CommandUIController.toggleRightFeedCollapse()" class="hidden absolute top-16 right-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Dòng tin cứu hộ trực tiếp (Phím ])">
               <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
               <i data-lucide="chevrons-left" class="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition"></i>
               <span class="text-xs font-bold">Dòng Tin Cứu Hộ</span>
               <span id="floating-feed-badge" class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs">0</span>
             </button>
-
-            <!-- Floating Controls Preserved Inside Map -->
-            <div id="regional-focus-control" class="absolute top-4 left-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold hidden sm:flex items-center gap-2 select-none">
-        <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-1 select-none pointer-events-none">
-          <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
-          <span class="text-[11px] uppercase tracking-wider">Phân vùng:</span>
-        </div>
-        <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2.5 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-          <option value="all">🌐 Toàn Miền Bắc (Tổng quan)</option>
-          <option value="hanoi">📍 Hà Nội & Đồng Bằng</option>
-          <option value="taybac">⛰️ Tây Bắc (Lào Cai - Yên Bái)</option>
-          <option value="vietbac">🌊 Việt Bắc (Thái Nguyên - Bắc Giang)</option>
-          <option value="dongbac">🏔️ Đông Bắc (Cao Bằng - Lạng Sơn)</option>
-          <option value="quangninh">🏖️ Duyên Hải (Quảng Ninh - Hải Phòng)</option>
-          <option value="songda">🏞️ Sông Đà (Phú Thọ - Hòa Bình)</option>
-        </select>
-        <button onclick="CommandUIController.toggleZenMapMode()" id="btn-map-zen-mode" class="ml-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] shadow flex items-center gap-1.5 cursor-pointer transition active:scale-95 shrink-0" title="Chế độ Giám sát Bản đồ: Thu gọn toàn bộ panel để mở rộng bản đồ tối đa (Phím Z)">
-          <i data-lucide="maximize" class="w-3.5 h-3.5" id="btn-map-zen-icon"></i>
-          <span id="btn-map-zen-text">Tối đa bản đồ</span>
-        </button>
-      </div>
             <div id="multi-hazard-layer-control" class="hidden absolute top-16 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-3 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-2 min-w-[250px] transition-all duration-200">
         <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
           <div class="flex items-center gap-1.5">
@@ -613,27 +642,7 @@
           </div>
         </div>
       </div>
-            <div id="viewport-flood-alert" class="hidden absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-2 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md z-[990] flex items-center gap-2.5 border transition-all duration-300 pointer-events-auto">
 
-        <div id="viewport-alert-icon" class="p-1 rounded-full flex-shrink-0">
-
-          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-
-        </div>
-
-        <div class="flex-1 truncate" id="viewport-alert-text">
-
-          Đang quét điểm ngập khu vực...
-
-        </div>
-
-        <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2.5 py-1 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow">
-
-          Xem
-
-        </button>
-
-      </div>
             <div id="pick-hint" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-4 py-2 rounded-full shadow-xl text-xs font-semibold backdrop-blur-sm z-[1000] flex items-center gap-2 border border-slate-700">
 
         <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
