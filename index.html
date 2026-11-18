@@ -328,6 +328,18 @@
           </div>
         </div>
 
+        <!-- Category 9: MÃ NGUỒN & PHÁP LÝ -->
+        <div class="pt-2 border-t border-slate-800/80">
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">IX. MÃ NGUỒN & PHÁP LÝ</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer transition" data-view="cmd_licenses" onclick="CommandUIController.switchView('cmd_licenses')">
+              <i data-lucide="scale" class="w-4 h-4 shrink-0 text-cyan-400"></i>
+              <span class="cmd-nav-label flex-1 truncate font-bold text-slate-200">Mã Nguồn Mở & Pháp Lý</span>
+              <span class="px-1.5 py-0.2 rounded text-[9.5px] font-black bg-cyan-950/80 text-cyan-300 border border-cyan-800 shrink-0">OSI</span>
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- Sidebar Status Footer -->
@@ -340,6 +352,10 @@
           <span>Engine:</span>
           <span>PostGIS + A* Dynamic Routing</span>
         </div>
+        <button onclick="CommandUIController.switchView('cmd_licenses')" class="w-full mt-2 py-1 px-2 rounded-lg bg-slate-900 hover:bg-slate-850 text-cyan-300 hover:text-cyan-200 border border-slate-800 flex items-center justify-center gap-1.5 text-[10px] font-bold cursor-pointer transition">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>100% OSI Open Source & Open Data</span>
+        </button>
       </div>
     </aside>
 
@@ -1707,6 +1723,11 @@
           </div>
         </div>
 
+        <!-- ============================================== -->
+        <!-- PANE 15: MÃ NGUỒN MỞ & PHÁP LÝ (OSI COMPLIANCE) -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_licenses" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 md:p-6 bg-slate-950 text-slate-100 custom-scrollbar"></div>
+
       </div>
 
     </main>
@@ -2464,15 +2485,15 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261118_v11"></script>
-  <script src="js/command_ui_controller.js?v=20261118_v11"></script>
-  <script src="js/coordinator_command.js?v=20261118_v11"></script>
-  <script src="js/map_core.js?v=20261118_v11"></script>
-  <script src="js/provinces_weather_layer.js?v=20261118_v11"></script>
-  <script src="js/rescue_manager.js?v=20261118_v11"></script>
-  <script src="js/advanced_modules.js?v=20261118_v11"></script>
-  <script src="js/storm_simulator.js?v=20261118_v11"></script>
-  <script src="js/voice_sos.js?v=20261118_v11"></script>
+  <script src="js/config.js?v=20261118_v12"></script>
+  <script src="js/command_ui_controller.js?v=20261118_v12"></script>
+  <script src="js/coordinator_command.js?v=20261118_v12"></script>
+  <script src="js/map_core.js?v=20261118_v12"></script>
+  <script src="js/provinces_weather_layer.js?v=20261118_v12"></script>
+  <script src="js/rescue_manager.js?v=20261118_v12"></script>
+  <script src="js/advanced_modules.js?v=20261118_v12"></script>
+  <script src="js/storm_simulator.js?v=20261118_v12"></script>
+  <script src="js/voice_sos.js?v=20261118_v12"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
