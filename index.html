@@ -153,6 +153,18 @@
         <span class="hidden xl:inline">Lớp Tác Chiến</span>
       </button>
 
+      <!-- Toggle Top Stats Button -->
+      <button onclick="CommandUIController.toggleTopStatsCollapse()" id="btn-toggle-top-stats" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Thu gọn / Mở rộng Chỉ số (Phím \)">
+        <i data-lucide="panel-top-close" class="w-3.5 h-3.5" id="icon-toggle-top-stats"></i>
+        <span class="hidden xl:inline" id="text-toggle-top-stats">Chỉ số</span>
+      </button>
+
+      <!-- Zen Map Monitoring Mode Button -->
+      <button onclick="CommandUIController.toggleZenMapMode()" id="btn-zen-map" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Giám sát bản đồ: Thu gọn tất cả thanh panel để quan sát rộng nhất (Phím Z)">
+        <i data-lucide="maximize" class="w-3.5 h-3.5" id="zen-map-icon"></i>
+        <span class="hidden xl:inline" id="zen-map-label">Giám sát bản đồ</span>
+      </button>
+
       <!-- SitRep Trigger Button -->
       <button onclick="CommandUIController.switchView('cmd_sitrep')" class="px-2 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Báo cáo Tác chiến SitRep">
         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
@@ -195,6 +207,9 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
           <span id="cmd-active-role-badge" class="text-[11px] font-black text-amber-300 truncate">⭐ Command Director (Toàn quyền)</span>
         </div>
+        <button onclick="CommandUIController.toggleSidebarCollapse()" class="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition shrink-0" title="Thu gọn sidebar (Phím [)">
+          <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+        </button>
       </div>
 
       <!-- Navigation Tree (8 Categories) -->
@@ -331,98 +346,110 @@
     <!-- B. CENTRAL WORKSPACE CONTAINER -->
     <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-950">
 
-      <!-- ROLE SCOPE & PERMISSIONS DYNAMIC BANNER -->
-      <div id="cmd-role-scope-banner" class="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 flex-wrap gap-2">
-        <div class="flex items-center gap-2 overflow-hidden">
-          <span class="px-2 py-0.5 rounded font-black text-[10.5px] border bg-amber-500/20 text-amber-300 border-amber-500/40 shrink-0">
-            ⭐ Chỉ huy trưởng
-          </span>
-          <span class="text-slate-300 font-medium text-[11px] truncate">
-            Toàn quyền điều hành, ban bố tình trạng khẩn cấp, phê duyệt xuất quân và quản trị hệ thống.
-          </span>
+      <!-- TOP STRATEGIC PANELS (COLLAPSIBLE TO MAXIMIZE MAP) -->
+      <div id="cmd-top-stats-container" class="shrink-0 transition-all duration-300 overflow-hidden z-20">
+        <!-- ROLE SCOPE & PERMISSIONS DYNAMIC BANNER -->
+        <div id="cmd-role-scope-banner" class="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 flex-wrap gap-2">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <span class="px-2 py-0.5 rounded font-black text-[10.5px] border bg-amber-500/20 text-amber-300 border-amber-500/40 shrink-0">
+              ⭐ Chỉ huy trưởng
+            </span>
+            <span class="text-slate-300 font-medium text-[11px] truncate">
+              Toàn quyền điều hành, ban bố tình trạng khẩn cấp, phê duyệt xuất quân và quản trị hệ thống.
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 text-[10px]">
+            <span class="px-1.5 py-0.5 rounded font-bold bg-rose-900/40 text-rose-300 border border-rose-800">
+              ✓ Có quyền Xuất quân
+            </span>
+            <span class="px-1.5 py-0.5 rounded font-bold bg-teal-900/40 text-teal-300 border border-teal-800">
+              ✓ Thẩm định tin
+            </span>
+            <span class="px-1.5 py-0.5 rounded font-bold bg-blue-900/40 text-blue-300 border border-blue-800">
+              ✓ Quản lý Đội xe
+            </span>
+          </div>
         </div>
-        <div class="flex items-center gap-1.5 shrink-0 text-[10px]">
-          <span class="px-1.5 py-0.5 rounded font-bold bg-rose-900/40 text-rose-300 border border-rose-800">
-            ✓ Có quyền Xuất quân
-          </span>
-          <span class="px-1.5 py-0.5 rounded font-bold bg-teal-900/40 text-teal-300 border border-teal-800">
-            ✓ Thẩm định tin
-          </span>
-          <span class="px-1.5 py-0.5 rounded font-bold bg-blue-900/40 text-blue-300 border border-blue-800">
-            ✓ Quản lý Đội xe
-          </span>
+
+        <!-- TOP COP QUICK METRICS BANNER -->
+        <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-20">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
+            
+            <!-- KPI 1: SOS Yêu cầu khẩn cấp -->
+            <div class="bg-rose-950/30 border border-rose-800/40 rounded-lg p-2 flex items-center justify-between">
+              <div>
+                <div class="text-[10.5px] font-bold text-rose-400 flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                  SOS Khẩn Cấp
+                </div>
+                <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">3</div>
+              </div>
+              <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500/40"></i>
+            </div>
+
+            <!-- KPI 2: Tiếp nhận chưa xử lý -->
+            <div class="bg-amber-950/30 border border-amber-800/40 rounded-lg p-2 flex items-center justify-between">
+              <div>
+                <div class="text-[10.5px] font-bold text-amber-400 flex items-center gap-1">
+                  <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
+                  Chờ Tiếp Nhận
+                </div>
+                <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">5</div>
+              </div>
+              <i data-lucide="clock" class="w-6 h-6 text-amber-500/40"></i>
+            </div>
+
+            <!-- KPI 3: Đang điều phối tác chiến -->
+            <div class="bg-blue-950/30 border border-blue-800/40 rounded-lg p-2 flex items-center justify-between">
+              <div>
+                <div class="text-[10.5px] font-bold text-blue-400 flex items-center gap-1">
+                  <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
+                  Đang Điều Phối
+                </div>
+                <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">2</div>
+              </div>
+              <i data-lucide="compass" class="w-6 h-6 text-blue-500/40"></i>
+            </div>
+
+            <!-- KPI 4: Đội cứu hộ sẵn sàng -->
+            <div class="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2 flex items-center justify-between">
+              <div>
+                <div class="text-[10.5px] font-bold text-emerald-400 flex items-center gap-1">
+                  <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
+                  Lực Lượng Trực
+                </div>
+                <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 / 5</div>
+              </div>
+              <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500/40"></i>
+            </div>
+
+            <!-- KPI 5: Điểm sơ tán an toàn -->
+            <div class="hidden lg:flex bg-teal-950/30 border border-teal-800/40 rounded-lg p-2 items-center justify-between">
+              <div>
+                <div class="text-[10.5px] font-bold text-teal-400 flex items-center gap-1">
+                  <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
+                  Điểm Trú Ẩn Mở
+                </div>
+                <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">6 Điểm</div>
+              </div>
+              <i data-lucide="warehouse" class="w-6 h-6 text-teal-500/40"></i>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ROLE OPERATIONAL FOCUS & QUICK ACTIONS BANNER -->
+        <div id="cmd-role-focus-callout" class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-3.5 py-2 z-20"></div>
+
+        <!-- MINI COLLAPSE STRIP (QUICK ONE-CLICK TO EXPAND MAP) -->
+        <div class="flex items-center justify-center bg-slate-900/95 border-b border-slate-800/80 py-0.5 select-none">
+          <button onclick="CommandUIController.toggleTopStatsCollapse()" class="text-[10px] font-bold text-slate-400 hover:text-amber-300 transition flex items-center gap-1.5 cursor-pointer px-4 py-0.5 rounded-full hover:bg-slate-800" title="Thu gọn dải chỉ số để tăng diện tích giám sát bản đồ (Phím \)">
+            <i data-lucide="chevron-up" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Thu gọn bảng chỉ số để tối đa hóa bản đồ</span>
+            <i data-lucide="chevron-up" class="w-3.5 h-3.5 text-amber-400"></i>
+          </button>
         </div>
       </div>
-
-      <!-- TOP COP QUICK METRICS BANNER -->
-      <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-20">
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
-          
-          <!-- KPI 1: SOS Yêu cầu khẩn cấp -->
-          <div class="bg-rose-950/30 border border-rose-800/40 rounded-lg p-2 flex items-center justify-between">
-            <div>
-              <div class="text-[10.5px] font-bold text-rose-400 flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                SOS Khẩn Cấp
-              </div>
-              <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">3</div>
-            </div>
-            <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500/40"></i>
-          </div>
-
-          <!-- KPI 2: Tiếp nhận chưa xử lý -->
-          <div class="bg-amber-950/30 border border-amber-800/40 rounded-lg p-2 flex items-center justify-between">
-            <div>
-              <div class="text-[10.5px] font-bold text-amber-400 flex items-center gap-1">
-                <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
-                Chờ Tiếp Nhận
-              </div>
-              <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">5</div>
-            </div>
-            <i data-lucide="clock" class="w-6 h-6 text-amber-500/40"></i>
-          </div>
-
-          <!-- KPI 3: Đang điều phối tác chiến -->
-          <div class="bg-blue-950/30 border border-blue-800/40 rounded-lg p-2 flex items-center justify-between">
-            <div>
-              <div class="text-[10.5px] font-bold text-blue-400 flex items-center gap-1">
-                <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
-                Đang Điều Phối
-              </div>
-              <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">2</div>
-            </div>
-            <i data-lucide="compass" class="w-6 h-6 text-blue-500/40"></i>
-          </div>
-
-          <!-- KPI 4: Đội cứu hộ sẵn sàng -->
-          <div class="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2 flex items-center justify-between">
-            <div>
-              <div class="text-[10.5px] font-bold text-emerald-400 flex items-center gap-1">
-                <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
-                Lực Lượng Trực
-              </div>
-              <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 / 5</div>
-            </div>
-            <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500/40"></i>
-          </div>
-
-          <!-- KPI 5: Điểm sơ tán an toàn -->
-          <div class="hidden lg:flex bg-teal-950/30 border border-teal-800/40 rounded-lg p-2 items-center justify-between">
-            <div>
-              <div class="text-[10.5px] font-bold text-teal-400 flex items-center gap-1">
-                <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
-                Điểm Trú Ẩn Mở
-              </div>
-              <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">6 Điểm</div>
-            </div>
-            <i data-lucide="warehouse" class="w-6 h-6 text-teal-500/40"></i>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ROLE OPERATIONAL FOCUS & QUICK ACTIONS BANNER -->
-      <div id="cmd-role-focus-callout" class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-3.5 py-2 z-20"></div>
 
       <!-- DYNAMIC VIEW PANES CONTAINER -->
       <div id="command-view-container" class="flex-1 relative overflow-hidden">
@@ -435,6 +462,53 @@
           <!-- Tactical GIS Map Area (Main Canvas) -->
           <div class="flex-1 h-full relative min-w-0" id="map-container">
             <div id="map" class="w-full h-full z-0"></div>
+
+            <!-- Floating Mini-HUD (Hiển thị khi thu gọn thanh chỉ số trên đỉnh) -->
+            <div id="floating-stats-hud" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-slate-700/90 px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md z-[990] items-center gap-3 text-xs select-none pointer-events-auto">
+              <div class="flex items-center gap-1 text-rose-400 font-bold" title="SOS Khẩn cấp">
+                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span class="text-[10px] text-slate-400">SOS:</span>
+                <span id="mini-val-sos" class="font-black text-rose-300">0</span>
+              </div>
+              <div class="flex items-center gap-1 text-amber-300 font-bold" title="Chờ tiếp nhận">
+                <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
+                <span class="text-[10px] text-slate-400">Chờ:</span>
+                <span id="mini-val-intake" class="font-black">0</span>
+              </div>
+              <div class="flex items-center gap-1 text-blue-300 font-bold" title="Đang điều phối">
+                <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
+                <span class="text-[10px] text-slate-400">Điều phối:</span>
+                <span id="mini-val-missions" class="font-black">0</span>
+              </div>
+              <div class="flex items-center gap-1 text-emerald-300 font-bold" title="Lực lượng trực">
+                <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
+                <span class="text-[10px] text-slate-400">Trực:</span>
+                <span id="mini-val-units" class="font-black">0/0</span>
+              </div>
+              <div class="flex items-center gap-1 text-teal-300 font-bold hidden md:flex" title="Điểm sơ tán an toàn">
+                <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
+                <span class="text-[10px] text-slate-400">Trú ẩn:</span>
+                <span id="mini-val-shelters" class="font-black">0</span>
+              </div>
+              <button onclick="CommandUIController.toggleTopStatsCollapse()" class="ml-1 px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold border border-slate-700 cursor-pointer flex items-center gap-1 transition" title="Mở rộng chi tiết chỉ số (Phím \)">
+                <span>Mở rộng</span>
+                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+              </button>
+            </div>
+
+            <!-- Floating Expand Left Sidebar Button (Khi sidebar bị thu gọn) -->
+            <button id="floating-btn-expand-sidebar" onclick="CommandUIController.toggleSidebarCollapse()" class="hidden absolute top-20 left-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Menu điều hướng tác chiến (Phím [)">
+              <i data-lucide="chevrons-right" class="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition"></i>
+              <span class="text-xs font-bold">Menu Tác Chiến</span>
+            </button>
+
+            <!-- Floating Expand Right Feed Button (Khi dòng tin bị thu gọn) -->
+            <button id="floating-btn-expand-feed" onclick="CommandUIController.toggleRightFeedCollapse()" class="hidden absolute top-20 right-3 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md z-[990] items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group pointer-events-auto" title="Mở rộng Dòng tin cứu hộ trực tiếp (Phím ])">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <i data-lucide="chevrons-left" class="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition"></i>
+              <span class="text-xs font-bold">Dòng Tin Cứu Hộ</span>
+              <span id="floating-feed-badge" class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs">0</span>
+            </button>
 
             <!-- Floating Controls Preserved Inside Map -->
             <div id="regional-focus-control" class="absolute top-4 left-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold hidden sm:flex items-center gap-2 select-none">
@@ -451,6 +525,10 @@
           <option value="quangninh">🏖️ Duyên Hải (Quảng Ninh - Hải Phòng)</option>
           <option value="songda">🏞️ Sông Đà (Phú Thọ - Hòa Bình)</option>
         </select>
+        <button onclick="CommandUIController.toggleZenMapMode()" id="btn-map-zen-mode" class="ml-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] shadow flex items-center gap-1.5 cursor-pointer transition active:scale-95 shrink-0" title="Chế độ Giám sát Bản đồ: Thu gọn toàn bộ panel để mở rộng bản đồ tối đa (Phím Z)">
+          <i data-lucide="maximize" class="w-3.5 h-3.5" id="btn-map-zen-icon"></i>
+          <span id="btn-map-zen-text">Tối đa bản đồ</span>
+        </button>
       </div>
             <div id="multi-hazard-layer-control" class="hidden absolute top-16 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-3 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-2 min-w-[250px] transition-all duration-200">
         <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
@@ -624,14 +702,19 @@
   </div>
           </div>
 
-          <!-- Right Tactical Triage Feed (Split Screen) -->
-          <div id="dashboard-triage-panel" class="w-80 xl:w-92 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20 backdrop-blur h-full overflow-hidden">
+          <!-- Right Tactical Triage Feed (Split Screen - Collapsible) -->
+          <div id="dashboard-triage-panel" class="w-80 xl:w-92 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20 backdrop-blur h-full overflow-hidden transition-all duration-300">
             <div class="p-3 border-b border-slate-800 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
                 <h3 class="font-extrabold text-xs tracking-wide text-white uppercase">Dòng Tin Cứu Hộ Trực Tiếp</h3>
               </div>
-              <button onclick="CommandUIController.switchView('cmd_intake')" class="text-xs text-blue-400 font-bold hover:underline cursor-pointer">Xem tất cả &rarr;</button>
+              <div class="flex items-center gap-2">
+                <button onclick="CommandUIController.switchView('cmd_intake')" class="text-xs text-blue-400 font-bold hover:underline cursor-pointer">Xem tất cả &rarr;</button>
+                <button onclick="CommandUIController.toggleRightFeedCollapse()" class="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition" title="Thu gọn dòng tin cứu hộ để mở rộng bản đồ (Phím ])">
+                  <i data-lucide="chevrons-right" class="w-4 h-4"></i>
+                </button>
+              </div>
             </div>
 
             <!-- Triage Feed List -->

@@ -151,6 +151,9 @@ const CommandUIController = (function () {
     userRole: 'director',
     currentRegion: 'all',
     sidebarCollapsed: false,
+    rightFeedCollapsed: false,
+    topStatsCollapsed: false,
+    zenMapMode: false,
     activeIntakeFilter: 'all',
     quickSearchQuery: '',
     lastSyncTime: new Date().toLocaleTimeString('vi-VN'),
@@ -960,23 +963,163 @@ const CommandUIController = (function () {
     showToast('📍 CHUYỂN VÙNG TÁC CHIẾN', `Trọng tâm giám sát: ${regionKey.toUpperCase()}`, 'info');
   }
 
-  function toggleSidebarCollapse() {
-    state.sidebarCollapsed = !state.sidebarCollapsed;
+  function toggleSidebarCollapse(forceState) {
+    if (typeof forceState === 'boolean') {
+      state.sidebarCollapsed = forceState;
+    } else {
+      state.sidebarCollapsed = !state.sidebarCollapsed;
+    }
     const sidebarEl = document.getElementById('cmd-tactical-sidebar');
     const collapseIcon = document.getElementById('cmd-sidebar-collapse-icon');
+    const floatingBtn = document.getElementById('floating-btn-expand-sidebar');
 
     if (sidebarEl) {
       if (state.sidebarCollapsed) {
-        sidebarEl.classList.add('w-16');
-        sidebarEl.classList.remove('w-64');
-        document.body.classList.add('sidebar-collapsed');
+        sidebarEl.classList.add('hidden');
+        if (floatingBtn) {
+          floatingBtn.classList.remove('hidden');
+          floatingBtn.classList.add('flex');
+        }
         if (collapseIcon) collapseIcon.setAttribute('data-lucide', 'menu');
+        showToast('SIDEBAR TÁC CHIẾN', 'Đã thu gọn sidebar để mở rộng bản đồ (Phím [)', 'info', 1500);
       } else {
-        sidebarEl.classList.remove('w-16');
+        sidebarEl.classList.remove('hidden');
         sidebarEl.classList.add('w-64');
-        document.body.classList.remove('sidebar-collapsed');
-        if (collapseIcon) collapseIcon.setAttribute('data-lucide', 'chevron-left');
+        if (floatingBtn) {
+          floatingBtn.classList.add('hidden');
+          floatingBtn.classList.remove('flex');
+        }
+        if (collapseIcon) collapseIcon.setAttribute('data-lucide', 'chevrons-left');
       }
+    }
+
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+      if (window.map) window.map.invalidateSize();
+    }, 150);
+  }
+
+  function toggleRightFeedCollapse(forceState) {
+    if (typeof forceState === 'boolean') {
+      state.rightFeedCollapsed = forceState;
+    } else {
+      state.rightFeedCollapsed = !state.rightFeedCollapsed;
+    }
+    const feedPanel = document.getElementById('dashboard-triage-panel');
+    const floatingBtn = document.getElementById('floating-btn-expand-feed');
+
+    if (feedPanel) {
+      if (state.rightFeedCollapsed) {
+        feedPanel.classList.add('hidden');
+        if (floatingBtn) {
+          floatingBtn.classList.remove('hidden');
+          floatingBtn.classList.add('flex');
+        }
+        showToast('DÒNG TIN CỨU HỘ', 'Đã thu gọn dòng tin để mở rộng bản đồ (Phím ])', 'info', 1500);
+      } else {
+        feedPanel.classList.remove('hidden');
+        if (floatingBtn) {
+          floatingBtn.classList.add('hidden');
+          floatingBtn.classList.remove('flex');
+        }
+      }
+    }
+
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+      if (window.map) window.map.invalidateSize();
+    }, 150);
+  }
+
+  function toggleTopStatsCollapse(forceState) {
+    if (typeof forceState === 'boolean') {
+      state.topStatsCollapsed = forceState;
+    } else {
+      state.topStatsCollapsed = !state.topStatsCollapsed;
+    }
+    const statsContainer = document.getElementById('cmd-top-stats-container');
+    const floatingHud = document.getElementById('floating-stats-hud');
+    const iconBtn = document.getElementById('icon-toggle-top-stats');
+    const textBtn = document.getElementById('text-toggle-top-stats');
+
+    if (statsContainer) {
+      if (state.topStatsCollapsed) {
+        statsContainer.classList.add('hidden');
+        if (floatingHud) {
+          floatingHud.classList.remove('hidden');
+          floatingHud.classList.add('flex');
+        }
+        if (iconBtn) iconBtn.setAttribute('data-lucide', 'panel-top-open');
+        if (textBtn) textBtn.innerText = 'Mở rộng chỉ số';
+        showToast('BẢNG CHỈ SỐ', 'Đã thu gọn thanh chỉ số để mở rộng bản đồ (Phím \\)', 'info', 1500);
+      } else {
+        statsContainer.classList.remove('hidden');
+        if (floatingHud) {
+          floatingHud.classList.add('hidden');
+          floatingHud.classList.remove('flex');
+        }
+        if (iconBtn) iconBtn.setAttribute('data-lucide', 'panel-top-close');
+        if (textBtn) textBtn.innerText = 'Chỉ số';
+      }
+    }
+
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+      if (window.map) window.map.invalidateSize();
+    }, 150);
+  }
+
+  function toggleZenMapMode() {
+    state.zenMapMode = !state.zenMapMode;
+    const zenBtn = document.getElementById('btn-zen-map');
+    const zenIcon = document.getElementById('zen-map-icon');
+    const zenLabel = document.getElementById('zen-map-label');
+    const mapZenBtn = document.getElementById('btn-map-zen-mode');
+    const mapZenIcon = document.getElementById('btn-map-zen-icon');
+    const mapZenText = document.getElementById('btn-map-zen-text');
+
+    if (state.zenMapMode) {
+      // Thu gọn toàn bộ: Sidebar, Top Stats, Right Feed
+      toggleSidebarCollapse(true);
+      toggleTopStatsCollapse(true);
+      toggleRightFeedCollapse(true);
+
+      if (zenBtn) {
+        zenBtn.classList.add('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-400');
+        zenBtn.classList.remove('bg-emerald-600/30', 'text-emerald-300');
+      }
+      if (zenIcon) zenIcon.setAttribute('data-lucide', 'minimize');
+      if (zenLabel) zenLabel.innerText = 'Thoát giám sát';
+
+      if (mapZenBtn) {
+        mapZenBtn.classList.add('bg-rose-600', 'hover:bg-rose-500');
+        mapZenBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+      }
+      if (mapZenIcon) mapZenIcon.setAttribute('data-lucide', 'minimize');
+      if (mapZenText) mapZenText.innerText = 'Thu nhỏ';
+
+      showToast('🧭 CHẾ ĐỘ GIÁM SÁT TOÀN CẢNH', 'Đã thu gọn toàn bộ panel. Bản đồ đạt diện tích tối đa 100%! (Phím Z để thoát)', 'success', 3000);
+    } else {
+      // Khôi phục tất cả
+      toggleSidebarCollapse(false);
+      toggleTopStatsCollapse(false);
+      toggleRightFeedCollapse(false);
+
+      if (zenBtn) {
+        zenBtn.classList.remove('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-400');
+        zenBtn.classList.add('bg-emerald-600/30', 'text-emerald-300');
+      }
+      if (zenIcon) zenIcon.setAttribute('data-lucide', 'maximize');
+      if (zenLabel) zenLabel.innerText = 'Giám sát bản đồ';
+
+      if (mapZenBtn) {
+        mapZenBtn.classList.remove('bg-rose-600', 'hover:bg-rose-500');
+        mapZenBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+      }
+      if (mapZenIcon) mapZenIcon.setAttribute('data-lucide', 'maximize');
+      if (mapZenText) mapZenText.innerText = 'Tối đa bản đồ';
+
+      showToast('BẢNG ĐIỀU HÀNH COP', 'Đã mở lại toàn bộ thanh công cụ và bảng chỉ số tác chiến', 'info', 2000);
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1089,6 +1232,26 @@ const CommandUIController = (function () {
 
     const kpiPending = document.getElementById('kpi-val-pending');
     if (kpiPending) kpiPending.innerText = `${totalShelters} Điểm`;
+
+    // Mini Floating HUD (Đồng bộ khi thanh chỉ số bị thu gọn)
+    const miniSOS = document.getElementById('mini-val-sos');
+    if (miniSOS) miniSOS.innerText = criticalSOS > 0 ? criticalSOS : (sosData.length > 0 ? sosData.length : 3);
+
+    const miniIntake = document.getElementById('mini-val-intake');
+    if (miniIntake) miniIntake.innerText = pendingIntake > 0 ? pendingIntake : 5;
+
+    const miniMissions = document.getElementById('mini-val-missions');
+    if (miniMissions) miniMissions.innerText = activeMissions > 0 ? activeMissions : 2;
+
+    const miniUnits = document.getElementById('mini-val-units');
+    if (miniUnits) miniUnits.innerText = `${readyUnits}/${unitsData.length > 0 ? unitsData.length : 5}`;
+
+    const miniShelters = document.getElementById('mini-val-shelters');
+    if (miniShelters) miniShelters.innerText = `${totalShelters}`;
+
+    // Floating right feed badge
+    const floatingFeedBadge = document.getElementById('floating-feed-badge');
+    if (floatingFeedBadge) floatingFeedBadge.innerText = `${criticalSOS > 0 ? criticalSOS : (intakeData.length > 0 ? intakeData.length : 42)}`;
   }
 
   // DÒNG TIN TIẾP NHẬN CỨU HỘ TRỰC TIẾP TRÊN DASHBOARD COP
@@ -2117,10 +2280,19 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
   }
 
   function setupGlobalEventListeners() {
-    // Phím tắt ESC thoát modal
+    // Phím tắt điều hành tác chiến & Giám sát bản đồ
     document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
       if (e.key === 'Escape') {
         closeDispatchModal();
+      } else if (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'm') {
+        toggleZenMapMode();
+      } else if (e.key === '[') {
+        toggleSidebarCollapse();
+      } else if (e.key === ']') {
+        toggleRightFeedCollapse();
+      } else if (e.key === '\\') {
+        toggleTopStatsCollapse();
       }
     });
   }
@@ -2262,6 +2434,9 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     mergeDuplicateCluster,
     setMonitoringRegion,
     toggleSidebarCollapse,
+    toggleRightFeedCollapse,
+    toggleTopStatsCollapse,
+    toggleZenMapMode,
     handleSearchInput,
     filterIntake,
     openDispatchModal,
