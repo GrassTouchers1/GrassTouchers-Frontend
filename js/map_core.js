@@ -216,48 +216,37 @@ function initMap() {
   currentBaseLayer = osmFrLayer;
   currentBaseLayer.addTo(map);
 
-  L.control.layers({
-    'OpenStreetMap (Chuẩn OSM - Cập nhật mới)': osmFrLayer,
-    'OpenStreetMap Quốc tế': osmLayer,
-    'Chế độ Ban đêm (ESRI Dark)': darkBaseLayer,
-    'Bản đồ ESRI (Dữ liệu cũ - Thiếu đường mới)': esriBaseLayer
-  }, null, { position: 'topright' }).addTo(map);
-
-
-
-  // Đồng bộ hóa khi người dùng chuyển lớp bản đồ từ điều khiển Leaflet
-
-  map.on('baselayerchange', (e) => {
-
-    currentBaseLayer = e.layer;
-
-    const isDark = (e.layer === darkBaseLayer);
-
-    if (isDark && !document.body.classList.contains('dark-mode')) {
-
-      document.body.classList.add('dark-mode');
-
-      const btn = document.getElementById('dark-mode-icon');
-
-      if (btn) btn.setAttribute('data-lucide', 'sun');
-
-      if (window.lucide) lucide.createIcons();
-
-    } else if (!isDark && document.body.classList.contains('dark-mode')) {
-
-      document.body.classList.remove('dark-mode');
-
-      const btn = document.getElementById('dark-mode-icon');
-
-      if (btn) btn.setAttribute('data-lucide', 'moon');
-
-      if (window.lucide) lucide.createIcons();
-
+  // Chuyển đổi lớp bản đồ nền từ Bảng điều khiển Lớp Bản Đồ
+  function switchBaseLayer(type) {
+    if (!map) return;
+    if (currentBaseLayer) {
+      map.removeLayer(currentBaseLayer);
     }
+    if (type === 'osm') {
+      currentBaseLayer = osmFrLayer;
+    } else if (type === 'intl') {
+      currentBaseLayer = osmLayer;
+    } else if (type === 'dark') {
+      currentBaseLayer = darkBaseLayer;
+    } else if (type === 'esri') {
+      currentBaseLayer = esriBaseLayer;
+    }
+    currentBaseLayer.addTo(map);
 
-  });
-
-
+    const isDark = (type === 'dark');
+    if (isDark && !document.body.classList.contains('dark-mode')) {
+      document.body.classList.add('dark-mode');
+      const btn = document.getElementById('dark-mode-icon');
+      if (btn) btn.setAttribute('data-lucide', 'sun');
+      if (window.lucide) lucide.createIcons();
+    } else if (!isDark && document.body.classList.contains('dark-mode')) {
+      document.body.classList.remove('dark-mode');
+      const btn = document.getElementById('dark-mode-icon');
+      if (btn) btn.setAttribute('data-lucide', 'moon');
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+  window.switchBaseLayer = switchBaseLayer;
 
     // Triển khai Marker Clustering cho 130 điểm ngập (Leaflet.markercluster)
   if (typeof L.markerClusterGroup === 'function') {

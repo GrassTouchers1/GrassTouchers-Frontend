@@ -151,12 +151,6 @@
           <span class="hidden 2xl:inline text-[11px]">Thống kê</span>
         </button>
 
-        <!-- 2b. Lớp Bản Đồ Thiên Tai (Dấu 3 lớp / Layers) -->
-        <button id="btn-toggle-layers-hdr" onclick="toggleHazardLayersPanel()" title="Lớp bản đồ thiên tai (Dấu 3 lớp)" class="p-1.5 sm:px-2 py-1 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs font-semibold flex items-center gap-1 transition text-white cursor-pointer active:scale-95">
-          <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-200"></i>
-          <span class="hidden 2xl:inline text-[11px]">Lớp bản đồ</span>
-        </button>
-
         <!-- 3. Chế độ Sáng / Tối -->
         <button onclick="toggleDarkMode()" title="Chuyển chế độ Giao diện Sáng / Tối" class="p-1.5 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs transition text-white">
           <i id="dark-mode-icon" data-lucide="moon" class="w-3.5 h-3.5 text-amber-200"></i>
@@ -1046,15 +1040,14 @@
         </select>
       </div>
 
-      <!-- Floating Button: Dấu 3 lớp (Layers) để Bật/Tắt Lớp bản đồ thiên tai -->
-      <button id="btn-toggle-hazard-layers-float" onclick="toggleHazardLayersPanel()" title="Lớp bản đồ thiên tai (Dấu 3 lớp)" class="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 text-blue-600 dark:text-cyan-400 p-2 sm:px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[995] text-xs font-bold flex items-center gap-1.5 hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer select-none active:scale-95">
-        <i data-lucide="layers" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
-        <span class="text-[11px] text-slate-700 dark:text-slate-200 font-bold">Lớp bản đồ</span>
+      <!-- Floating Button: Dấu 3 lớp (Layers) để Bật/Tắt Lớp bản đồ thiên tai & Bản đồ nền -->
+      <button id="btn-toggle-hazard-layers-float" onclick="toggleHazardLayersPanel()" title="Lớp bản đồ (Dấu 3 lớp)" class="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 text-blue-600 dark:text-cyan-400 w-10 h-10 rounded-xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[995] flex items-center justify-center hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer select-none active:scale-95" aria-label="Lớp bản đồ">
+        <i data-lucide="layers" class="w-5 h-5 text-blue-600 dark:text-cyan-400"></i>
       </button>
 
-      <!-- Floating Multi-Hazard Layer Control (NorthStar) -->
-      <div id="multi-hazard-layer-control" class="absolute top-14 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2.5 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-1.5 min-w-[240px] transition-all duration-200">
-        <div class="flex items-center justify-between pb-1 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
+      <!-- Floating Multi-Hazard & Base Layer Control (NorthStar) -->
+      <div id="multi-hazard-layer-control" class="hidden absolute top-16 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-3 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-2 min-w-[250px] transition-all duration-200">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
           <div class="flex items-center gap-1.5">
             <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400"></i>
             <span>Lớp Bản Đồ Thiên Tai</span>
@@ -1077,10 +1070,31 @@
           <input type="checkbox" id="layer-toggle-sos" checked onchange="NorthStarRescue.toggleLayer('sos', this.checked)" class="rounded text-rose-600 focus:ring-rose-500">
           <span>🆘 Tín hiệu SOS cộng đồng</span>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
           <input type="checkbox" id="layer-toggle-sar" onchange="SarFloodManager.toggle(this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500">
           <span class="text-cyan-700 dark:text-cyan-400 font-bold">🛰️ Vùng ngập viễn thám Sentinel-1 SAR</span>
         </label>
+
+        <!-- Lớp Bản Đồ Nền -->
+        <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold pb-0.5">Bản Đồ Nền</div>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+            <input type="radio" name="base-map-radio" value="osm" checked onchange="window.switchBaseLayer('osm')" class="text-blue-600 focus:ring-blue-500">
+            <span>🗺️ OSM Chuẩn (Cập nhật mới)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+            <input type="radio" name="base-map-radio" value="intl" onchange="window.switchBaseLayer('intl')" class="text-blue-600 focus:ring-blue-500">
+            <span>🌐 OpenStreetMap Quốc tế</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+            <input type="radio" name="base-map-radio" value="dark" onchange="window.switchBaseLayer('dark')" class="text-blue-600 focus:ring-blue-500">
+            <span>🌙 Chế độ Ban đêm (Dark)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+            <input type="radio" name="base-map-radio" value="esri" onchange="window.switchBaseLayer('esri')" class="text-blue-600 focus:ring-blue-500">
+            <span>🛰️ Bản đồ ESRI</span>
+          </label>
+        </div>
       </div>
 
 
