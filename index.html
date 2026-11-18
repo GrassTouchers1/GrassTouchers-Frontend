@@ -1318,13 +1318,13 @@
 
   <div id="onboarding-modal" class="hidden fixed inset-0 z-[9999] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target === this) closeHelpGuide()">
 
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-5 border border-slate-200">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-5 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100">
 
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
 
         <div class="flex items-center gap-3">
 
-          <div class="p-2.5 bg-blue-100 text-blue-700 rounded-xl">
+          <div class="p-2.5 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-400 rounded-2xl">
 
             <i data-lucide="compass" class="w-6 h-6"></i>
 
@@ -1332,15 +1332,18 @@
 
           <div>
 
-            <h2 class="text-base font-extrabold text-slate-900">Chào mừng đến với FloodNav 🌊</h2>
+            <h2 class="text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span>Chào mừng đến với NORTHSTAR</span>
+              <span class="text-blue-600 dark:text-cyan-400">🧭</span>
+            </h2>
 
-            <p class="text-xs text-slate-500">Hệ thống Định tuyến Thông minh & Cảnh báo Ngập lụt Hà Nội</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Nền tảng Ứng phó Khẩn cấp, Giám sát Thiên tai & Cứu trợ Cứu nạn</p>
 
           </div>
 
         </div>
 
-        <button onclick="closeHelpGuide()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <button onclick="closeHelpGuide()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
 
           <i data-lucide="x" class="w-5 h-5"></i>
 
@@ -1350,50 +1353,79 @@
 
 
 
-      <!-- 3 Steps Walkthrough -->
+      <!-- 4 Core Pillars Walkthrough -->
 
-      <div class="space-y-3">
+      <div class="space-y-2.5">
 
-        <div class="flex items-start gap-3 p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+        <!-- 1. Voice SOS & Emergency Rescue -->
+        <div class="flex items-start gap-3 p-3 bg-rose-50/80 dark:bg-rose-950/30 rounded-2xl border border-rose-100 dark:border-rose-900/40">
 
-          <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</div>
+          <div class="w-7 h-7 rounded-full bg-rose-600 text-white font-extrabold flex items-center justify-center text-xs flex-shrink-0 mt-0.5 shadow-sm">1</div>
 
           <div class="text-xs">
 
-            <h4 class="font-bold text-slate-800">Tìm lộ trình né ngập thông minh (Thuật toán A*)</h4>
-            <p class="text-slate-600 mt-0.5">Hệ thống áp dụng thuật toán A* với hàm chi phí an toàn: đoạn ngập &ge; 5cm bị phạt chi phí để ưu tiên tuyến vòng khô ráo; đoạn ngập vượt ngưỡng chịu ngập của xe (Xe máy &ge; 20cm, Ô tô &ge; 30cm) sẽ bị chặn hoàn toàn.</p>
+            <h4 class="font-extrabold text-rose-900 dark:text-rose-200 flex items-center gap-1">
+              <span>🆘 Cứu hộ Khẩn cấp 1-Chạm & Voice SOS AI</span>
+            </h4>
+            <p class="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+              Bấm nói để gửi tín hiệu cầu cứu bằng giọng nói tiếng Việt (Groq Whisper AI), tự động bóc tách địa danh, số người mắc kẹt và tọa độ GPS định vị chính xác tới đội cứu hộ.
+            </p>
 
           </div>
 
         </div>
 
+        <!-- 2. Sơ tán khẩn cấp & Safe Zones -->
+        <div class="flex items-start gap-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/40">
 
-
-        <div class="flex items-start gap-3 p-3 bg-indigo-50/70 rounded-xl border border-indigo-100">
-
-          <div class="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</div>
+          <div class="w-7 h-7 rounded-full bg-emerald-600 text-white font-extrabold flex items-center justify-center text-xs flex-shrink-0 mt-0.5 shadow-sm">2</div>
 
           <div class="text-xs">
 
-            <h4 class="font-bold text-slate-800">Thử nghiệm Bộ Giả lập Mưa Bão (Kịch bản thời tiết)</h4>
-
-            <p class="text-slate-600 mt-0.5">Tại thanh công cụ phía trên, chọn kịch bản <strong>Mưa lớn (50mm)</strong> để giả lập nước dâng tại các trạm cảm biến IoT và xem hệ thống tính lại lộ trình tức thì.</p>
+            <h4 class="font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center gap-1">
+              <span>🛡️ Sơ tán An toàn & Điểm Tránh trú (Safe Zones)</span>
+            </h4>
+            <p class="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+              Tìm kiếm và điều hướng tới trường học, nhà văn hóa kiên cố an toàn gần bạn nhất với thuật toán Dijkstra đa nguồn né hoàn toàn các điểm ngập hiểm trở.
+            </p>
 
           </div>
 
         </div>
 
+        <!-- 3. Giám sát Đa thiên tai & Vệ tinh SAR -->
+        <div class="flex items-start gap-3 p-3 bg-cyan-50/80 dark:bg-cyan-950/30 rounded-2xl border border-cyan-100 dark:border-cyan-900/40">
 
-
-        <div class="flex items-start gap-3 p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
-
-          <div class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</div>
+          <div class="w-7 h-7 rounded-full bg-cyan-600 text-white font-extrabold flex items-center justify-center text-xs flex-shrink-0 mt-0.5 shadow-sm">3</div>
 
           <div class="text-xs">
 
-            <h4 class="font-bold text-slate-800">Trợ lý giọng nói & Báo ngập cộng đồng</h4>
+            <h4 class="font-extrabold text-cyan-900 dark:text-cyan-200 flex items-center gap-1">
+              <span>🌊 Giám sát Đa Thiên tai & Viễn thám Sentinel-1 SAR</span>
+            </h4>
 
-            <p class="text-slate-600 mt-0.5">Hệ thống tự động phát âm thanh cảnh báo bằng giọng nói tiếng Việt khi chuẩn bị vào vùng ngập, cùng tính năng cho phép người dân gửi báo cáo ngập tại hiện trường.</p>
+            <p class="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+              Theo dõi 130+ trạm thủy văn đo mực nước sông Hồng/sông Đà, cảnh báo lũ lụt, sạt lở, radar lượng mưa thời gian thực và vùng ngập viễn thám vệ tinh.
+            </p>
+
+          </div>
+
+        </div>
+
+        <!-- 4. Lộ trình Né ngập thông minh A* -->
+        <div class="flex items-start gap-3 p-3 bg-blue-50/80 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+
+          <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-extrabold flex items-center justify-center text-xs flex-shrink-0 mt-0.5 shadow-sm">4</div>
+
+          <div class="text-xs">
+
+            <h4 class="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+              <span>🧭 Định tuyến Thông minh Né Ngập (Thuật toán A*)</span>
+            </h4>
+
+            <p class="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+              Thuật toán A* với hàm chi phí an toàn: đoạn ngập &ge; 5cm bị phạt chi phí để ưu tiên tuyến vòng khô ráo; đoạn ngập vượt ngưỡng chịu ngập của xe máy/ô tô sẽ bị chặn hoàn toàn.
+            </p>
 
           </div>
 
@@ -1403,13 +1435,13 @@
 
 
 
-      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
 
-        <span class="text-[11px] text-slate-400">Có thể mở lại hướng dẫn này bằng nút <strong>(?)</strong> trên Header</span>
+        <span class="text-[11px] text-slate-400">Có thể mở lại hướng dẫn này bằng nút <strong>(?)</strong> trên Menu</span>
 
-        <button onclick="closeHelpGuide()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/25 transition">
+        <button onclick="closeHelpGuide()" class="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-blue-500/25 transition cursor-pointer active:scale-95">
 
-          Bắt đầu Trải nghiệm 🚀
+          Bắt đầu Sử dụng NORTHSTAR 🚀
 
         </button>
 
