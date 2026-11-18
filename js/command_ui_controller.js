@@ -230,6 +230,10 @@ const CommandUIController = (function () {
     if (initialView && initialView !== 'cmd_dashboard') {
       switchView(initialView);
     }
+    const initialModal = urlParams.get('modal');
+    if (initialModal) {
+      setTimeout(() => openDispatchModal(initialModal), 300);
+    }
 
     console.log('[NorthStar Command] Unified Emergency Operations Center đã sẵn sàng trực chiến.');
   }
@@ -1252,12 +1256,17 @@ const CommandUIController = (function () {
 
     listEl.innerHTML = pendingSOS.map(s => {
       const dispatchBtn = roleCfg.canDispatch ? `
-        <button onclick="CommandUIController.openDispatchModal('${s.id}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs transition active:scale-95">
-          ⚡ Lập Lệnh Cứu Nạn
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button onclick="CommandUIController.openDispatchModal('${s.id}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs transition active:scale-95 flex items-center gap-1">
+            <span>📤 Gửi Tin Cứu Hộ</span>
+          </button>
+          <button onclick="CommandUIController.quickCopyIncident('${s.id}')" title="Sao chép gói tin Zalo/SMS nhanh để gửi cho Chỉ huy" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-lg font-bold text-xs border border-slate-700 cursor-pointer transition">
+            📋 Zalo
+          </button>
+        </div>
       ` : `
         <button disabled class="px-2.5 py-1 bg-slate-800 text-slate-500 rounded-lg font-bold text-xs cursor-not-allowed border border-slate-700">
-          🔒 Chờ Dispatcher
+          🔒 Chờ Điều phối viên
         </button>
       `;
 
@@ -1869,6 +1878,7 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
       `).join('');
     }
 
+    updateReceivingUnitPreview(teamSelect ? teamSelect.value : '');
     modal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
@@ -2144,11 +2154,90 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     showToast('🔗 ĐÃ HỢP NHẤT TIN BÁO TRÙNG', 'Đã gộp cụm SOS-63, SOS-64, SOS-58 (Bảo Yên, Lào Cai trong bán kính 45m) thành 1 nhiệm vụ cứu hộ gộp.', 'success');
   }
 
+  
+  function updateReceivingUnitPreview(unitId) {
+    const el = document.getElementById('disp-modal-receiving-unit-preview');
+    if (!el) return;
+    const unit = unitsData.find(u => u.id === unitId);
+    if (unit) {
+      el.innerText = `${unit.name} (${unit.commander} - ${unit.phone})`;
+    }
+  }
+
+  function copyLocationLink() {
+    const itemId = document.getElementById('disp-modal-incident-id').value;
+    const item = intakeData.find(i => i.id === itemId);
+    if (!item) return;
+    const link = `https://maps.google.com/?q=${item.lat},${item.lng}`;
+    navigator.clipboard.writeText(link).then(() => {
+      showToast('📍 ĐÃ SAO CHÉP TỌA ĐỘ', `Đã chép link Google Maps: [${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]`, 'success');
+    }).catch(() => {
+      showToast('📍 TỌA ĐỘ', `Toạ độ: ${item.lat}, ${item.lng}`, 'info');
+    });
+  }
+
+  function quickCopyIncident(incidentId) {
+    const incident = intakeData.find(i => i.id === incidentId);
+    if (!incident) return;
+    const mapLink = `https://maps.google.com/?q=${incident.lat},${incident.lng}`;
+    const txt = `🚨 [NORTHSTAR COMMAND - CHUYỂN GIAO TIN CỨU HỘ]
+• Mã tin: ${incident.id} (Ưu tiên: ${(incident.priority || 'CRITICAL').toUpperCase()})
+• Người kêu cứu: ${incident.contact_name} - SĐT: ${incident.phone}
+• Địa điểm: Toạ độ [${Number(incident.lat || 0).toFixed(4)}, ${Number(incident.lng || 0).toFixed(4)}]
+• Link bản đồ: ${mapLink}
+• Hiện trạng: ${incident.description} (Mực nước ngập: ~${incident.water_level_cm || 0}cm)
+• Nguồn tiếp nhận: ${incident.source_label} lúc ${new Date(incident.created_at).toLocaleTimeString('vi-VN')}
+• Đơn vị chuyển giao: Trung tâm Điều hành Thông tin NORTHSTAR COMMAND (Hotline 24/7)`;
+
+    navigator.clipboard.writeText(txt).then(() => {
+      showToast('📋 ĐÃ SAO CHÉP GÓI TIN ZALO/SMS', `Đã sao chép gói tin cứu hộ [${incident.id}] để gửi trực tiếp cho Đội Cứu Hộ.`, 'success');
+    }).catch(() => {
+      showToast('📋 GÓI TIN CỨU HỘ', incident.description, 'info');
+    });
+  }
+
+  function copyDispatchPackageText() {
+    const itemId = document.getElementById('disp-modal-incident-id').value;
+    const teamId = document.getElementById('disp-modal-team-select').value;
+    const shelterName = document.getElementById('disp-modal-shelter-select').value;
+    const notes = document.getElementById('disp-modal-notes').value;
+
+    const incident = intakeData.find(i => i.id === itemId) || {};
+    const unit = unitsData.find(u => u.id === teamId) || {};
+    const mapLink = `https://maps.google.com/?q=${incident.lat},${incident.lng}`;
+
+    const textPackage = `🚨 [NORTHSTAR COMMAND] - PHIẾU CHUYỂN GIAO THÔNG TIN CỨU HỘ KHẨN CẤP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Mã sự cố: ${incident.id || 'N/A'} (Ưu tiên: ${(incident.priority || 'CRITICAL').toUpperCase()})
+• Người kêu cứu: ${incident.contact_name || 'Nạn nhân'} - SĐT: ${incident.phone || 'N/A'}
+• Số lượng người: ${incident.people_count || 1} người ${incident.has_vulnerable ? '(Có người già / trẻ em cần ưu tiên)' : ''}
+• Tọa độ GPS: [${Number(incident.lat || 0).toFixed(4)}, ${Number(incident.lng || 0).toFixed(4)}]
+• Mở Google Maps dẫn đường: ${mapLink}
+• Hiện trạng thực địa: ${incident.description || notes || 'Nước ngập sâu, bị cô lập'}
+• Mực nước ước tính: ~${incident.water_level_cm || 0}cm
+• Lộ trình an toàn né ngập: Tuyến đường theo thuật toán A* né các đoạn ngập sâu >30cm
+• Điểm sơ tán tiếp nhận: ${shelterName}
+• Đơn vị cứu hộ tiếp nhận tin: ${unit.name || 'Đội Cứu Nạn Cơ Động'} (Chỉ huy: ${unit.commander || 'Trực ban'} - ${unit.phone || '114'})
+• Thời điểm chuyển giao: ${new Date().toLocaleTimeString('vi-VN')} ngày ${new Date().toLocaleDateString('vi-VN')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+*Nguồn dữ liệu: Trung tâm Tiếp nhận & Điều phối Thông tin Thiên tai NORTHSTAR COMMAND*`;
+
+    navigator.clipboard.writeText(textPackage).then(() => {
+      showToast('📋 ĐÃ SAO CHÉP GÓI TIN CỨU HỘ', 'Gói tin chuyển giao đã được sao chép vào bộ nhớ tạm. Bạn có thể dán (Paste) ngay vào Zalo / SMS cho Chỉ huy Đội Cứu Hộ.', 'success');
+    }).catch(() => {
+      showToast('📋 GÓI TIN CỨU HỘ', 'Vui lòng sao chép văn bản phiếu chuyển giao.', 'info');
+    });
+  }
+
   return {
     init,
     switchView,
     switchUserRole,
     triggerEmergencyBroadcast,
+    copyDispatchPackageText,
+    copyLocationLink,
+    quickCopyIncident,
+    updateReceivingUnitPreview,
     mergeDuplicateCluster,
     setMonitoringRegion,
     toggleSidebarCollapse,

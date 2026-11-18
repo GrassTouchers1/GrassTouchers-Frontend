@@ -99,7 +99,7 @@
               TRỰC CHIẾN
             </span>
           </div>
-          <p class="text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Điều phối Cứu trợ & Tình báo Thiên tai</p>
+          <p class="text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận Dữ liệu & Chuyển giao Thông tin Cứu nạn</p>
         </div>
       </div>
     </div>
@@ -268,7 +268,7 @@
           <div class="space-y-0.5">
             <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_rescue_teams" onclick="CommandUIController.switchView('cmd_rescue_teams')">
               <i data-lucide="truck" class="w-4 h-4 shrink-0 text-rose-400"></i>
-              <span class="cmd-nav-label flex-1 truncate">Đội Cứu Hộ & Phương Tiện</span>
+              <span class="cmd-nav-label flex-1 truncate">Đội Cứu Hộ Tiếp Nhận & Xe</span>
             </button>
           </div>
         </div>
@@ -279,7 +279,7 @@
           <div class="space-y-0.5">
             <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_operations" onclick="CommandUIController.switchView('cmd_operations')">
               <i data-lucide="navigation-2" class="w-4 h-4 shrink-0 text-amber-400"></i>
-              <span class="cmd-nav-label flex-1 truncate">Nhiệm Vụ & Điều Phối Tuyến</span>
+              <span class="cmd-nav-label flex-1 truncate">Chuyển Giao Tin & Phân Tuyến</span>
             </button>
           </div>
         </div>
@@ -2300,44 +2300,86 @@
       </div>
     </div>
   </div>
-  <div id="command-dispatch-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full shadow-2xl border border-rose-500/30 overflow-hidden flex flex-col max-h-[90vh]">
-      <!-- Header Modal -->
-      <div class="p-3.5 bg-gradient-to-r from-rose-700 to-indigo-800 text-white flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i data-lucide="send" class="w-5 h-5 text-amber-300"></i>
+  <div id="command-dispatch-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
+    <div class="bg-slate-900 rounded-2xl max-w-xl w-full shadow-2xl border border-rose-500/40 overflow-hidden flex flex-col max-h-[92vh] text-slate-100">
+      
+      <!-- Modal Header -->
+      <div class="p-3.5 bg-gradient-to-r from-rose-900 via-rose-800 to-indigo-900 text-white flex items-center justify-between border-b border-rose-700/50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-rose-600/80 flex items-center justify-center border border-rose-400/40 shadow-xs">
+            <i data-lucide="send" class="w-4 h-4 text-amber-300"></i>
+          </div>
           <div>
-            <h3 class="text-sm font-black uppercase tracking-wide">PHÁT LỆNH ĐIỀU PHỐI CỨU NẠN</h3>
-            <p class="text-[10.5px] text-rose-100">Giao nhiệm vụ khẩn cấp cho lực lượng cơ động</p>
+            <h3 class="text-sm font-black uppercase tracking-wide flex items-center gap-1.5">
+              <span>CHUYỂN GIAO THÔNG TIN CHO ĐỘI CỨU HỘ</span>
+              <span class="px-1.5 py-0.2 rounded text-[9.5px] bg-rose-500 text-white font-black">P1 KHẨN CẤP</span>
+            </h3>
+            <p class="text-[11px] text-rose-200">Đóng gói thông tin tiếp nhận & Chuyển giao khẩn cấp cho đơn vị phản ứng nhanh</p>
           </div>
         </div>
-        <button onclick="CoordinatorCommand.closeDispatchModal()" class="p-1 hover:bg-white/20 rounded-lg transition cursor-pointer">
+        <button onclick="CommandUIController.closeDispatchModal()" class="p-1.5 hover:bg-white/20 rounded-lg transition cursor-pointer text-slate-300 hover:text-white">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- Body Modal -->
-      <div class="p-4 space-y-3 overflow-y-auto text-xs">
+      <!-- Modal Body -->
+      <div class="p-4 space-y-3.5 overflow-y-auto text-xs">
         <input type="hidden" id="disp-modal-incident-id" value="">
 
-        <!-- Thông tin mục tiêu -->
-        <div class="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-900 space-y-1">
-          <div class="font-extrabold text-rose-900 dark:text-rose-200" id="disp-modal-victim-info">Nạn nhân</div>
-          <div class="text-[11px] text-slate-600 dark:text-slate-400" id="disp-modal-location">Tọa độ</div>
+        <!-- Banner Bên Gửi & Bên Nhận -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px]">
+          <div>
+            <span class="text-slate-400 block font-bold">BÊN GỬI THÔNG TIN:</span>
+            <span class="font-extrabold text-white flex items-center gap-1 mt-0.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              NORTHSTAR COMMAND (Trực ban 24/7)
+            </span>
+          </div>
+          <div>
+            <span class="text-slate-400 block font-bold">ĐƠN VỊ TIẾP NHẬN:</span>
+            <span id="disp-modal-receiving-unit-preview" class="font-bold text-sky-300 truncate block mt-0.5">
+              Đội Ca-nô PCCC 114
+            </span>
+          </div>
         </div>
 
-        <!-- Chọn Đội Cứu Hộ -->
+        <!-- 1. Thông tin nạn nhân & Hiện trường -->
+        <div class="p-3 bg-rose-950/30 rounded-xl border border-rose-900/60 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-black text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
+              <i data-lucide="user-check" class="w-3.5 h-3.5 text-rose-400"></i>
+              THÔNG TIN NẠN NHÂN CẦN GIẢI CỨU
+            </span>
+            <span class="text-[10px] text-amber-300 font-bold px-2 py-0.5 bg-amber-950/60 rounded border border-amber-800">
+              Đã thẩm định thông tin
+            </span>
+          </div>
+          <div class="font-bold text-white text-sm" id="disp-modal-victim-info">Nạn nhân kêu cứu</div>
+          <div class="text-[11px] text-slate-300 flex items-center justify-between flex-wrap gap-1">
+            <span id="disp-modal-location" class="font-mono text-cyan-300">Toạ độ: [21.0285, 105.8542]</span>
+            <button onclick="CommandUIController.copyLocationLink()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold rounded text-[10.5px] border border-slate-700 cursor-pointer">
+              📍 Copy Link Google Maps
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Chọn Đơn vị Cứu hộ tiếp nhận tin -->
         <div>
-          <label class="block font-black text-slate-700 dark:text-slate-200 mb-1">CHỈ ĐỊNH ĐỘI CỨU NẠN TIẾP CẬN:</label>
-          <select id="disp-modal-team-select" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-rose-500">
-            <!-- options via JS -->
+          <label class="block font-black text-slate-300 mb-1 flex items-center justify-between">
+            <span>CHỈ ĐỊNH ĐƠN VỊ CỨU HỘ TIẾP NHẬN GÓI TIN:</span>
+            <span class="text-[10px] text-slate-400 font-normal">Kèm SĐT chỉ huy trực tiếp</span>
+          </label>
+          <select id="disp-modal-team-select" onchange="CommandUIController.updateReceivingUnitPreview(this.value)" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-white outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer">
+            <!-- options populated via JS -->
           </select>
         </div>
 
-        <!-- Chọn Điểm Sơ Tán Tiếp Nhận -->
+        <!-- 3. Điểm sơ tán an toàn chỉ định đưa nạn nhân về -->
         <div>
-          <label class="block font-black text-slate-700 dark:text-slate-200 mb-1">ĐIỂM SƠ TÁN TIẾP NHẬN NẠN NHÂN:</label>
-          <select id="disp-modal-shelter-select" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-rose-500">
+          <label class="block font-black text-slate-300 mb-1">
+            ĐIỂM SƠ TÁN TIẾP NHẬN NẠN NHÂN (CHỈ ĐỊNH CHO ĐỘI CỨU HỘ):
+          </label>
+          <select id="disp-modal-shelter-select" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-white outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer">
             <option value="Trung tâm Chỉ huy Quân sự Huyện Bảo Yên (Sơ tán Làng Nủ)">Trung tâm Chỉ huy Bảo Yên (Trống 420 chỗ)</option>
             <option value="Nhà thi đấu Đa năng Tỉnh Lào Cai">Nhà thi đấu Lào Cai (Trống 1.180 chỗ)</option>
             <option value="Trường THPT Chuyên Nguyễn Tất Thành (TP Yên Bái)">THPT Nguyễn Tất Thành Yên Bái (Trống 550 chỗ)</option>
@@ -2347,23 +2389,33 @@
           </select>
         </div>
 
-        <!-- Ghi chú mệnh lệnh -->
+        <!-- 4. Lộ trình an toàn & Hướng dẫn tiếp cận -->
         <div>
-          <label class="block font-black text-slate-700 dark:text-slate-200 mb-1">MỆNH LỆNH TÁC CHIẾN / GHI CHÚ:</label>
-          <textarea id="disp-modal-notes" rows="2" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-rose-500" placeholder="Ví dụ: Ưu tiên đưa cháu nhỏ và người già trước, mang áo phao cỡ nhỏ..."></textarea>
+          <label class="block font-black text-slate-300 mb-1">
+            HƯỚNG DẪN TIẾP CẬN & CẢNH BÁO ĐOẠN NGẬP:
+          </label>
+          <textarea id="disp-modal-notes" rows="2" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl font-medium text-xs text-white outline-none focus:ring-1 focus:ring-rose-500" placeholder="Chỉ dẫn cung đường né ngập, phương tiện cần chuẩn bị..."></textarea>
         </div>
       </div>
 
-      <!-- Footer Modal -->
-      <div class="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2">
-        <button onclick="CoordinatorCommand.closeDispatchModal()" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs cursor-pointer transition">
-          Hủy bỏ
+      <!-- Modal Footer (3 Kênh Chuyển Giao Tin) -->
+      <div class="p-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+        <button onclick="CommandUIController.copyDispatchPackageText()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition cursor-pointer active:scale-95" title="Tạo tin nhắn văn bản gửi qua Zalo / SMS cho Chỉ huy">
+          <i data-lucide="copy" class="w-4 h-4 text-sky-400"></i>
+          <span>📋 Sao Chép Gói Tin Zalo/SMS</span>
         </button>
-        <button onclick="CoordinatorCommand.submitDispatchMission()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95">
-          <i data-lucide="radio" class="w-4 h-4"></i>
-          <span>PHÁT LỆNH & CẮM TUYẾN</span>
-        </button>
+
+        <div class="flex items-center gap-2">
+          <button onclick="CommandUIController.closeDispatchModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer">
+            Đóng
+          </button>
+          <button onclick="CommandUIController.submitDispatchMission()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md shadow-rose-900/40 transition cursor-pointer active:scale-95">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>📤 Gửi Tin Cho Đội Cứu Hộ</span>
+          </button>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -2371,7 +2423,7 @@
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
   <script src="js/config.js"></script>
-  <script src="js/command_ui_controller.js?v=2.8"></script>
+  <script src="js/command_ui_controller.js?v=2.9"></script>
   <script src="js/coordinator_command.js?v=2.5"></script>
   <script src="js/map_core.js?v=6.8"></script>
   <script src="js/rescue_manager.js?v=5.2"></script>
