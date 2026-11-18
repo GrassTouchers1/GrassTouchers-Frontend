@@ -768,7 +768,7 @@ const CommandUIController = (function () {
     // Xử lý di chuyển container bản đồ giữa Dashboard và Fullscreen GIS
     const mapContainer = document.getElementById('map-container');
     const dashPane = document.getElementById('pane-cmd_dashboard');
-    const rightRail = document.getElementById('dashboard-right-rail');
+    const triagePanel = document.getElementById('dashboard-triage-panel');
     const fsPane = document.getElementById('pane-cmd_disaster_map');
 
     if (viewId === 'cmd_disaster_map' && fsPane && mapContainer) {
@@ -776,9 +776,12 @@ const CommandUIController = (function () {
         fsPane.innerHTML = '';
         fsPane.appendChild(mapContainer);
       }
-    } else if (viewId === 'cmd_dashboard' && dashPane && mapContainer && rightRail) {
-      if (mapContainer.parentElement !== dashPane) {
-        dashPane.insertBefore(mapContainer, rightRail);
+    } else if (dashPane && mapContainer && mapContainer.parentElement !== dashPane) {
+      // Đưa bản đồ về lại Bảng điều hành COP Dashboard
+      if (triagePanel && triagePanel.parentElement === dashPane) {
+        dashPane.insertBefore(mapContainer, triagePanel);
+      } else {
+        dashPane.prepend(mapContainer);
       }
     }
 

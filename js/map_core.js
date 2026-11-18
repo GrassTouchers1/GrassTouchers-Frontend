@@ -153,17 +153,19 @@ function initMap() {
     mapContainer.parentElement.style.isolation = 'isolate';
   }
 
-  esriBaseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-
-    attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap contributors',
-
+  // 1. Lớp bản đồ Vệ tinh Viễn thám ESRI kèm Nhãn địa danh (100% Miễn phí, Không API Key)
+  const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics',
     maxZoom: 19
-
   });
+  const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '',
+    maxZoom: 19,
+    pane: 'shadowPane'
+  });
+  esriBaseLayer = L.layerGroup([esriImagery, esriLabels]);
 
-
-
-  // Lớp bản đồ Dark Mode tác chiến cao cấp (Esri World Dark Gray Canvas - 100% Miễn phí, Không API Key, Chuẩn phòng chỉ huy)
+  // 2. Lớp bản đồ Dark Mode tác chiến cao cấp (Esri World Dark Gray Canvas - 100% Miễn phí, Không API Key, Chuẩn phòng chỉ huy)
   const esriDarkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
     maxNativeZoom: 16,
@@ -177,18 +179,17 @@ function initMap() {
   });
   darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkLabels]);
 
-  // Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
+  // 3. Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
   const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
     subdomains: ['a', 'b', 'c']
   });
 
-  // Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng CDN OpenStreetMap toàn cầu chuẩn tốc độ cao & Carto Voyager Fallback)
-  const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-    subdomains: ['a', 'b', 'c']
+  // 4. Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng Esri World Topo Map - Không giới hạn, Không lỗi DNS)
+  const osmLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap contributors',
+    maxZoom: 19
   });
 
   osmLayer.on('tileerror', function(error) {
@@ -206,7 +207,7 @@ function initMap() {
       error.tile.dataset.fallbackTried = 'true';
       const coords = error.coords;
       if (coords) {
-        error.tile.src = `https://a.tile.openstreetmap.fr/hot/${coords.z}/${coords.x}/${coords.y}.png`;
+        error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
       }
     }
   });
