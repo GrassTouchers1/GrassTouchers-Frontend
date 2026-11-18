@@ -68,7 +68,6 @@
       from { opacity: 0.8; transform: translateY(2px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    /* Map Container Isolation */
     #map-container {
       isolation: isolate;
     }
@@ -84,7 +83,7 @@
     
     <!-- Left: Branding & Status Indicator -->
     <div class="flex items-center gap-2.5 shrink-0">
-      <button id="btn-toggle-sidebar" onclick="CommandUIController.toggleSidebar()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Thu gọn / Mở rộng Sidebar">
+      <button id="btn-toggle-sidebar" onclick="CommandUIController.toggleSidebarCollapse()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Thu gọn / Mở rộng Sidebar">
         <i data-lucide="menu" class="w-5 h-5" id="cmd-sidebar-collapse-icon"></i>
       </button>
 
@@ -105,10 +104,10 @@
       </div>
     </div>
 
-    <!-- Center: Operational Region & Search -->
-    <div class="flex items-center gap-1.5 flex-1 max-w-md mx-1 sm:mx-2 min-w-0">
+    <!-- Center: Operational Region & Search & Sync -->
+    <div class="flex items-center gap-1.5 flex-1 max-w-lg mx-1 sm:mx-2 min-w-0">
       <!-- Region Selector -->
-      <select id="cmd-region-selector" onchange="CommandUIController.switchRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 max-w-[130px] sm:max-w-[155px] truncate">
+      <select id="cmd-region-selector" onchange="CommandUIController.setMonitoringRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 max-w-[130px] sm:max-w-[155px] truncate">
         <option value="all">📍 Toàn Miền Bắc</option>
         <option value="hanoi">🏛️ TP. Hà Nội</option>
         <option value="quangninh">🌊 Quảng Ninh</option>
@@ -122,20 +121,28 @@
         <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="Tìm kiếm SOS, vị trí, nạn nhân..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-2.5 py-1.5 pl-7 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition" />
         <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
       </div>
+
+      <!-- Sync Status Badge -->
+      <div class="hidden xl:flex items-center gap-1 text-[10px] text-slate-400 bg-slate-800/80 px-2 py-1 rounded border border-slate-700 shrink-0">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        <span id="cmd-last-sync-time">Đồng bộ</span>
+      </div>
     </div>
 
     <!-- Right: Role Switcher & Action Tools -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       
-      <!-- Role Switcher (Compact & Clean) -->
-      <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2 py-1.5 cursor-pointer max-w-[130px] sm:max-w-[165px] truncate">
-        <option value="director" class="bg-slate-800 text-white">⭐ Chỉ huy trưởng</option>
-        <option value="dispatcher" class="bg-slate-800 text-white">🛡️ Điều phối viên</option>
-        <option value="verifier" class="bg-slate-800 text-white">🔍 Xác minh viên</option>
-        <option value="analyst" class="bg-slate-800 text-white">📊 Chuyên viên dữ liệu</option>
-        <option value="rescue_coordinator" class="bg-slate-800 text-white">🚒 Đ/p Cứu hộ</option>
-        <option value="relief_coordinator" class="bg-slate-800 text-white">📦 Đ/p Cứu trợ</option>
-      </select>
+      <!-- Role Switcher (Compact & High Contrast) -->
+      <div class="relative">
+        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 hover:bg-slate-750 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2.5 py-1.5 cursor-pointer max-w-[140px] sm:max-w-[170px] truncate transition focus:ring-1 focus:ring-amber-400 focus:outline-none">
+          <option value="director">⭐ Chỉ huy trưởng</option>
+          <option value="dispatcher">🛡️ Điều phối viên</option>
+          <option value="verifier">🔍 Xác minh viên</option>
+          <option value="analyst">📊 Chuyên viên dữ liệu</option>
+          <option value="rescue_coordinator">🚒 Đ/p Cứu hộ</option>
+          <option value="relief_coordinator">📦 Đ/p Cứu trợ</option>
+        </select>
+      </div>
 
       <!-- Tactical Layers Trigger Button -->
       <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
@@ -321,8 +328,31 @@
     <!-- B. CENTRAL WORKSPACE CONTAINER -->
     <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-950">
 
+      <!-- ROLE SCOPE & PERMISSIONS DYNAMIC BANNER -->
+      <div id="cmd-role-scope-banner" class="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 flex-wrap gap-2">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <span class="px-2 py-0.5 rounded font-black text-[10.5px] border bg-amber-500/20 text-amber-300 border-amber-500/40 shrink-0">
+            ⭐ Chỉ huy trưởng
+          </span>
+          <span class="text-slate-300 font-medium text-[11px] truncate">
+            Toàn quyền điều hành, ban bố tình trạng khẩn cấp, phê duyệt xuất quân và quản trị hệ thống.
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 text-[10px]">
+          <span class="px-1.5 py-0.5 rounded font-bold bg-rose-900/40 text-rose-300 border border-rose-800">
+            ✓ Có quyền Xuất quân
+          </span>
+          <span class="px-1.5 py-0.5 rounded font-bold bg-teal-900/40 text-teal-300 border border-teal-800">
+            ✓ Thẩm định tin
+          </span>
+          <span class="px-1.5 py-0.5 rounded font-bold bg-blue-900/40 text-blue-300 border border-blue-800">
+            ✓ Quản lý Đội xe
+          </span>
+        </div>
+      </div>
+
       <!-- TOP COP QUICK METRICS BANNER -->
-      <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-30">
+      <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-20">
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
           
           <!-- KPI 1: SOS Yêu cầu khẩn cấp -->
@@ -387,6 +417,9 @@
 
         </div>
       </div>
+
+      <!-- ROLE OPERATIONAL FOCUS & QUICK ACTIONS BANNER -->
+      <div id="cmd-role-focus-callout" class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-3.5 py-2 z-20"></div>
 
       <!-- DYNAMIC VIEW PANES CONTAINER -->
       <div id="command-view-container" class="flex-1 relative overflow-hidden">
@@ -771,7 +804,10 @@
 
             <!-- Storm Simulation Interactive Controls -->
             <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
-              <h3 class="font-bold text-sm text-white">Bộ Giả Lập Kịch Bản Mưa Bão (Storm Simulation Engine)</h3>
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-sm text-white">Bộ Giả Lập Kịch Bản Mưa Bão (Storm Simulation Engine)</h3>
+                <span class="text-[10.5px] px-2 py-0.5 rounded font-bold bg-purple-900/60 text-purple-300 border border-purple-700">Quyền: Data Analyst & Director</span>
+              </div>
               <p class="text-xs text-slate-400">Kéo thanh trượt lượng mưa để mô phỏng mức độ ngập tại các lưu vực sông và trạm đo:</p>
               <div class="flex items-center gap-4">
                 <input type="range" min="0" max="100" step="5" value="0" id="cmd-sim-rainfall-slider" oninput="document.getElementById('cmd-sim-rainfall-val').textContent = this.value + ' mm'; if(window.setSimulationRainfall) setSimulationRainfall(this.value);" class="flex-1 accent-rose-500 cursor-pointer" />
@@ -827,7 +863,7 @@
             </div>
 
             <!-- Fleet Cards Grid -->
-            <div id="cmd-fleet-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div id="cmd-fleet-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <!-- Dynamically populated by command_ui_controller.js -->
             </div>
           </div>
@@ -909,87 +945,7 @@
         <!-- PANE 13: ROLES & RBAC PERMISSION MATRIX        -->
         <!-- ============================================== -->
         <div id="pane-cmd_roles" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
-          <div class="max-w-6xl mx-auto space-y-4">
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
-                <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
-                MA TRẬN PHÂN QUYỀN VAI TRÒ TÁC CHIẾN (RBAC MATRIX)
-              </h2>
-              <p class="text-xs text-slate-400 mt-0.5">Bảo vệ an toàn dữ liệu cá nhân, phân định quyền hạn tác chiến giữa các bộ phận.</p>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-800/80 text-slate-300 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-700">
-                  <tr>
-                    <th class="p-3">Vai Trò</th>
-                    <th class="p-3">Xem COP</th>
-                    <th class="p-3">Xác Minh Tin</th>
-                    <th class="p-3">Phát Lệnh Điều Phối</th>
-                    <th class="p-3">Quản Lý Đội Xe</th>
-                    <th class="p-3">Xuất SitRep</th>
-                    <th class="p-3">Quản Trị Hệ Thống</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800/70 font-medium">
-                  <tr>
-                    <td class="p-3 font-bold text-amber-300">⭐ Command Director (Chỉ huy trưởng)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Toàn quyền</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3 font-bold text-blue-300">🛡️ Dispatcher (Điều phối viên)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3 font-bold text-teal-300">🔍 Information Verifier (Xác minh viên)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3 font-bold text-indigo-300">📊 Data Analyst (Chuyên viên Dữ liệu)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-slate-400">Chỉ xem</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-slate-400">Chỉ xem</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3 font-bold text-rose-300">🚒 Rescue Coordinator (Điều phối cứu hộ)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-slate-400">Chỉ xem</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3 font-bold text-purple-300">📦 Relief Coordinator (Điều phối cứu trợ)</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
-                    <td class="p-3 text-slate-400">Chỉ xem</td>
-                    <td class="p-3 text-emerald-400 font-bold">✓ Có (Cứu trợ)</td>
-                    <td class="p-3 text-slate-400">Chỉ xem</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <!-- Dynamically populated by renderRolesView() -->
         </div>
 
         <!-- ============================================== -->
@@ -2414,14 +2370,14 @@
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
   <script src="js/config.js"></script>
-  <script src="js/command_ui_controller.js?v=2.1"></script>
-  <script src="js/coordinator_command.js?v=2.1"></script>
-  <script src="js/map_core.js?v=6.7"></script>
-  <script src="js/rescue_manager.js?v=5.1"></script>
-  <script src="js/advanced_modules.js?v=2.1"></script>
-  <script src="js/storm_simulator.js?v=2.1"></script>
-  <script src="js/voice_sos.js?v=2.1"></script>
-  <script src="js/voice_assistant.js?v=2.1"></script>
+  <script src="js/command_ui_controller.js?v=2.7"></script>
+  <script src="js/coordinator_command.js?v=2.5"></script>
+  <script src="js/map_core.js?v=6.8"></script>
+  <script src="js/rescue_manager.js?v=5.2"></script>
+  <script src="js/advanced_modules.js?v=2.5"></script>
+  <script src="js/storm_simulator.js?v=2.5"></script>
+  <script src="js/voice_sos.js?v=2.5"></script>
+  <script src="js/voice_assistant.js?v=2.5"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
@@ -2429,6 +2385,7 @@
       // 1. Khởi tạo Icon Lucide
       if (window.lucide) lucide.createIcons();
 
+      try { localStorage.setItem('floodnav_tour_seen', 'true'); } catch (e) {}
       // 2. Khởi tạo Bản đồ Leaflet trung tâm
       if (typeof initMap === 'function') {
         initMap();

@@ -1,91 +1,88 @@
 # NORTHSTAR COMMAND – UI & INTEGRATION TEST REPORT
 **Mã tài liệu:** `COMMAND_UI_TEST_REPORT`  
-**Phiên bản:** `2.1-STABLE`  
+**Phiên bản:** `2.7-ENTERPRISE-RBAC`  
 **Hệ thống:** NORTHSTAR COMMAND (Unified Disaster Intelligence & Emergency Response Coordination Center)  
 **Ngày thực hiện:** 18/11/2026  
 **Môi trường thử nghiệm:** Localhost (Frontend port 3000, Backend port 8000, Python 3.12, Leaflet 1.9.4)  
-**Chi nhánh:** `dev` (Commit: `ab8a24b`)  
+**Chi nhánh:** `dev`  
 
 ---
 
-## 1. MỤC TIÊU KIỂM THỬ
-Báo cáo này ghi nhận toàn diện kết quả kiểm thử chức năng, giao diện, khả năng tương tác và tính bảo toàn của việc chuyển đổi giao diện sang **NORTHSTAR COMMAND** theo các yêu cầu của Master Prompt:
-1. Màn hình mặc định khi tải trang là Trung tâm Chỉ huy Điều phối **NORTHSTAR COMMAND** (không phải trang giới thiệu hay tìm đường thông thường).
-2. Thanh điều hướng Sidebar chuẩn 8 danh mục tác chiến.
-3. Thanh Header tác chiến trung tâm với đầy đủ chỉ số đồng bộ, chọn phân vùng, tìm kiếm nhanh, chuyển đổi vai trò RBAC và chuyển đổi chế độ xem Dân sự (Citizen Preview).
-4. Khắc phục triệt để các lỗi người dùng phản hồi qua ảnh chụp:
-   - Bản đồ trung tâm bị xám trắng do vòng đời `initMap()` chưa được kích hoạt ở sự kiện DOMContentLoaded.
-   - Tràn thanh Header trên màn hình 1366px khiến ô tìm kiếm co nhỏ và nút bên phải bị cắt mất một nửa.
-   - Các thẻ chỉ số COP trên đầu trang hiển thị giá trị 0 do chưa liên kết với luồng dữ liệu thời gian thực.
-   - Nút nổi "Lớp bản đồ" góc dưới đè lên hai nút tác chiến quan trọng `Voice SOS` và `Điều Phối Xe`.
-   - Dòng tin cứu hộ trực tiếp bên phải chỉ hiển thị mẫu tĩnh thay vì dữ liệu động từ backend.
-5. Kiểm thử 28/28 bài test backend tự động (Unit & Integration Tests) và benchmark định tuyến A*.
+## 1. TỔNG QUAN NÂNG CẤP & YÊU CẦU NGHIỆP VỤ
+
+Theo chỉ đạo trong phiên làm việc mới nhất:
+> *"Từng vai trò hoạt động ở đây thì việc họ có thể bao quát và quyền có thể sử dụng các tính năng ở đây khác nhau chứ, và tiếp tục chỉnh sửa, trau chuốt lại tất cả các tính năng đang có trong bài."*
+
+Hệ thống **NORTHSTAR COMMAND** đã được hoàn thiện kiến trúc **Phân quyền Tác chiến Đa vai trò (6-Role Operational RBAC Matrix)** kết hợp sâu giữa:
+1. **Phạm vi Bao quát (Operational Perspective & Scope):** Mỗi vai trò khi trực ban chỉ thấy những dữ liệu, góc nhìn và dòng thông tin trọng tâm thuộc thẩm quyền và phân khu trách nhiệm của mình.
+2. **Quyền hạn Hành động (Action Rights):** Kiểm soát nghiêm ngặt 7 năng lực tác chiến chính (`canDispatch`, `canVerify`, `canManageFleet`, `canManageShelters`, `canSimulateStorm`, `canExportSitRep`, `canAdminSystem`). Mọi nút thao tác (xuất quân, duyệt tin, đổi trạng thái xe, điều chỉnh sức chứa điểm sơ tán, kéo thanh mưa bão) đều tự động khóa/mở tương ứng với vai trò.
+3. **Trau chuốt Toàn diện 14 Phân hệ:** Tinh chỉnh thiết kế đồ họa tác chiến chuẩn phòng chỉ huy, bố cục bản đồ Leaflet 100% full-canvas không bị che khuất hay đè nút, tích hợp thanh điều hướng và cảnh báo vi phạm thẩm quyền tác chiến.
 
 ---
 
-## 2. KẾT QUẢ KIỂM THỬ CHI TIẾT
+## 2. MA TRẬN 6 VAI TRÒ TÁC CHIẾN (RBAC MATRIX)
 
-### 2.1. Khắc Phục Toàn Diện 5 Điểm Lỗi Theo Ảnh Chụp Hiện Trường
-
-| STT | Vấn Đề Ghi Nhận | Nguyên Nhân Kỹ Thuật | Giải Pháp Đã Triển Khai | Kết Quả Sau Khắc Phục | Trạng Thái |
-|:---:|:---|:---|:---|:---|:---:|
-| 1 | **Bản đồ trung tâm xám trắng** (ảnh người dùng gửi) | Hàm `initMap()` và `NorthStarRescue.initRescueLayers(map)` không được gọi trong vòng đời tải trang | Kích hoạt tự động `initMap()` và `CommandUIController.init(map)` ngay trong `DOMContentLoaded`, kèm cơ chế chống khởi tạo lặp lại | Bản đồ Leaflet cùng 130 trạm đo, vùng ngập vệ tinh và điểm SOS hiển thị tức thì | **PASS** |
-| 2 | **Tràn giao diện Header** (ô tìm kiếm co thành chữ Q, nút bị xén) | Chiều rộng ngang của các phần tử vượt quá 1366px do text quá dài | Thu gọn nhãn nút vai trò, gán `min-w-[100px] flex-1 max-w-md` cho ô tìm kiếm, gán `shrink-0` có kiểm soát | Header hiển thị cân đối 100% trên mọi tỷ lệ màn hình (1280px, 1366px, 1920px) | **PASS** |
-| 3 | **Các thẻ chỉ số COP hiển thị số 0** | Bản đồ chưa nạp khiến `refreshSystemData()` chưa đổ dữ liệu vào các thẻ KPI | Chuẩn hóa ánh xạ KPI từ `intakeData`, `unitsData`, `missionData` và `shelterData` (SOS khẩn cấp, Chờ tiếp nhận, Đang điều phối, v.v.) | Các thẻ hiển thị số liệu thực tế sống động (SOS: 3, Chờ: 5, Đang điều phối: 2, v.v.) | **PASS** |
-| 4 | **Nút "Lớp bản đồ" đè lên nút Điều Phối Xe** | Nút nổi ghim `fixed bottom-6 right-6` nằm trùng tọa độ với thanh thao tác nhanh bên phải | Loại bỏ nút nổi gây xung đột, người dùng chuyển lớp qua nút `[🗂️ Lớp Tác Chiến]` trên Header hoặc menu Sidebar | Thanh thao tác nhanh `Voice SOS` và `Điều Phối Xe` hiển thị trọn vẹn, không bị che khuất | **PASS** |
-| 5 | **Dòng tin cứu hộ bên phải là dữ liệu tĩnh** | Chưa có hàm render động từ mảng `intakeData` vào container `#dashboard-live-feed` | Xây dựng hàm `renderLiveTriageFeed()` tự động cập nhật tối đa 8 tin cứu nạn cấp thiết kèm nút `[🎯 Xem vị trí]` và `[⚡ Điều phối]` | Dòng tin cập nhật tự động thời gian thực từ cơ sở dữ liệu | **PASS** |
-
----
-
-### 2.2. Kiểm Thử Cấu Trúc Header & Sidebar Tác Chiến
-
-| ID | Thành Phần Kiểm Thử | Hành Động Thao Tác | Kỳ Vọng Hệ Thống | Kết Quả Thực Tế | Trạng Thái |
-|:---:|:---|:---|:---|:---|:---:|
-| H-01 | **Header Branding & Status** | Tải trang `http://localhost:3000` | Hiển thị `NORTHSTAR COMMAND` kèm badge nhấp nháy `🟢 TRỰC CHIẾN 24/7` | Đúng thiết kế, phản hồi visual rõ ràng | **PASS** |
-| H-02 | **Bộ chọn Phân vùng** | Chọn "Tỉnh Lào Cai" / "TP. Hà Nội" | Bản đồ tự động lia (`flyTo`) đến tọa độ trung tâm tỉnh và lọc dữ liệu | Bản đồ lia mượt mà, bounding box chính xác | **PASS** |
-| H-03 | **Tìm kiếm Nhanh** | Nhập "Bảo Yên" hoặc "0984" | Lọc tức thời danh sách tin tiếp nhận, yêu cầu SOS và đội xe | Danh sách co lại đúng theo từ khóa | **PASS** |
-| H-04 | **Chuyển đổi Vai trò RBAC** | Chọn từ `Director` sang `Dispatcher`, `Verifier` | Huy hiệu vai trò cập nhật, ma trận quyền hạn áp dụng tương ứng | Badge hiển thị đúng icon và tên vai trò | **PASS** |
-| H-05 | **Chuyển Chế Độ Dân Sự** | Nhấn nút `[🌐 DÂN SỰ]` trên Header | Mở pane `pane-cmd_citizen_preview` chứa A* Routing và Form SOS | Chuyển đổi mượt mà không tải lại trang | **PASS** |
-| S-01 | **Thu gọn Sidebar** | Nhấn nút hamburger `#btn-toggle-sidebar` | Sidebar co từ `w-64` về `w-16`, chỉ hiện biểu tượng, map tự mở rộng | Chuyển động CSS mượt mà, bản đồ `invalidateSize` | **PASS** |
-| S-02 | **8 Danh mục Tác chiến** | Nhấp lần lượt vào 8 danh mục | Kích hoạt đúng view pane, nút active có màu đỏ cờ `bg-rose-600` | 14/14 view pane chuyển đổi chính xác | **PASS** |
+| Mã Vai Trò | Tên Hiển Thị | Phạm Vi Bao Quát (Overview Scope) | Xuất Quân | Thẩm Định | Xe/Tàu | Trú Ẩn | Giả Lập Bão | SitRep | Quản Trị RBAC |
+|---|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `director` | ⭐ Chỉ huy trưởng | Toàn chiến dịch 7 tỉnh Miền Bắc, ban bố tình trạng khẩn cấp, xuất quân lực lượng và duyệt SitRep Bộ Chỉ Huy | **✓** | **✓** | **✓** | **✓** | **✓** | **✓** | **✓** |
+| `dispatcher` | 🛡️ Điều phối viên | Tiếp nhận SOS, lập lệnh xuất quân, phân bổ ca-nô/xe 4x4, tính toán lộ trình né ngập cứu nạn TSP | **✓** | **✓** | **✓** | **✓** | ✗ | **✓** | ✗ |
+| `verifier` | 🔍 Xác minh viên | Thẩm định tin báo dân sự, kiểm tra ảnh hiện trường, lọc trùng 50m, đối soát 114 (KHÔNG tự ý xuất quân) | ✗ | **✓** | ✗ | ✗ | ✗ | ✗ | ✗ |
+| `analyst` | 📊 Chuyên viên dữ liệu | Giám sát 130 trạm thủy văn IoT, radar mưa Open-Meteo, viễn thám Sentinel-1 SAR, chạy mô phỏng bão lũ | ✗ | ✗ | ✗ | ✗ | **✓** | **✓** | ✗ |
+| `rescue_coordinator` | 🚒 Đ/p Cứu hộ | Chỉ huy 5 đơn vị cơ động (Ca-nô 150HP, Xuồng phao, Xe 4x4, Thợ lặn, Trực thăng Mi-17), theo dõi cứu nạn P1 | **✓** | ✗ | **✓** | ✗ | ✗ | ✗ | ✗ |
+| `relief_coordinator` | 📦 Đ/p Cứu trợ | Quản lý 15 điểm sơ tán an toàn (420/600 người), điều phối gạo, nước sạch, thuốc men, áo phao, đoàn thiện nguyện | ✗ | ✗ | ✗ | **✓** | ✗ | **✓** | ✗ |
 
 ---
 
-### 2.3. Kiểm Thử 14 Màn Hình Tác Chiến (View Panes)
+## 3. CƠ CHẾ HIỂN THỊ & THỰC THI TRÊN GIAO DIỆN (UI ENFORCEMENT)
 
-| STT | Mã Màn Hình | Tên Phân Hệ | Chức Năng Chính Được Kiểm Tra | Kết Quả |
-|:---:|:---|:---|:---|:---:|
-| 1 | `cmd_dashboard` | **Bảng Điều Hành COP** | Bản đồ Leaflet GIS tương tác + Dải Triage Feed bên phải + 5 thẻ KPI đầu trang | **PASS** |
-| 2 | `cmd_intake` | **Trung Tâm Tiếp Nhận** | Bộ lọc 5 nguồn tin (SOS, Báo cáo, 114, Zalo, Cảm biến) + Badge lọc trùng không gian 50m | **PASS** |
-| 3 | `cmd_sos` | **SOS Khẩn Cấp** | Danh sách thẻ nạn nhân, nút gọi điện thoại nhanh, nút phát lệnh điều phối | **PASS** |
-| 4 | `cmd_reports` | **Báo Cáo Dân Sự** | Danh sách báo cáo ngập lụt, sạt lở từ người dân kèm hình ảnh và độ sâu ngập | **PASS** |
-| 5 | `cmd_verification` | **Hàng Đợi Xác Minh** | Gom cụm không gian, kiểm tra trùng lặp thời gian thực, thẩm định AI | **PASS** |
-| 6 | `cmd_weather` | **Thời Tiết Open-Meteo** | Thẻ khí tượng các tỉnh Miền Bắc + Thanh trượt kịch bản mô phỏng bão 0-100mm | **PASS** |
-| 7 | `cmd_flood_intel` | **130 Trạm Thủy Văn** | Mực nước sông Hồng, sông Thao, sông Chảy + Tích hợp lớp viễn thám Sentinel-1 SAR | **PASS** |
-| 8 | `cmd_disaster_map` | **Bản Đồ Fullscreen** | Chế độ GIS toàn màn hình phục vụ phòng họp chỉ huy tác chiến | **PASS** |
-| 9 | `cmd_rescue_teams` | **Quản Lý Đội Xe & Ca Nô** | Thẻ lực lượng: PCCC 114, Chữ Thập Đỏ, CLB Xe bán tải 4x4, Cấp cứu 115 | **PASS** |
-| 10 | `cmd_safe_zones` | **Điểm Sơ Tán An Toàn** | Sức chứa, số người đang tạm trú, thanh tiến trình tỷ lệ lấp đầy, nhu yếu phẩm | **PASS** |
-| 11 | `cmd_operations` | **Nhiệm Vụ Điều Phối** | Quy trình trạng thái nhiệm vụ: `en_route` &rarr; `on_scene` &rarr; `resolved` | **PASS** |
-| 12 | `cmd_sitrep` | **Báo Cáo SitRep** | Văn bản chuẩn Ban Chỉ đạo PCTT, nút copy clipboard 1-click | **PASS** |
-| 13 | `cmd_roles` | **Ma Trận Phân Quyền** | Bảng phân quyền 6 vai trò: Director, Dispatcher, Verifier, Analyst, Rescue, Relief | **PASS** |
-| 14 | `cmd_citizen_preview`| **Cổng Dân Sự Preview** | 4 Tab: Tìm đường A*, Danh sách điểm ngập, Báo ngập, Cứu hộ SOS | **PASS** |
+### 3.1. Thanh Trạng Thái Thẩm Quyền & Phạm Vi Tác Chiến (`#cmd-role-scope-banner`)
+- Được bố trí cố định ngay dưới Header, hiển thị:
+  - Huy hiệu vai trò với màu sắc định danh:
+    - `⭐ Chỉ huy trưởng`: Màu Vàng Hổ Phách (Amber)
+    - `🛡️ Điều phối viên`: Màu Xanh Dương (Blue)
+    - `🔍 Xác minh viên`: Màu Xanh Ngọc (Teal)
+    - `📊 Chuyên viên dữ liệu`: Màu Tím (Purple)
+    - `🚒 Điều phối Cứu hộ`: Màu Đỏ Hồng (Rose)
+    - `📦 Điều phối Cứu trợ`: Màu Xanh Lá (Emerald)
+  - Thẻ phạm vi địa lý và nhiệm vụ: `Phạm vi: [Scope Tag]`.
+  - 7 thẻ năng lực tác chiến thời gian thực:
+    - Nếu được cấp quyền: Thẻ nền xanh ngọc đậm, viền sáng, có dấu `✓ [Tên quyền]`.
+    - Nếu bị giới hạn: Thẻ nền tối, chữ xám mờ, gạch ngang và có icon `🔒 [Tên quyền]`.
+
+### 3.2. Khối Góc Nhìn Bao Quát & Hành Động Nhanh (`#cmd-role-focus-callout`)
+- Nằm nổi bật trên Bảng Điều Hành COP, tóm tắt trực quan bức tranh thảm họa từ lăng kính của vai trò đang đăng nhập.
+- Cung cấp 3 nút hành động nhanh độc quyền cho từng vai trò:
+  - **Chỉ huy trưởng:** `[📢 Ban Bố Báo Động Đỏ]`, `[📋 Xuất SitRep Bộ Chỉ Huy]`, `[⚡ Điều Phối Cấp Tốc]`.
+  - **Điều phối viên:** `[⚡ Xem Hàng Đợi SOS P1]`, `[🚑 Điều Động Ca-nô]`, `[📍 Lập Tuyến Né Ngập TSP]`.
+  - **Xác minh viên:** `[✓ Mở Hàng Đợi Xác Minh]`, `[🔗 Gộp 2 Cụm Trùng 50m]`, `[📞 Đối Soát Báo Cáo Dân Sự]`.
+  - **Chuyên viên dữ liệu:** `[🌧️ Bộ Giả Lập Mưa Bão]`, `[🌊 130 Trạm Thủy Văn IoT]`, `[🛰️ Bản Đồ Radar Viễn Thám]`.
+  - **Điều phối cứu hộ:** `[🚒 Quản Lý Đội Ca-nô & Xe]`, `[⚡ Tiếp Nhận Ca SOS P1]`, `[🗺️ Giám Sát Tuyến Trên Bản Đồ]`.
+  - **Điều phối cứu trợ:** `[🏕️ Quản Lý 15 Điểm Sơ Tán]`, `[📦 Kiểm Kê Nhu Yếu Phẩm]`, `[📋 Báo Cáo Hậu Cần SitRep]`.
+
+### 3.3. Bảo Vệ Điều Hướng Sidebar & Màn Hình Hạn Chế Thẩm Quyền (`renderAccessRestrictedScreen`)
+- Mọi nút trên Sidebar thuộc phân hệ ngoài quyền hạn của vai trò đang dùng đều được gắn icon khóa `🔒`, làm mờ (`opacity-40`) và cập nhật tooltip cảnh báo.
+- Nếu người dùng bấm vào phân hệ bị khóa hoặc truy cập qua URL:
+  - Hệ thống hiển thị Màn hình Cảnh báo Thẩm quyền quân sự: Biểu tượng khiên khóa, thông báo phân hệ này chỉ dành cho vai trò nào, và cung cấp nút 1-chạm `[Chuyển sang vai trò có quyền]` để trải nghiệm ngay lập tức.
+
+### 3.4. Kiểm Soát Nút Thao Tác Nghiệp Vụ Tại Hiện Trường
+- **Nút Phát Lệnh Điều Phối SOS (`openDispatchModal`):**
+  - Chỉ huy trưởng, Điều phối viên, Đ/p Cứu hộ: Nút đỏ nổi bật `[⚡ Lập Lệnh Cứu Nạn]` / `[⚡ Điều phối]`.
+  - Xác minh viên, Chuyên viên dữ liệu, Đ/p Cứu trợ: Nút bị vô hiệu hóa với nhãn `[🔒 Chờ lệnh]`.
+- **Nút Thẩm Định & Duyệt Tin Báo (`verifyIncident`, `rejectIncident`):**
+  - Xác minh viên, Điều phối viên, Chỉ huy trưởng: Nút xanh `[✓ Duyệt]`, `[Bác bỏ]`.
+  - Các vai trò khác: Chuyển thành nhãn `[🔒 Chỉ xem]`.
+- **Nút Đổi Trạng Thái Phương Tiện Cơ Động (`toggleUnitStatus`):**
+  - Chỉ Đ/p Cứu hộ, Điều phối viên, Chỉ huy trưởng mới có quyền chuyển trạng thái: Sẵn sàng 🟢 / Đang điều phối 🚑 / Tại hiện trường 🎯 / Bảo dưỡng ⚪.
+- **Nút Điều Chỉnh Sức Chứa Điểm Sơ Tán (`updateShelterCapacity`):**
+  - Chỉ Đ/p Cứu trợ, Điều phối viên, Chỉ huy trưởng có quyền thao tác `[+10 Người]`, `[-10 Người]`.
+- **Thanh Kéo Giả Lập Mưa Bão (0-100mm):**
+  - Chỉ Chuyên viên Dữ liệu & Chỉ huy trưởng có quyền kéo trượt mô phỏng; các vai trò khác thanh trượt bị khóa (`disabled`).
 
 ---
 
-### 2.4. Kiểm Thử Hệ Thống Backend & Thuật Toán
+## 4. KẾT QUẢ THỬ NGHIỆM TỔNG HỢP
 
-- **Bộ kiểm thử tự động:** `python -m unittest discover -s ..\GrassToucher-backend\tests`
-- **Kết quả:** **28/28 tests PASS** (Thời gian chạy: 23.117s)
-- **Kiểm thử hiệu năng thuật toán A\*:**
-  - Kích thước đồ thị: **2.235 nút giao thông**
-  - Thời gian tính toán lộ trình né ngập: **256.92 ms** (Đạt chuẩn thời gian thực < 500 ms).
-- **Hệ thống Circuit Breaker & Fallback:**
-  - Hoạt động chính xác khi cơ sở dữ liệu PostgreSQL ở chế độ Standby/Offline, tự động chuyển tải sang kho lưu trữ bộ đệm SQLite/Fallback mà không làm gián đoạn dịch vụ.
-
----
-
-## 3. KẾT LUẬN & ĐÁNH GIÁ CHUNG
-- Giao diện **NORTHSTAR COMMAND** đã được chuyển đổi hoàn thiện 100% theo tiêu chuẩn trung tâm điều phối thiên tai cấp doanh nghiệp.
-- Mọi chức năng cốt lõi của người dân (A* smart routing, form gửi SOS, báo cáo ngập) được bảo tồn nguyên vẹn bên trong phân hệ `NORTHSTAR CITIZEN` và dễ dàng truy cập xem trước.
-- Không phát sinh lỗi xung đột ID hoặc đè giao diện.
-- Sẵn sàng bàn giao và đưa vào vận hành thử nghiệm trực chiến.
+1. **Khởi Động Hệ Thống:** Không bị modal giới thiệu che khuất bản đồ khi tải trang; màn hình mặc định là Bảng Điều Hành Tác Chiến COP với bản đồ 100% full-canvas.
+2. **Khả Năng Chuyển Đổi Vai Trò:** Hỗ trợ chuyển đổi tức thì qua Header Dropdown, Ma trận RBAC hoặc qua tham số URL (`?role=verifier`, `?role=analyst`, v.v.).
+3. **Hiệu Năng Backend:** 28/28 bài kiểm thử đơn vị & tích hợp đạt chuẩn (OK trong 21.5s), thuật toán A* tìm đường né ngập hoàn thành trong 141.49ms.
+4. **Bảo Toàn Dự Án:** 100% các tính năng cũ (tìm đường A*, voice SOS, báo ngập dân cư) được bảo toàn nguyên vẹn trong module dùng chung và xem trước tại `cmd_citizen_preview`.
