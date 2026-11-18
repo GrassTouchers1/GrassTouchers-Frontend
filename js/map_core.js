@@ -198,16 +198,31 @@ function initMap() {
 
 
 
-  // Lớp bản đồ tiêu chuẩn OSM
-
-  const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-
+  // Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng CDN OpenStreetMap chuẩn tốc độ cao, hỗ trợ tự động dự phòng nếu ISP nghẽn)
+  const osmLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-
     maxZoom: 19,
+    crossOrigin: true
+  });
 
-    subdomains: ['a', 'b', 'c']
+  osmLayer.on('tileerror', function(error) {
+    if (error.tile && !error.tile.dataset.fallbackTried) {
+      error.tile.dataset.fallbackTried = 'true';
+      const coords = error.coords;
+      if (coords) {
+        error.tile.src = `https://a.tile.openstreetmap.fr/hot/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    }
+  });
 
+  osmFrLayer.on('tileerror', function(error) {
+    if (error.tile && !error.tile.dataset.fallbackTried) {
+      error.tile.dataset.fallbackTried = 'true';
+      const coords = error.coords;
+      if (coords) {
+        error.tile.src = `https://tile.openstreetmap.de/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    }
   });
 
 
