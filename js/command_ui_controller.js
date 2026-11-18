@@ -946,13 +946,18 @@ const CommandUIController = (function () {
     state.currentRegion = regionKey;
 
     const regionCoords = {
-      all: { lat: 21.30, lng: 105.30, zoom: 8 },
-      hanoi: { lat: 21.0285, lng: 105.8542, zoom: 12 },
-      thainguyen: { lat: 21.5928, lng: 105.8442, zoom: 12 },
-      laocai: { lat: 22.4856, lng: 103.9707, zoom: 12 },
-      yenbai: { lat: 21.7168, lng: 104.8973, zoom: 12 },
-      caobang: { lat: 22.6667, lng: 106.2500, zoom: 11 },
-      tuyenquang: { lat: 21.8236, lng: 105.2147, zoom: 12 }
+      all: { lat: 21.30, lng: 105.30, zoom: 8, name: 'Toàn Miền Bắc' },
+      hanoi: { lat: 21.0285, lng: 105.8542, zoom: 12, name: 'TP. Hà Nội' },
+      quangninh: { lat: 20.9500, lng: 107.0800, zoom: 10, name: 'Quảng Ninh' },
+      thainguyen: { lat: 21.5928, lng: 105.8442, zoom: 12, name: 'Thái Nguyên' },
+      laocai: { lat: 22.4856, lng: 103.9707, zoom: 12, name: 'Lào Cai' },
+      yenbai: { lat: 21.7168, lng: 104.8973, zoom: 12, name: 'Yên Bái' },
+      caobang: { lat: 22.6667, lng: 106.2500, zoom: 11, name: 'Cao Bằng' },
+      tuyenquang: { lat: 21.8236, lng: 105.2147, zoom: 12, name: 'Tuyên Quang' },
+      taybac: { lat: 22.05, lng: 104.35, zoom: 9, name: 'Tây Bắc' },
+      vietbac: { lat: 21.45, lng: 105.95, zoom: 10, name: 'Việt Bắc' },
+      dongbac: { lat: 22.40, lng: 106.10, zoom: 9, name: 'Đông Bắc' },
+      songda: { lat: 21.05, lng: 105.30, zoom: 10, name: 'Sông Đà' }
     };
 
     const target = regionCoords[regionKey] || regionCoords.all;
@@ -961,9 +966,21 @@ const CommandUIController = (function () {
     }
 
     const regSelect = document.getElementById('cmd-region-selector');
-    if (regSelect) regSelect.value = regionKey;
+    if (regSelect && regSelect.value !== regionKey) {
+      if (Array.from(regSelect.options).some(opt => opt.value === regionKey)) {
+        regSelect.value = regionKey;
+      }
+    }
 
-    showToast('📍 CHUYỂN VÙNG TÁC CHIẾN', `Trọng tâm giám sát: ${regionKey.toUpperCase()}`, 'info');
+    const mapJumpSelect = document.getElementById('region-jump-select');
+    if (mapJumpSelect && mapJumpSelect.value !== regionKey) {
+      if (Array.from(mapJumpSelect.options).some(opt => opt.value === regionKey)) {
+        mapJumpSelect.value = regionKey;
+      }
+    }
+
+    const regionName = target.name || regionKey.toUpperCase();
+    showToast('📍 CHUYỂN VÙNG TÁC CHIẾN', `Trọng tâm giám sát: ${regionName}`, 'info');
   }
 
   function toggleSidebarCollapse(forceState) {

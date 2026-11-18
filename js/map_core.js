@@ -1439,7 +1439,16 @@ function jumpToRegion(regionKey) {
 
   const selEl = document.getElementById('region-jump-select');
   if (selEl && selEl.value !== regionKey) {
-    selEl.value = regionKey;
+    if (Array.from(selEl.options).some(opt => opt.value === regionKey)) {
+      selEl.value = regionKey;
+    }
+  }
+
+  const cmdRegSelect = document.getElementById('cmd-region-selector');
+  if (cmdRegSelect && cmdRegSelect.value !== regionKey) {
+    if (Array.from(cmdRegSelect.options).some(opt => opt.value === regionKey)) {
+      cmdRegSelect.value = regionKey;
+    }
   }
 
   if (typeof window.showNorthStarToast === 'function') {
