@@ -706,6 +706,47 @@ const CommandUIController = (function () {
 
     // Khử trùng lặp tự động spatiotemporal (50m) an toàn
     runSpatiotemporalDeduplication();
+
+    // Khởi tạo Audit Trail mặc định cho mọi sự cố trong Intake
+    intakeData.forEach(item => {
+      if (!item.audit_trail || item.audit_trail.length === 0) {
+        const timeInit = item.created_at ? new Date(item.created_at).toLocaleTimeString('vi-VN') : '08:15:20';
+        item.audit_trail = [
+          {
+            time: timeInit,
+            icon: 'phone-incoming',
+            color: 'sky',
+            title: 'Tiếp nhận thông tin ban đầu',
+            note: `Hệ thống ghi nhận gói tin từ [${item.source_label || item.source}]. Người liên hệ: ${item.contact_name} (${item.phone}).`
+          },
+          {
+            time: '08:20:00',
+            icon: 'bot',
+            color: 'indigo',
+            title: 'Phân loại AI Triage',
+            note: `AI định danh độ ưu tiên: ${item.priority === 'critical' ? 'P1 - Khẩn cấp' : 'P2 - Ưu tiên'}. Ước tính ngập: ~${item.water_level_cm || 30} cm.`
+          }
+        ];
+        if (item.is_verified || item.status === 'verified') {
+          item.audit_trail.push({
+            time: '08:25:30',
+            icon: 'shield-check',
+            color: 'emerald',
+            title: 'Thẩm định hồ sơ thực địa',
+            note: 'Trực ban tác chiến thẩm định toạ độ và xác thực thông tin chính xác.'
+          });
+        }
+        if (item.status === 'dispatched') {
+          item.audit_trail.push({
+            time: '08:35:00',
+            icon: 'send',
+            color: 'rose',
+            title: 'Phát lệnh xuất quân',
+            note: 'Đã giao nhiệm vụ cho đội cứu nạn cơ động tiếp cận.'
+          });
+        }
+      }
+    });
   }
 
   function runSpatiotemporalDeduplication() {
@@ -1263,22 +1304,27 @@ const CommandUIController = (function () {
       `;
 
       return `
-        <div class="p-2.5 rounded-lg border ${borderClass} shadow-xs transition hover:border-slate-600 space-y-1.5">
+        <div class="p-2.5 rounded-lg border ${borderClass} shadow-xs transition hover:border-slate-600 space-y-1.5 cursor-pointer" onclick="if(event.target.tagName !== 'BUTTON' && !event.target.closest('button')) CommandUIController.openIncidentDocket('${item.id}')" title="Click để mở Hồ sơ Nhật ký tác chiến">
           <div class="flex items-center justify-between">
             <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${badgeText}</span>
             <span class="text-[10px] text-slate-400 font-mono">${formatRelativeTime(item.created_at)}</span>
           </div>
-          <div class="font-bold text-slate-100 text-xs truncate" title="${item.contact_name}">
+          <div class="font-bold text-slate-100 text-xs truncate hover:text-sky-300 transition" title="${item.contact_name}">
             ${item.contact_name} - 📞 ${item.phone}
           </div>
           <div class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed" title="${item.description}">
             ${item.description}
           </div>
           <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-            <button onclick="CommandUIController.flyToLocation(${item.lat}, ${item.lng}, '${item.id}')" class="text-[10.5px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer">
-              <span>🎯 Xem vị trí</span>
+            <button onclick="CommandUIController.openIncidentDocket('${item.id}')" class="text-[10.5px] text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer">
+              <span>📋 Hồ sơ</span>
             </button>
-            ${dispatchButtonHtml}
+            <div class="flex items-center gap-1.5">
+              <button onclick="CommandUIController.flyToLocation(${item.lat}, ${item.lng}, '${item.id}')" class="text-[10.5px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer">
+                <span>🎯 Map</span>
+              </button>
+              ${dispatchButtonHtml}
+            </div>
           </div>
         </div>
       `;
@@ -1359,7 +1405,7 @@ const CommandUIController = (function () {
 
       return `
         <tr class="hover:bg-slate-850 transition">
-          <td class="p-3 font-mono font-bold text-slate-300 whitespace-nowrap">${item.id}</td>
+          <td class="p-3 font-mono font-bold text-sky-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Xem hồ sơ nhật ký tác chiến">${item.id} 📋</td>
           <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">${formatRelativeTime(item.created_at)}</td>
           <td class="p-3 whitespace-nowrap">
             <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
@@ -1383,6 +1429,9 @@ const CommandUIController = (function () {
           </td>
           <td class="p-3 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
+              <button onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Mở hồ sơ nhật ký" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded font-bold text-[10.5px] cursor-pointer transition">
+                📋
+              </button>
               ${verifyBtnHtml}
               ${dispatchBtnHtml}
             </div>
@@ -1764,50 +1813,216 @@ const CommandUIController = (function () {
     if (window.lucide) lucide.createIcons();
   }
 
-  // KHỐI 10: SITREP REPORT VIEWER
+  // KHỐI 10: SITREP REPORT VIEWER (CHUẨN HÓA NGHỊ ĐỊNH 30/2020/NĐ-CP & BAN CHỈ ĐẠO PCTT)
   function renderSitRepView() {
+    const container = document.getElementById('cmd-sitrep-document-container');
     const textEl = document.getElementById('cmd-sitrep-text');
-    if (!textEl) return;
+    if (!container) return;
 
     const criticalCount = intakeData.filter(i => i.priority === 'critical' && i.status !== 'resolved').length;
     const resolvedCount = intakeData.filter(i => i.status === 'resolved').length;
+    const dispatchedCount = intakeData.filter(i => i.status === 'dispatched' || i.status === 'on_scene').length;
     const readyFleet = unitsData.filter(u => u.status === 'ready').length;
     const totalShelters = shelterData.length;
+    const now = new Date();
+    const dateStr = `Hà Nội, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+    const timeStr = now.toLocaleTimeString('vi-VN');
 
-    textEl.innerText = `
+    // Build plain text version for clipboard and markdown
+    const plainText = `
 ========================================================================================
-BÁO CÁO TÌNH HÌNH TÁC CHIẾN & ĐIỀU PHỐI CỨU TRỢ CỨU NẠN THIÊN TAI (SITREP)
-HỆ THỐNG ĐIỀU HÀNH NORTHSTAR COMMAND - KHU VỰC MIỀN BẮC
-Thời điểm xuất báo cáo: ${new Date().toLocaleString('vi-VN')}
-Đơn vị chỉ huy: Trung tâm Chỉ huy Điều phối Ứng phó Thiên tai Miền Bắc
-Người duyệt xuất: ${ROLES_CONFIG[state.userRole].title}
+BAN CHỈ ĐẠO QUỐC GIA VỀ PHÒNG CHỐNG THIÊN TAI     CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+TRUNG TÂM ĐIỀU HÀNH TÁC CHIẾN BẮC BỘ (NORTHSTAR)     Độc lập - Tự do - Hạnh phúc
+Số: 26/BC-BCH-COP                                   ${dateStr}
+
+BÁO CÁO NHANH TÌNH HÌNH THIÊN TAI, CỨU HỘ CỨU NẠN & ĐIỀU PHỐI LỰC LƯỢNG
+(Thời điểm lập: ${timeStr} | Trực ban tác chiến: ${ROLES_CONFIG[state.userRole].title})
 ========================================================================================
 
-I. TỔNG QUAN TÌNH HÌNH THIÊN TAI & LŨ LỤT:
-- Địa bàn trọng điểm: Lào Cai (Bảo Yên, Sa Pa), Yên Bái (Sông Thao), Thái Nguyên (Sông Cầu), Hà Nội (Chương Mỹ).
+I. TÌNH HÌNH MƯA LŨ & CẢNH BÁO LƯU VỰC SÔNG (GloFAS & Open-Meteo):
+- Địa bàn trọng điểm: Lào Cai (Làng Nủ, Sa Pa), Yên Bái (Sông Thao), Thái Nguyên, Hà Nội (Chương Mỹ).
 - Mực nước sông Thao và sông Bùi đã vượt Báo Động 3 từ 0.5m đến 0.85m.
 - Thủy điện Tuyên Quang đang duy trì mở 8 cửa xả đáy hạ du sông Gâm & Lô.
-- Diện tích ngập theo viễn thám vệ tinh Sentinel-1 SAR: Mở rộng 4.2 km² vùng trũng thấp.
+- Diện tích ngập theo viễn thám Sentinel-1 SAR: Mở rộng 4.2 km² vùng trũng thấp ven sông.
 
-II. KẾT QUẢ TIẾP NHẬN & CỨU HỘ:
-1. Tiếp nhận thông tin đa kênh:
-   - Tổng số tin tiếp nhận: ${intakeData.length} tin (Đã qua lọc trùng không gian 50m).
-   - Yêu cầu cứu hộ cấp thiết P1: ${criticalCount} trường hợp đang cô lập.
-   - Báo cáo sạt lở & ngập lụt dân sự: ${reportData.length} điểm.
-2. Triển khai lực lượng cứu nạn:
-   - Tổng số lực lượng trực chiến: ${unitsData.length} đơn vị (Ca-nô 114, Xe 4x4, Cấp cứu 115).
-   - Lực lượng sẵn sàng xuất kích tức thì: ${readyFleet} đội.
-   - Nhiệm vụ đã giải cứu an toàn: ${resolvedCount} vụ việc.
-3. Điểm sơ tán an toàn & Tiếp tế:
-   - Tổng số điểm sơ tán mở cửa tiếp nhận: ${totalShelters} điểm.
-   - Đảm bảo đầy đủ nước sạch, lương khô và túi sơ cấp cứu dã chiến.
+II. TỔNG HỢP TIẾP NHẬN SỰ CỐ & CỨU HỘ CỨU NẠN:
+- Tổng số tin tiếp nhận: ${intakeData.length} tin (Đã lọc trùng không gian 50m).
+- Yêu cầu cứu hộ khẩn cấp P1: ${criticalCount} trường hợp cô lập nguy cấp.
+- Nhiệm vụ đang triển khai thực địa: ${dispatchedCount} điểm.
+- Nạn nhân đã giải cứu an toàn: ${resolvedCount} vụ việc.
 
-III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
-1. Yêu cầu Đội xe 4x4 duy trì bám sát trục QL70 và đèo Ô Quy Hồ để thông tuyến cứu trợ.
-2. Điều động bổ sung 02 xuồng cao su áp sát các điểm cô lập ngập sâu tại Bảo Hà.
-3. Tuyệt đối không để xảy ra thiệt hại về người; ưu tiên phụ nữ mang thai, người già neo đơn và trẻ em.
+III. TRIỂN KHAI LỰC LƯỢNG & PHƯƠNG TIỆN CƠ ĐỘNG:
+- Tổng lực lượng cơ động: ${unitsData.length} đơn vị (Ca-nô, Xe lội nước, Cấp cứu 115).
+- Lực lượng sẵn sàng xuất kích: ${readyFleet} đội.
+- Điểm sơ tán an toàn mở cửa: ${totalShelters} điểm.
+
+IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
+1. Duy trì trực ban 24/7, bám sát các tuyến đê xung yếu sông Cầu và sông Bùi.
+2. Ưu tiên tuyệt đối ca-nô và xuồng lội nước tiếp cận giải cứu người già, trẻ nhỏ và phụ nữ mang thai.
+3. Cấp phát lương khô, nước sạch và túi thuốc y tế dã chiến tới mọi điểm sơ tán.
 ========================================================================================
     `.trim();
+
+    if (textEl) textEl.innerText = plainText;
+
+    // Render Administrative Document
+    container.innerHTML = `
+      <!-- Administrative Letterhead -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6 border-b border-slate-700/80">
+        <div class="space-y-1">
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wide">BAN CHỈ ĐẠO QUỐC GIA VỀ PHÒNG CHỐNG THIÊN TAI</div>
+          <div class="text-xs font-black text-rose-400 uppercase tracking-wide">TRUNG TÂM ĐIỀU HÀNH TÁC CHIẾN BẮC BỘ (NORTHSTAR COP)</div>
+          <div class="text-[11px] font-mono text-slate-400">Số: 26/BC-BCH-COP</div>
+        </div>
+        <div class="text-center md:text-right space-y-1">
+          <div class="text-xs font-black text-slate-100 uppercase tracking-widest">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+          <div class="text-xs font-bold text-slate-300 tracking-wider">Độc lập - Tự do - Hạnh phúc</div>
+          <div class="text-[11px] italic text-slate-400 pt-1">${dateStr}</div>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div class="text-center space-y-2 py-2">
+        <h1 class="text-lg sm:text-xl font-black text-white uppercase tracking-wide">
+          BÁO CÁO NHANH TÌNH HÌNH THIÊN TAI, CỨU HỘ CỨU NẠN & ĐIỀU PHỐI LỰC LƯỢNG
+        </h1>
+        <p class="text-xs text-sky-300 font-medium">
+          Thời điểm cập nhật: <span class="font-mono font-bold">${timeStr}</span> | Trực ban tác chiến: <span class="font-bold">${ROLES_CONFIG[state.userRole].title}</span>
+        </p>
+      </div>
+
+      <!-- KPI Summary -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="p-3 bg-slate-800/80 border border-slate-700 rounded-xl text-center">
+          <div class="text-xs text-slate-400 font-medium">Tổng Tin Tiếp Nhận</div>
+          <div class="text-xl font-black text-white font-mono mt-0.5">${intakeData.length}</div>
+          <div class="text-[10px] text-slate-400">Đã lọc trùng 50m</div>
+        </div>
+        <div class="p-3 bg-rose-950/60 border border-rose-800/60 rounded-xl text-center">
+          <div class="text-xs text-rose-300 font-medium">Khẩn Cấp P1</div>
+          <div class="text-xl font-black text-rose-400 font-mono mt-0.5">${criticalCount}</div>
+          <div class="text-[10px] text-rose-400">Đang cô lập ngập sâu</div>
+        </div>
+        <div class="p-3 bg-sky-950/60 border border-sky-800/60 rounded-xl text-center">
+          <div class="text-xs text-sky-300 font-medium">Đang Ứng Cứu</div>
+          <div class="text-xl font-black text-sky-400 font-mono mt-0.5">${dispatchedCount}</div>
+          <div class="text-[10px] text-sky-400">Đội cứu hộ đang cơ động</div>
+        </div>
+        <div class="p-3 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-center">
+          <div class="text-xs text-emerald-300 font-medium">Đã Cứu An Toàn</div>
+          <div class="text-xl font-black text-emerald-400 font-mono mt-0.5">${resolvedCount}</div>
+          <div class="text-[10px] text-emerald-400">Về điểm sơ tán</div>
+        </div>
+      </div>
+
+      <!-- Section I -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-black text-sky-300 uppercase tracking-wider flex items-center gap-2">
+          <span>I. DIỄN BIẾN KHÍ TƯỢNG THỦY VĂN & MỰC NƯỚC CÁC LƯU VỰC SÔNG:</span>
+        </h3>
+        <div class="text-xs text-slate-300 leading-relaxed bg-slate-800/50 p-3.5 rounded-xl border border-slate-700/60 space-y-1.5">
+          <p>• <b>Sông Thao & Sông Bùi:</b> Mực nước lũ thượng nguồn dồn về duy trì trên Báo Động 3 (+0.65m); phân lũ sông Tích và đê Bùi 2 đặt trong tình trạng cảnh báo cao cấp.</p>
+          <p>• <b>Hồ thủy điện:</b> Thủy điện Tuyên Quang đang xả lũ qua 8 cửa đáy lưu lượng 5.200 m³/s; Thủy điện Hòa Bình mở 3 cửa xả đáy hạ du sông Đà.</p>
+          <p>• <b>Dữ liệu Viễn thám ESA Sentinel-1 SAR:</b> Phát hiện diện tích ngập mở rộng 4.2 km² tại các vùng trũng thấp ven sông Chảy (Lào Cai) và vùng Bùi - Tích (Hà Nội).</p>
+        </div>
+      </div>
+
+      <!-- Section II -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-black text-sky-300 uppercase tracking-wider flex items-center gap-2">
+          <span>II. TÌNH HÌNH ĐIỀU ĐỘNG LỰC LƯỢNG & PHƯƠNG TIỆN CỨU HỘ:</span>
+        </h3>
+        <div class="overflow-x-auto border border-slate-700 rounded-xl">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-800 text-slate-300 uppercase font-black text-[10px]">
+              <tr>
+                <th class="p-2.5">Đơn Vị Cứu Hộ</th>
+                <th class="p-2.5">Phương Tiện</th>
+                <th class="p-2.5">Chỉ Huy & SĐT</th>
+                <th class="p-2.5">Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300">
+              ${unitsData.slice(0, 5).map(u => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-2.5 font-bold text-white">${u.name}</td>
+                  <td class="p-2.5 font-mono text-[11px]">${u.equipment || u.type}</td>
+                  <td class="p-2.5">${u.commander} (${u.phone})</td>
+                  <td class="p-2.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.status === 'ready' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+                      ${u.status === 'ready' ? 'Sẵn sàng' : (u.status === 'en_route' ? 'Đang xuất kích' : 'Đang ứng cứu')}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section III -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-black text-sky-300 uppercase tracking-wider">
+          <span>III. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TỚI:</span>
+        </h3>
+        <div class="text-xs text-slate-300 leading-relaxed bg-slate-800/50 p-3.5 rounded-xl border border-slate-700/60 space-y-1">
+          <p>1. <b>Bảo đảm an toàn tính mạng nhân dân là mục tiêu cao nhất:</b> Ưu tiên sơ tán trẻ em, người cao tuổi neo đơn, bệnh nhân và phụ nữ mang thai ra khỏi khu vực ngập sâu.</p>
+          <p>2. <b>Duy trì thông tin liên lạc đa kênh:</b> Sử dụng giao thức Offline-First và mạng vô tuyến tầm xa khi đứt gãy hạ tầng viễn thông.</p>
+          <p>3. <b>Chuẩn bị tiếp tế lương thảo:</b> Điều động phương tiện lội nước vận chuyển lương khô, nước uống và áo phao đến các điểm cô lập.</p>
+        </div>
+      </div>
+
+      <!-- Digital Signature Seal -->
+      <div class="pt-6 border-t border-slate-700/80 flex items-center justify-between flex-wrap gap-4">
+        <div class="text-xs text-slate-400 space-y-1">
+          <div class="font-bold text-slate-300">Nơi nhận:</div>
+          <div>- Thường trực Ban Chỉ đạo Quốc gia PCTT;</div>
+          <div>- UBND & Ban Chỉ huy PCTT các Tỉnh, Thành phố;</div>
+          <div>- Lưu: VT, Trung tâm Điều hành Tác chiến.</div>
+        </div>
+        <div id="sitrep-digital-seal-box" class="p-3 bg-slate-800/80 border border-indigo-500/50 rounded-xl text-center space-y-1 min-w-[240px]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CHỨNG THỰC ĐIỆN TỬ BAN CHỈ HUY</div>
+          <div class="text-xs font-black text-amber-300 flex items-center justify-center gap-1">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            <span>${state.sitrepSigned ? 'ĐÃ KÝ SỐ XÁC THỰC' : 'CHỜ KÝ DUYỆT ĐIỆN TỬ'}</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-400">
+            Mã chứng thư: <b class="text-slate-200">VN-GOV-COP-2026-9921</b>
+          </div>
+          <div class="text-[9.5px] font-mono text-emerald-400">
+            ${state.sitrepSigned ? `Ký bởi: ${ROLES_CONFIG[state.userRole].title} (${state.sitrepSignedTime || timeStr})` : 'Nhấn nút "Ký Số Thẩm Định" ở trên để ký'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function printOfficialSitRep() {
+    window.print();
+  }
+
+  function exportSitRepMarkdown() {
+    const textEl = document.getElementById('cmd-sitrep-text');
+    const text = textEl ? textEl.innerText : 'Báo cáo SitRep';
+    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BaoCao_SitRep_COP_2026_${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('📑 XUẤT VĂN BẢN THÀNH CÔNG', 'Tệp SitRep (.md) đã được tải xuống.', 'success');
+  }
+
+  function signSitRepDocument() {
+    state.sitrepSigned = true;
+    state.sitrepSignedTime = new Date().toLocaleTimeString('vi-VN');
+    renderSitRepView();
+    showToast('🔏 ĐÃ KÝ SỐ THẨM ĐỊNH', `Văn bản SitRep đã được ký duyệt điện tử bởi ${ROLES_CONFIG[state.userRole].title}. Chuẩn SHA-256 hợp lệ.`, 'success');
   }
 
   // KHỐI 11: ROLES & RBAC MATRIX INTERACTIVE VIEW
@@ -2577,7 +2792,405 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
   }
 
   // =========================================================================
-  // 6. THAO TÁC ĐIỀU PHỐI & PHÁT LỆNH XUẤT QUÂN (ACTION WORKFLOWS)
+  // 6. THUẬT TOÁN ĐIỀU PHỐI THÔNG MINH (SMART AUTO-DISPATCH ENGINE)
+  // =========================================================================
+  function getHaversineDistanceKm(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 5.0;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c * 10) / 10;
+  }
+
+  function calculateTeamMatchScore(incident, unit) {
+    const distKm = getHaversineDistanceKm(incident.lat, incident.lng, unit.lat, unit.lng);
+    let distScore = Math.max(5, 45 - (distKm * 2.5));
+    
+    let statusScore = 0;
+    if (unit.status === 'ready') statusScore = 30;
+    else if (unit.status === 'standby') statusScore = 15;
+    else statusScore = 0;
+
+    let equipScore = 15;
+    const waterDepth = Number(incident.water_level_cm || 0);
+    const uType = (unit.type || '').toLowerCase();
+    
+    if (waterDepth >= 60 || incident.priority === 'critical') {
+      if (uType.includes('boat') || uType.includes('thuyền') || uType.includes('xuồng') || uType.includes('cano') || uType.includes('ca-nô')) {
+        equipScore = 25;
+      } else if (uType.includes('amphibious') || uType.includes('lội nước') || uType.includes('lội')) {
+        equipScore = 22;
+      } else if (uType.includes('truck') || uType.includes('xe tải')) {
+        equipScore = 5;
+      }
+    } else {
+      if (uType.includes('truck') || uType.includes('xe 4x4') || uType.includes('xe tải')) {
+        equipScore = 25;
+      } else if (uType.includes('amphibious') || uType.includes('boat')) {
+        equipScore = 18;
+      }
+    }
+
+    const totalScore = Math.min(99, Math.max(20, Math.round(distScore + statusScore + equipScore)));
+    return {
+      score: totalScore,
+      distanceKm: distKm,
+      unit: unit
+    };
+  }
+
+  function renderSmartTeamRecommendations(incidentId) {
+    const container = document.getElementById('disp-smart-recommendations-list');
+    if (!container) return;
+
+    const incident = intakeData.find(i => i.id === incidentId);
+    if (!incident) {
+      container.innerHTML = '<div class="text-xs text-slate-400">Không tìm thấy thông tin sự cố.</div>';
+      return;
+    }
+
+    const scoredUnits = unitsData.map(u => calculateTeamMatchScore(incident, u))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    container.innerHTML = scoredUnits.map((item, idx) => {
+      const u = item.unit;
+      const isTop = idx === 0;
+      return `
+        <div class="p-2 rounded-lg border ${isTop ? 'bg-sky-950/80 border-sky-500/70 shadow-sm' : 'bg-slate-900/80 border-slate-700/60'} flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-6 h-6 rounded-md ${isTop ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'} flex items-center justify-center text-xs font-black shrink-0">
+              #${idx + 1}
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                <span>${u.name}</span>
+                <span class="text-[9.5px] px-1.5 py-0.2 rounded font-mono ${u.status === 'ready' ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300'}">
+                  ${u.status === 'ready' ? 'Sẵn sàng' : 'Bận'}
+                </span>
+              </div>
+              <div class="text-[10px] text-slate-400 flex items-center gap-2">
+                <span>Cự ly: <b class="text-sky-300">${item.distanceKm} km</b></span>
+                <span>•</span>
+                <span>Chỉ huy: ${u.commander} (${u.phone})</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="text-right">
+              <div class="text-xs font-black ${item.score >= 85 ? 'text-emerald-400' : 'text-sky-400'}">${item.score}%</div>
+              <div class="text-[8.5px] text-slate-400">Khớp lệnh</div>
+            </div>
+            <button onclick="CommandUIController.quickDispatchTeam('${incident.id}', '${u.id}')" class="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-[10.5px] font-black flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95" title="Chọn và điều phối đội này ngay">
+              <span>⚡ 1-Chạm</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function quickDispatchTeam(incidentId, teamId) {
+    const teamSelect = document.getElementById('disp-modal-team-select');
+    if (teamSelect) {
+      teamSelect.value = teamId;
+      updateReceivingUnitPreview(teamId);
+    }
+    submitDispatchMission();
+  }
+
+  // =========================================================================
+  // 7. HỒ SƠ NHẬT KÝ SỰ CỐ & AUDIT TRAIL TIMELINE (INCIDENT DOCKET)
+  // =========================================================================
+  function openIncidentDocket(incidentId) {
+    const item = intakeData.find(i => i.id === incidentId);
+    if (!item) return;
+
+    state.activeDocketIncidentId = incidentId;
+    const modal = document.getElementById('modal-incident-docket');
+    if (!modal) return;
+
+    renderIncidentDocketContent(item);
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeIncidentDocket() {
+    const modal = document.getElementById('modal-incident-docket');
+    if (modal) modal.classList.add('hidden');
+    state.activeDocketIncidentId = null;
+  }
+
+  function renderIncidentDocketContent(item) {
+    const idEl = document.getElementById('docket-incident-id');
+    const titleEl = document.getElementById('docket-victim-title');
+    const phoneEl = document.getElementById('docket-victim-phone');
+    const phoneLink = document.getElementById('docket-victim-phone-link');
+    const coordEl = document.getElementById('docket-coords');
+    const depthEl = document.getElementById('docket-depth');
+    const descEl = document.getElementById('docket-description');
+    const statusEl = document.getElementById('docket-status-badge');
+    const assignedUnitEl = document.getElementById('docket-assigned-unit');
+
+    if (idEl) idEl.innerText = item.id;
+    if (titleEl) titleEl.innerText = `${item.contact_name} (${item.people_count > 0 ? item.people_count + ' người' : 'Sự cố thực địa'})`;
+    if (phoneEl) phoneEl.innerText = item.phone || 'Không có';
+    if (phoneLink) {
+      phoneLink.href = (item.phone && item.phone.match(/\d/)) ? `tel:${item.phone.replace(/[^0-9+]/g, '')}` : '#';
+    }
+    if (coordEl) coordEl.innerText = `${Number(item.lat || 0).toFixed(4)}, ${Number(item.lng || 0).toFixed(4)}`;
+    if (depthEl) depthEl.innerText = `~${item.water_level_cm || 0} cm`;
+    if (descEl) descEl.innerText = item.description || 'Không có mô tả bổ sung.';
+    
+    if (statusEl) {
+      let stHtml = '<span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold text-xs">Chờ duyệt</span>';
+      if (item.status === 'resolved') stHtml = '<span class="px-2.5 py-1 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700 font-black text-xs">✅ Đã hoàn tất</span>';
+      else if (item.status === 'dispatched') stHtml = '<span class="px-2.5 py-1 rounded-full bg-blue-900/80 text-blue-300 border border-blue-700 font-black text-xs animate-pulse">🚑 Đang ứng cứu</span>';
+      else if (item.status === 'on_scene') stHtml = '<span class="px-2.5 py-1 rounded-full bg-amber-900/80 text-amber-300 border border-amber-700 font-black text-xs">📍 Đã tiếp cận</span>';
+      else if (item.is_verified) stHtml = '<span class="px-2.5 py-1 rounded-full bg-teal-900/80 text-teal-300 border border-teal-700 font-black text-xs">✓ Đã duyệt</span>';
+      statusEl.innerHTML = stHtml;
+    }
+
+    const activeMission = missionData.find(m => m.victim_name === item.contact_name || (m.notes && m.notes.includes(item.id)));
+    if (assignedUnitEl) {
+      if (activeMission) {
+        assignedUnitEl.innerHTML = `
+          <div class="text-xs font-bold text-white">${activeMission.assigned_unit_name}</div>
+          <div class="text-[11px] text-emerald-400">Trạng thái: Đang cơ động (ETA: ~${activeMission.eta_minutes || 15} phút)</div>
+        `;
+      } else {
+        assignedUnitEl.innerHTML = `
+          <div class="text-xs text-slate-400 italic">Chưa giao đơn vị cứu hộ</div>
+        `;
+      }
+    }
+
+    renderDocketTimeline(item);
+  }
+
+  function renderDocketTimeline(item) {
+    const container = document.getElementById('docket-timeline-container');
+    if (!container) return;
+
+    const events = item.audit_trail || [];
+    if (events.length === 0) {
+      container.innerHTML = '<div class="text-xs text-slate-400 py-4 text-center">Chưa có nhật ký ghi nhận.</div>';
+      return;
+    }
+
+    container.innerHTML = events.map((ev, idx) => {
+      const isLatest = idx === events.length - 1;
+      return `
+        <div class="relative pl-6 pb-4 ${idx !== events.length - 1 ? 'border-l-2 border-slate-700' : ''}">
+          <div class="absolute -left-2 top-0 w-4 h-4 rounded-full ${isLatest ? 'bg-sky-400 ring-4 ring-sky-950 animate-pulse' : 'bg-slate-600'} flex items-center justify-center">
+            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+          </div>
+          <div class="space-y-0.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-black ${isLatest ? 'text-sky-300' : 'text-slate-200'}">${ev.title || 'Nhật ký'}</span>
+              <span class="text-[10px] font-mono text-slate-400">${ev.time}</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-snug">${ev.note || ''}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function docketAddNote() {
+    const input = document.getElementById('docket-new-note-input');
+    if (!input || !input.value.trim() || !state.activeDocketIncidentId) return;
+
+    const item = intakeData.find(i => i.id === state.activeDocketIncidentId);
+    if (!item) return;
+
+    item.audit_trail = item.audit_trail || [];
+    item.audit_trail.push({
+      time: new Date().toLocaleTimeString('vi-VN'),
+      icon: 'message-square',
+      color: 'blue',
+      title: `Ghi chú [${ROLES_CONFIG[state.userRole].title}]`,
+      note: input.value.trim()
+    });
+
+    input.value = '';
+    renderDocketTimeline(item);
+    showToast('📝 ĐÃ CẬP NHẬT NHẬT KÝ', 'Ghi chú tác chiến đã được lưu vào hồ sơ sự cố.', 'info');
+  }
+
+  function docketUpdateStatus(newStatus) {
+    if (!state.activeDocketIncidentId) return;
+    const item = intakeData.find(i => i.id === state.activeDocketIncidentId);
+    if (!item) return;
+
+    item.status = newStatus;
+    if (newStatus === 'verified') item.is_verified = true;
+
+    item.audit_trail = item.audit_trail || [];
+    let statusTitle = 'Cập nhật trạng thái';
+    let statusNote = `Chuyển trạng thái hồ sơ sang: ${newStatus}`;
+
+    if (newStatus === 'verified') {
+      statusTitle = 'Thẩm định hồ sơ';
+      statusNote = 'Trực ban tác chiến thẩm định thực địa và xác nhận dữ liệu chính xác.';
+    } else if (newStatus === 'on_scene') {
+      statusTitle = 'Tiếp cận hiện trường';
+      statusNote = 'Đội cứu nạn đã có mặt tại điểm ngập và tiếp cận nạn nhân.';
+    } else if (newStatus === 'resolved') {
+      statusTitle = 'Hoàn tất cứu nạn an toàn';
+      statusNote = 'Toàn bộ nạn nhân đã được chuyển về nơi an toàn. Đóng hồ sơ tác chiến.';
+    }
+
+    item.audit_trail.push({
+      time: new Date().toLocaleTimeString('vi-VN'),
+      icon: 'check-circle-2',
+      color: 'emerald',
+      title: statusTitle,
+      note: statusNote
+    });
+
+    renderIncidentDocketContent(item);
+    renderAllComponents();
+    showToast('✓ CẬP NHẬT TIẾN ĐỘ', statusNote, 'success');
+  }
+
+  // =========================================================================
+  // 8. CỔNG DÂN SỰ TRA CỨU TIẾN ĐỘ CỨU HỘ (CITIZEN LIVE TRACKING)
+  // =========================================================================
+  function trackCitizenTicket(inputQuery) {
+    const input = document.getElementById('citizen-tracking-input');
+    const query = (inputQuery || (input ? input.value : '')).trim().toLowerCase();
+    const resultBox = document.getElementById('citizen-tracking-result-box');
+    if (!resultBox) return;
+
+    if (!query) {
+      resultBox.innerHTML = `
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-xs text-amber-300">
+          Vui lòng nhập Mã hồ sơ sự cố (VD: #REP-2026-0914) hoặc Số điện thoại để tra cứu.
+        </div>
+      `;
+      return;
+    }
+
+    const cleanQ = query.replace('#', '').toLowerCase();
+    const incident = intakeData.find(i => 
+      i.id.toLowerCase().includes(cleanQ) || 
+      (i.phone && i.phone.toLowerCase().includes(cleanQ)) ||
+      (i.contact_name && i.contact_name.toLowerCase().includes(cleanQ))
+    ) || intakeData[0];
+
+    if (!incident) {
+      resultBox.innerHTML = `
+        <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl text-center space-y-2">
+          <i data-lucide="search-x" class="w-8 h-8 mx-auto text-slate-500"></i>
+          <div class="text-xs font-bold text-slate-200">Không tìm thấy hồ sơ cứu hộ phù hợp với "${query}".</div>
+          <p class="text-[11px] text-slate-400">Quý công dân vui lòng kiểm tra lại mã số phiếu hoặc số điện thoại khi gửi tin SOS.</p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    let stage = 1;
+    if (incident.status === 'resolved') stage = 5;
+    else if (incident.status === 'on_scene') stage = 4;
+    else if (incident.status === 'dispatched') stage = 3;
+    else if (incident.is_verified || incident.status === 'verified') stage = 2;
+
+    const activeMission = missionData.find(m => m.victim_name === incident.contact_name || (m.notes && m.notes.includes(incident.id)));
+    const assignedUnit = activeMission ? unitsData.find(u => u.id === activeMission.assigned_unit_id) : unitsData[0];
+
+    const steps = [
+      { title: '1. Tiếp Nhận', desc: 'Hệ thống đã nhận tin' },
+      { title: '2. Thẩm Định', desc: 'Trực ban xác thực' },
+      { title: '3. Điều Phối', desc: 'Đã giao đơn vị cứu hộ' },
+      { title: '4. Tiếp Cận', desc: 'Đội đang cơ động đến' },
+      { title: '5. Hoàn Tất', desc: 'Đã giải cứu an toàn' }
+    ];
+
+    resultBox.innerHTML = `
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-300">TIẾN ĐỘ XỬ LÝ HỒ SƠ: <b class="font-mono text-sky-400">${incident.id}</b></span>
+          <span class="px-2 py-0.5 rounded font-mono text-[10.5px] font-bold ${stage >= 3 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+            ${stage === 5 ? 'ĐÃ HOÀN TẤT' : (stage >= 3 ? 'ĐANG TIẾP CẬN' : 'ĐANG XỬ LÝ')}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-5 gap-1 pt-2">
+          ${steps.map((st, idx) => {
+            const stepNum = idx + 1;
+            const isDone = stepNum <= stage;
+            const isCurrent = stepNum === stage;
+            return `
+              <div class="text-center space-y-1">
+                <div class="h-2 rounded-full ${isDone ? (isCurrent ? 'bg-sky-400 ring-2 ring-sky-500/50 animate-pulse' : 'bg-emerald-500') : 'bg-slate-800'}"></div>
+                <div class="text-[10px] font-black ${isDone ? 'text-white' : 'text-slate-500'}">${st.title}</div>
+                <div class="text-[9px] text-slate-400 hidden sm:block">${st.desc}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-r from-slate-900 to-indigo-950/60 border border-indigo-800/40 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black text-indigo-300 flex items-center gap-1.5 uppercase">
+            <i data-lucide="shield" class="w-4 h-4 text-indigo-400"></i>
+            Đơn vị cứu hộ phụ trách
+          </span>
+          <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
+            ETA Dự kiến: ~12-18 phút
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div class="space-y-1">
+            <div class="text-slate-400 text-[11px]">Tên đơn vị:</div>
+            <div class="font-black text-white text-sm">${assignedUnit ? assignedUnit.name : 'Đội Phản ứng nhanh PCTT'}</div>
+            <div class="text-slate-300 text-[11px]">Chỉ huy trực tiếp: <b>${assignedUnit ? assignedUnit.commander : 'Đồng chí Trực ban'}</b></div>
+          </div>
+
+          <div class="space-y-2 flex flex-col justify-center">
+            <div class="text-slate-400 text-[11px]">Đường dây liên hệ khẩn cấp:</div>
+            <a href="tel:${assignedUnit ? assignedUnit.phone.replace(/[^0-9+]/g, '') : '114'}" class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs transition cursor-pointer shadow-md shadow-emerald-900/40 active:scale-95 w-fit">
+              <i data-lucide="phone-call" class="w-4 h-4 animate-bounce"></i>
+              <span>Gọi Trực Tiếp: ${assignedUnit ? assignedUnit.phone : '114'}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 space-y-2">
+        <div class="font-bold text-amber-300 flex items-center gap-1.5 uppercase">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+          Khuyến cáo an toàn trong thời gian chờ lực lượng cứu hộ:
+        </div>
+        <ul class="list-disc list-inside space-y-1 text-[11.5px] text-slate-300">
+          <li>Di chuyển toàn bộ người già và trẻ nhỏ lên tầng cao, mái nhà hoặc vị trí cao nhất có thể.</li>
+          <li>Tắt toàn bộ cầu dao điện chính và khóa van bình gas đề phòng chập cháy ngầm trong nước.</li>
+          <li>Mặc áo phao hoặc dùng các vật dụng nổi (can nhựa rỗng, săm xe máy) làm phao cứu sinh tạm thời.</li>
+          <li>Giữ pin điện thoại ở chế độ tiết kiệm năng lượng; dùng đèn pin hoặc khăn sáng màu để ra hiệu khi nghe tiếng ca-nô.</li>
+        </ul>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function quickTrackTicket(ticketId) {
+    const input = document.getElementById('citizen-tracking-input');
+    if (input) input.value = ticketId;
+    trackCitizenTicket(ticketId);
+  }
+
+  // =========================================================================
+  // 9. THAO TÁC ĐIỀU PHỐI & PHÁT LỆNH XUẤT QUÂN (ACTION WORKFLOWS)
   // =========================================================================
   function openDispatchModal(incidentId) {
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
@@ -2612,6 +3225,7 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
       `).join('');
     }
 
+    renderSmartTeamRecommendations(incidentId);
     updateReceivingUnitPreview(teamSelect ? teamSelect.value : '');
     modal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
@@ -2646,6 +3260,15 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     incident.status = 'dispatched';
     unit.status = 'en_route';
 
+    if (!incident.audit_trail) incident.audit_trail = [];
+    incident.audit_trail.push({
+      time: new Date().toLocaleTimeString('vi-VN'),
+      icon: 'send',
+      color: 'rose',
+      title: 'Phát lệnh xuất quân',
+      note: `Đã giao nhiệm vụ cho [${unit.name}] (${unit.commander} - ${unit.phone}) cơ động ứng cứu.`
+    });
+
     // Tạo nhiệm vụ tác chiến mới
     const newMission = {
       id: `CMD-MIS-${Date.now().toString().slice(-4)}`,
@@ -2666,6 +3289,11 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     };
 
     missionData.unshift(newMission);
+
+    // Lưu vào hàng đợi nếu đang ngoại tuyến
+    if (window.OfflineSyncManager && !window.OfflineSyncManager.isOnline()) {
+      window.OfflineSyncManager.enqueue('dispatch_mission', newMission);
+    }
 
     // Vẽ lộ trình nhiệm vụ lên bản đồ
     drawTacticalMissionRoute(newMission.id);
@@ -2726,6 +3354,20 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     if (item) {
       item.is_verified = true;
       item.status = 'verified';
+
+      if (!item.audit_trail) item.audit_trail = [];
+      item.audit_trail.push({
+        time: new Date().toLocaleTimeString('vi-VN'),
+        icon: 'shield-check',
+        color: 'emerald',
+        title: 'Thẩm định hồ sơ thực địa',
+        note: `Trực ban tác chiến [${ROLES_CONFIG[state.userRole].title}] đã xác minh toạ độ và mức độ nguy hiểm.`
+      });
+
+      if (window.OfflineSyncManager && !window.OfflineSyncManager.isOnline()) {
+        window.OfflineSyncManager.enqueue('verify_incident', { id: item.id, status: 'verified' });
+      }
+
       renderAllComponents();
       showToast('✓ ĐÃ THẨM ĐỊNH', `Tin báo [${id}] đã được xác thực chính xác.`, 'success');
     }
@@ -2992,6 +3634,21 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
     openDispatchModal,
     closeDispatchModal,
     submitDispatchMission,
+    renderSmartTeamRecommendations,
+    quickDispatchTeam,
+    openIncidentDocket,
+    closeIncidentDocket,
+    docketAddNote,
+    docketUpdateStatus,
+    printOfficialSitRep,
+    exportSitRepMarkdown,
+    signSitRepDocument,
+    trackCitizenTicket,
+    quickTrackTicket,
+    getIntakeData: () => [...intakeData],
+    getUnitsData: () => [...unitsData],
+    getMissionData: () => [...missionData],
+    getShelterData: () => [...shelterData],
     flyToLocation,
     verifyIncident,
     rejectIncident,

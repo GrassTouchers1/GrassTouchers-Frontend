@@ -2522,21 +2522,26 @@ async function submitReport() {
 
 // 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
 function switchTab(tabId) {
-  ['route', 'points', 'report', 'rescue', 'command'].forEach(id => {
+  ['route', 'points', 'report', 'rescue', 'command', 'tracking'].forEach(id => {
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`tab-btn-${id}`);
     const hdrBtn = document.getElementById(`hdr-btn-${id}`);
+    const cBtn = document.getElementById(`citizen-tab-btn-${id}`);
 
     if (tab) tab.classList.add('hidden');
     if (btn) btn.className = 'flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition text-xs font-semibold text-slate-600';
     if (hdrBtn) {
       hdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5';
     }
+    if (cBtn) {
+      cBtn.className = 'flex-1 min-w-[120px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition font-bold';
+    }
   });
 
   const activeTab = document.getElementById(`tab-${tabId}`);
   const activeBtn = document.getElementById(`tab-btn-${tabId}`);
   const activeHdrBtn = document.getElementById(`hdr-btn-${tabId}`);
+  const activeCBtn = document.getElementById(`citizen-tab-btn-${tabId}`);
 
   if (activeTab) activeTab.classList.remove('hidden');
   if (activeBtn) {
@@ -2546,12 +2551,19 @@ function switchTab(tabId) {
       activeBtn.className = 'flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold text-xs';
     }
   }
+  if (activeCBtn) {
+    activeCBtn.className = 'flex-1 min-w-[120px] py-2 rounded-lg bg-emerald-600 text-white text-center cursor-pointer transition font-black shadow-sm';
+  }
   if (activeHdrBtn) {
     if (tabId === 'command') {
       activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600 text-white font-extrabold text-xs transition flex items-center gap-1.5 shadow-md border border-rose-400';
     } else {
       activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/25 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm border border-white/20';
     }
+  }
+
+  if (tabId === 'tracking' && window.CommandUIController && typeof window.CommandUIController.trackCitizenTicket === 'function') {
+    window.CommandUIController.trackCitizenTicket();
   }
 
   // Cập nhật tiêu đề thanh điều khiển trên mobile tương ứng với tab
