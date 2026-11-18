@@ -587,6 +587,10 @@
           <input type="checkbox" id="layer-toggle-sar" onchange="SarFloodManager.toggle(this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500">
           <span class="text-cyan-700 dark:text-cyan-400 font-bold">🛰️ Vùng ngập viễn thám Sentinel-1 SAR</span>
         </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-provinces-weather" checked onchange="window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.toggle(this.checked)" class="rounded text-sky-600 focus:ring-sky-500">
+          <span class="text-sky-600 dark:text-sky-400 font-bold">🗺️ Ô Tỉnh thành & Thời tiết / AQI trực tiếp</span>
+        </label>
 
         <!-- Lớp Bản Đồ Nền -->
         <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
@@ -2460,14 +2464,15 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261118_v10"></script>
-  <script src="js/command_ui_controller.js?v=20261118_v10"></script>
-  <script src="js/coordinator_command.js?v=20261118_v10"></script>
-  <script src="js/map_core.js?v=20261118_v10"></script>
-  <script src="js/rescue_manager.js?v=20261118_v10"></script>
-  <script src="js/advanced_modules.js?v=20261118_v10"></script>
-  <script src="js/storm_simulator.js?v=20261118_v10"></script>
-  <script src="js/voice_sos.js?v=20261118_v10"></script>
+  <script src="js/config.js?v=20261118_v11"></script>
+  <script src="js/command_ui_controller.js?v=20261118_v11"></script>
+  <script src="js/coordinator_command.js?v=20261118_v11"></script>
+  <script src="js/map_core.js?v=20261118_v11"></script>
+  <script src="js/provinces_weather_layer.js?v=20261118_v11"></script>
+  <script src="js/rescue_manager.js?v=20261118_v11"></script>
+  <script src="js/advanced_modules.js?v=20261118_v11"></script>
+  <script src="js/storm_simulator.js?v=20261118_v11"></script>
+  <script src="js/voice_sos.js?v=20261118_v11"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>

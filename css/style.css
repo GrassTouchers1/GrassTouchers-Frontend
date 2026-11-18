@@ -734,6 +734,39 @@ body.command-mode-active .floating-header {
   box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.25), 0 8px 10px -6px rgba(225, 29, 72, 0.2) !important;
 }
 
+/* ========================================================
+   NORTHSTAR COMMAND - Tactical Province Weather & AQI Tooltip
+   ======================================================== */
+.province-weather-leaflet-tooltip {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.25) !important;
+  padding: 0.75rem !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  color: #f8fafc !important;
+  font-family: var(--font-main) !important;
+  pointer-events: none;
+  z-index: 1050 !important;
+}
+
+.province-weather-leaflet-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.96) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.96) !important;
+}
+
+.province-chip-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.tactical-province-boundary {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+
 
 
 

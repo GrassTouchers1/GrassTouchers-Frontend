@@ -278,6 +278,11 @@ function initMap() {
     // Đồng bộ radio button trong bảng điều khiển lớp bản đồ
     const radio = document.querySelector(`input[name="base-map-radio"][value="${type}"]`);
     if (radio) radio.checked = true;
+
+    // Cập nhật giao diện lớp ranh giới tỉnh & thời tiết
+    if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.updateTheme === 'function') {
+      window.ProvinceWeatherLayer.updateTheme(isDark);
+    }
   }
   window.switchBaseLayer = switchBaseLayer;
 
@@ -365,6 +370,11 @@ function initMap() {
   loadWeatherInfo();
   fetchAiPredictions(); // Nạp dự báo AI vào cache nền tránh spam API
   map.on('popupopen', handlePopupOpen);
+
+  // Khởi tạo Lớp Ranh giới Ô Tỉnh thành & Thời tiết / AQI Trực tiếp
+  if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.init === 'function') {
+    window.ProvinceWeatherLayer.init(map);
+  }
 
 
 
