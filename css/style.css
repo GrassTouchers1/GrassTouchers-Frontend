@@ -131,9 +131,60 @@ body.dark-mode aside {
   border-color: #1f2937;
   color: #f8fafc;
 }
-body.dark-mode .bg-white {
-  background-color: #111827 !important;
+body.dark-mode .bg-white,
+body.dark-mode .bg-white\/95,
+body.dark-mode .bg-white\/90,
+body.dark-mode .bg-white\/80 {
+  background-color: #0f172a !important;
   color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+/* Bảo đảm Bảng Lớp Bản Đồ và Phân Vùng có độ tương phản cao trong Dark Mode */
+body.dark-mode #multi-hazard-layer-control,
+.dark #multi-hazard-layer-control {
+  background-color: rgba(15, 23, 42, 0.96) !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode #multi-hazard-layer-control label,
+body.dark-mode #multi-hazard-layer-control span,
+.dark #multi-hazard-layer-control label,
+.dark #multi-hazard-layer-control span {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #regional-focus-control,
+.dark #regional-focus-control {
+  background-color: rgba(15, 23, 42, 0.96) !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode #regional-focus-control span,
+.dark #regional-focus-control span {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #region-jump-select,
+.dark #region-jump-select {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+body.dark-mode #region-jump-select option,
+.dark #region-jump-select option {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #btn-toggle-hazard-layers-float,
+.dark #btn-toggle-hazard-layers-float {
+  background-color: rgba(15, 23, 42, 0.96) !important;
+  color: #38bdf8 !important;
+  border-color: #334155 !important;
 }
 body.dark-mode .bg-slate-50 {
   background-color: #0b1120 !important;

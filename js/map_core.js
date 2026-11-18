@@ -234,13 +234,17 @@ function initMap() {
     currentBaseLayer.addTo(map);
 
     const isDark = (type === 'dark');
-    if (isDark && !document.body.classList.contains('dark-mode')) {
+    if (isDark) {
       document.body.classList.add('dark-mode');
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
       const btn = document.getElementById('dark-mode-icon');
       if (btn) btn.setAttribute('data-lucide', 'sun');
       if (window.lucide) lucide.createIcons();
-    } else if (!isDark && document.body.classList.contains('dark-mode')) {
+    } else {
       document.body.classList.remove('dark-mode');
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
       const btn = document.getElementById('dark-mode-icon');
       if (btn) btn.setAttribute('data-lucide', 'moon');
       if (window.lucide) lucide.createIcons();
@@ -2531,6 +2535,19 @@ function toggleDarkMode() {
   document.body.classList.toggle('dark-mode');
 
   const isDark = document.body.classList.contains('dark-mode');
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }
+
+  // Đồng bộ radio button trong bảng điều khiển lớp bản đồ
+  const darkRadio = document.querySelector('input[name="base-map-radio"][value="dark"]');
+  const osmRadio = document.querySelector('input[name="base-map-radio"][value="osm"]');
+  if (isDark && darkRadio) darkRadio.checked = true;
+  if (!isDark && osmRadio) osmRadio.checked = true;
 
   const btn = document.getElementById('dark-mode-icon');
 

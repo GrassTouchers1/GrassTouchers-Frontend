@@ -1054,23 +1054,23 @@
           </div>
           <button type="button" onclick="toggleHazardLayersPanel(false)" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded text-xs font-bold cursor-pointer" title="Thu gọn">✕</button>
         </div>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
           <input type="checkbox" id="layer-toggle-floods" checked onchange="window.toggleFloodPointsLayer ? window.toggleFloodPointsLayer(this.checked) : null" class="rounded text-blue-600 focus:ring-blue-500">
           <span>🌊 Trạm thủy văn & quan trắc ngập</span>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
           <input type="checkbox" id="layer-toggle-disasters" checked onchange="NorthStarRescue.toggleLayer('disasters', this.checked)" class="rounded text-amber-500 focus:ring-amber-500">
           <span>⚠️ Vùng thiên tai & sự cố</span>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
           <input type="checkbox" id="layer-toggle-shelters" checked onchange="NorthStarRescue.toggleLayer('shelters', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500">
           <span>🛡️ Điểm sơ tán an toàn</span>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
           <input type="checkbox" id="layer-toggle-sos" checked onchange="NorthStarRescue.toggleLayer('sos', this.checked)" class="rounded text-rose-600 focus:ring-rose-500">
           <span>🆘 Tín hiệu SOS cộng đồng</span>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
           <input type="checkbox" id="layer-toggle-sar" onchange="SarFloodManager.toggle(this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500">
           <span class="text-cyan-700 dark:text-cyan-400 font-bold">🛰️ Vùng ngập viễn thám Sentinel-1 SAR</span>
         </label>
@@ -1078,19 +1078,19 @@
         <!-- Lớp Bản Đồ Nền -->
         <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
           <div class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold pb-0.5">Bản Đồ Nền</div>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
             <input type="radio" name="base-map-radio" value="osm" checked onchange="window.switchBaseLayer('osm')" class="text-blue-600 focus:ring-blue-500">
             <span>🗺️ OSM Chuẩn (Cập nhật mới)</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
             <input type="radio" name="base-map-radio" value="intl" onchange="window.switchBaseLayer('intl')" class="text-blue-600 focus:ring-blue-500">
             <span>🌐 OpenStreetMap Quốc tế</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
             <input type="radio" name="base-map-radio" value="dark" onchange="window.switchBaseLayer('dark')" class="text-blue-600 focus:ring-blue-500">
             <span>🌙 Chế độ Ban đêm (Dark)</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80">
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
             <input type="radio" name="base-map-radio" value="esri" onchange="window.switchBaseLayer('esri')" class="text-blue-600 focus:ring-blue-500">
             <span>🛰️ Bản đồ ESRI</span>
           </label>
