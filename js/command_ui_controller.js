@@ -235,6 +235,116 @@ const CommandUIController = (function () {
   }
 
   // Làm mới toàn bộ dữ liệu từ backend và đồng bộ trạng thái
+  
+  function getSeedReports() {
+    return [
+      {
+        id: 'REP-HN-101',
+        raw_id: 101,
+        level: 'medium',
+        estimated_depth_cm: 35,
+        confirmed: true,
+        lat: 20.9850,
+        lng: 105.8180,
+        contact_name: 'Báo cáo: Ngõ 207 Bùi Xương Trạch, Thanh Xuân, Hà Nội',
+        phone: 'Dân cư đối soát tự động',
+        description: 'Nước ngập tràn vào nhà dân ~35cm, xe máy không thể di chuyển, rác tràn nghẽn cống tiêu thoát nước.',
+        created_at: new Date(Date.now() - 25 * 60000).toISOString()
+      },
+      {
+        id: 'REP-LC-102',
+        raw_id: 102,
+        level: 'heavy',
+        estimated_depth_cm: 90,
+        confirmed: false,
+        lat: 22.3150,
+        lng: 104.3820,
+        contact_name: 'Báo cáo: Km 78 Quốc lộ 4D, Đèo Ô Quy Hồ, Sa Pa, Lào Cai',
+        phone: 'Tài xế đường dài',
+        description: 'Sạt lở vách núi đất đá dài 40m chia cắt hoàn toàn tuyến Sa Pa - Lai Châu. 2 xe tải kẹt giữa đoạn sạt lở nguy hiểm.',
+        created_at: new Date(Date.now() - 15 * 60000).toISOString()
+      },
+      {
+        id: 'REP-YB-103',
+        raw_id: 103,
+        level: 'heavy',
+        estimated_depth_cm: 80,
+        confirmed: true,
+        lat: 21.7230,
+        lng: 104.8980,
+        contact_name: 'Báo cáo: Phường Hồng Hà, TP. Yên Bái (Ven sông Thao)',
+        phone: 'Tổ trưởng dân phố Hồng Hà',
+        description: 'Nước sông Thao dâng vượt báo động 3, tràn qua mặt đê tràn vào tầng 1 các hộ dân khu phố Thanh Niên.',
+        created_at: new Date(Date.now() - 35 * 60000).toISOString()
+      },
+      {
+        id: 'REP-TN-104',
+        raw_id: 104,
+        level: 'heavy',
+        estimated_depth_cm: 65,
+        confirmed: false,
+        lat: 21.5930,
+        lng: 105.8450,
+        contact_name: 'Báo cáo: Đường Hoàng Văn Thụ, TP. Thái Nguyên',
+        phone: 'Người dân địa phương',
+        description: 'Mưa to xối xả ngập sâu 65cm, 1 cây phượng vĩ bật gốc đè vào đường dây điện trung thế, nguy cơ rò điện.',
+        created_at: new Date(Date.now() - 40 * 60000).toISOString()
+      },
+      {
+        id: 'REP-HN-105',
+        raw_id: 105,
+        level: 'heavy',
+        estimated_depth_cm: 120,
+        confirmed: true,
+        lat: 20.8935,
+        lng: 105.6590,
+        contact_name: 'Báo cáo: Thôn Nhân Lý, Xã Nam Phương Tiến, Chương Mỹ, Hà Nội',
+        phone: 'UBND Xã Nam Phương Tiến',
+        description: 'Nước sông Bùi tràn đê Bùi 2, toàn thôn ngập sâu 1.2m đến 1.5m, 120 hộ dân bị cô lập cần thuyền tiếp tế.',
+        created_at: new Date(Date.now() - 50 * 60000).toISOString()
+      },
+      {
+        id: 'REP-QN-106',
+        raw_id: 106,
+        level: 'medium',
+        estimated_depth_cm: 30,
+        confirmed: false,
+        lat: 20.9510,
+        lng: 107.0850,
+        contact_name: 'Báo cáo: Khu vực Cột 5, Phường Hồng Hà, TP. Hạ Long, Quảng Ninh',
+        phone: 'Người đi đường',
+        description: 'Triều cường dâng kết hợp mưa lớn làm ngập cục bộ 30cm tuyến bao biểu, các xe ô tô gầm thấp phải quay đầu.',
+        created_at: new Date(Date.now() - 65 * 60000).toISOString()
+      },
+      {
+        id: 'REP-HG-107',
+        raw_id: 107,
+        level: 'heavy',
+        estimated_depth_cm: 75,
+        confirmed: false,
+        lat: 22.7520,
+        lng: 104.9850,
+        contact_name: 'Báo cáo: Km 12 Quốc lộ 2, Huyện Vị Xuyên, Hà Giang',
+        phone: 'Ban chỉ huy PCTT Hà Giang',
+        description: 'Lũ ống quét qua ngầm tràn cuốn trôi 1 phần kè taluy âm, đất đá đang sạt trượt tiếp, khuyến cáo không đi qua.',
+        created_at: new Date(Date.now() - 80 * 60000).toISOString()
+      },
+      {
+        id: 'REP-CB-108',
+        raw_id: 108,
+        level: 'medium',
+        estimated_depth_cm: 40,
+        confirmed: true,
+        lat: 22.8250,
+        lng: 106.5280,
+        contact_name: 'Báo cáo: Thị trấn Trùng Khánh, Tỉnh Cao Bằng',
+        phone: 'Người dân địa phương',
+        description: 'Nước sông Quây Sơn dâng nhanh làm ngập 40cm các diện tích lúa và hoa màu ven bãi bồi.',
+        created_at: new Date(Date.now() - 95 * 60000).toISOString()
+      }
+    ];
+  }
+
   async function refreshSystemData() {
     state.lastSyncTime = new Date().toLocaleTimeString('vi-VN');
     updateSyncIndicator();
@@ -265,25 +375,34 @@ const CommandUIController = (function () {
         });
       }
 
-      // 2. Lấy dữ liệu Báo cáo ngập từ người dân
+      // 2. Lấy dữ liệu Báo cáo ngập từ người dân (với hạt giống dự phòng chuẩn Miền Bắc)
       const repRes = await fetch(getApiUrl('/api/reports')).catch(() => null);
       if (repRes && repRes.ok) {
         const data = await repRes.json();
-        reportData = (data.features || []).map(f => {
-          const p = f.properties;
-          const c = f.geometry.coordinates;
-          return {
-            id: `REP-${p.id}`,
-            raw_id: p.id,
-            level: p.level || 'medium',
-            estimated_depth_cm: p.estimated_depth_cm || 25,
-            confirmed: !!p.confirmed,
-            lat: c[1],
-            lng: c[0],
-            description: p.description || `Ngập đường giao thông ước tính ~${p.estimated_depth_cm || 25}cm.`,
-            created_at: p.created_at || new Date().toISOString()
-          };
-        });
+        const features = data.features || [];
+        if (features.length > 0) {
+          reportData = features.map(f => {
+            const p = f.properties || {};
+            const c = (f.geometry && f.geometry.coordinates) || [105.85, 21.02];
+            return {
+              id: `REP-${p.id}`,
+              raw_id: p.id,
+              level: p.level || 'medium',
+              estimated_depth_cm: p.estimated_depth_cm || 25,
+              confirmed: !!p.confirmed,
+              lat: Number(c[1] || 21.02),
+              lng: Number(c[0] || 105.85),
+              contact_name: `Báo cáo thực địa #${p.id}`,
+              phone: 'GPS Đối soát',
+              description: p.description || `Ngập đường giao thông ước tính ~${p.estimated_depth_cm || 25}cm.`,
+              created_at: p.created_at || new Date().toISOString()
+            };
+          });
+        } else {
+          reportData = getSeedReports();
+        }
+      } else {
+        reportData = getSeedReports();
       }
 
       // 3. Lấy dữ liệu Điểm sơ tán an toàn
@@ -466,59 +585,59 @@ const CommandUIController = (function () {
   function buildUnifiedIntakeFeed() {
     intakeData = [];
 
-    // Nạp SOS
+    // Nạp SOS khẩn cấp
     sosData.forEach(item => {
       intakeData.push({
-        id: item.id,
+        id: item.id || `SOS-${Math.random().toString().slice(2, 6)}`,
         raw_id: item.raw_id,
         source: 'sos_beacon',
         source_label: '🆘 Tín Hiệu SOS',
         source_badge_color: 'bg-rose-600 text-white',
-        contact_name: item.contact_name,
-        phone: item.phone,
-        people_count: item.people_count,
-        has_vulnerable: item.has_vulnerable,
-        water_level_cm: item.water_level_cm,
-        priority: item.priority,
-        status: item.status,
-        lat: item.lat,
-        lng: item.lng,
-        description: item.notes,
-        created_at: item.created_at,
+        contact_name: item.contact_name || 'Người dân kêu cứu',
+        phone: String(item.phone || '098xxxxxxx'),
+        people_count: Number(item.people_count || 1),
+        has_vulnerable: !!item.has_vulnerable,
+        water_level_cm: Number(item.water_level_cm || 0),
+        priority: item.priority || 'critical',
+        status: item.status || 'pending',
+        lat: Number(item.lat || 21.0285),
+        lng: Number(item.lng || 105.8542),
+        description: item.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
+        created_at: item.created_at || new Date().toISOString(),
         is_verified: item.priority === 'critical' || item.status !== 'pending'
       });
     });
 
-    // Nạp Báo cáo dân
-    reportData.forEach(item => {
+    // Nạp Báo cáo dân sự
+    (reportData || []).forEach(item => {
       intakeData.push({
-        id: item.id,
+        id: item.id || `REP-${Math.random().toString().slice(2, 6)}`,
         raw_id: item.raw_id,
         source: 'citizen_report',
         source_label: '📢 Dân Báo Ngập',
         source_badge_color: 'bg-amber-600 text-white',
-        contact_name: `Báo cáo thực địa #${item.raw_id}`,
-        phone: 'GPS Đối soát tự động',
+        contact_name: item.contact_name || `Báo cáo thực địa #${item.raw_id || ''}`,
+        phone: String(item.phone || 'GPS Đối soát tự động'),
         people_count: 0,
         has_vulnerable: false,
-        water_level_cm: item.estimated_depth_cm,
+        water_level_cm: Number(item.estimated_depth_cm || 25),
         priority: item.level === 'heavy' ? 'high' : 'medium',
         status: item.confirmed ? 'verified' : 'pending',
-        lat: item.lat,
-        lng: item.lng,
-        description: item.description,
-        created_at: item.created_at,
-        is_verified: item.confirmed
+        lat: Number(item.lat || 21.0285),
+        lng: Number(item.lng || 105.8542),
+        description: item.description || 'Báo cáo sự cố ngập úng hoặc sạt lở.',
+        created_at: item.created_at || new Date().toISOString(),
+        is_verified: !!item.confirmed
       });
     });
 
-    // Thêm các nguồn hotline và cảm biến
+    // Thêm các nguồn hotline, cảm biến IoT và ảnh viễn thám Sentinel-1
     intakeData.push(
       {
         id: 'HOTLINE-114',
         raw_id: 114,
         source: 'hotline_114',
-        source_label: '☎️ Tổng Đài 114',
+        source_label: '☎️ Hotline 114',
         source_badge_color: 'bg-blue-600 text-white',
         contact_name: 'Trực ban PCCC & CNCH Hà Nội',
         phone: '114 (Đường dây nóng)',
@@ -529,7 +648,7 @@ const CommandUIController = (function () {
         status: 'pending',
         lat: 20.8940,
         lng: 105.6595,
-        description: 'Người dân thôn Nhân Lý báo nước tràn vào ngõ sâu 1.2m, xe máy và máy phát điện đã ngập.',
+        description: 'Người dân thôn Nhân Lý báo nước tràn vào ngõ sâu 1.2m, xe máy và máy phát điện đã ngập, có người già 82 tuổi.',
         created_at: new Date(Date.now() - 15 * 60000).toISOString(),
         is_verified: true
       },
@@ -537,10 +656,10 @@ const CommandUIController = (function () {
         id: 'IOT-201',
         raw_id: 201,
         source: 'iot_sensor',
-        source_label: '📡 Cảm Biến IoT',
+        source_label: '🌊 Trạm Quan Trắc',
         source_badge_color: 'bg-cyan-700 text-white',
         contact_name: 'Trạm Quan Trắc Tự Động Sông Bùi',
-        phone: 'Telemetry IoT',
+        phone: 'Telemetry IoT Sensor',
         people_count: 0,
         has_vulnerable: false,
         water_level_cm: 145,
@@ -551,10 +670,29 @@ const CommandUIController = (function () {
         description: 'Mực nước dâng 1.45m trong 2 giờ qua, đê Bùi 2 có nguy cơ tràn bãi tả ngạn Nam Phương Tiến.',
         created_at: new Date(Date.now() - 20 * 60000).toISOString(),
         is_verified: true
+      },
+      {
+        id: 'SAR-S1-01',
+        raw_id: 501,
+        source: 'satellite_sar',
+        source_label: '🛰️ Vệ Tinh Sentinel-1',
+        source_badge_color: 'bg-purple-700 text-white',
+        contact_name: 'Viễn thám Radar Khẩu độ Tổng hợp ESA',
+        phone: 'Copernicus SAR Feed',
+        people_count: 0,
+        has_vulnerable: false,
+        water_level_cm: 100,
+        priority: 'high',
+        status: 'verified',
+        lat: 22.3120,
+        lng: 104.3800,
+        description: 'Ảnh viễn thám radar xuyên mây phát hiện mặt nước mở rộng 4.2 km² tại thung lũng sông Chảy, Bảo Yên.',
+        created_at: new Date(Date.now() - 45 * 60000).toISOString(),
+        is_verified: true
       }
     );
 
-    // Khử trùng lặp tự động spatiotemporal (50m)
+    // Khử trùng lặp tự động spatiotemporal (50m) an toàn
     runSpatiotemporalDeduplication();
   }
 
@@ -615,9 +753,30 @@ const CommandUIController = (function () {
       targetPane.classList.remove('hidden');
     }
 
-    // Nếu chọn Disaster Map Fullscreen hoặc Dashboard, đảm bảo Leaflet cập nhật size
+    // Xử lý di chuyển container bản đồ giữa Dashboard và Fullscreen GIS
+    const mapContainer = document.getElementById('map-container');
+    const dashPane = document.getElementById('pane-cmd_dashboard');
+    const rightRail = document.getElementById('dashboard-right-rail');
+    const fsPane = document.getElementById('pane-cmd_disaster_map');
+
+    if (viewId === 'cmd_disaster_map' && fsPane && mapContainer) {
+      if (mapContainer.parentElement !== fsPane) {
+        fsPane.innerHTML = '';
+        fsPane.appendChild(mapContainer);
+      }
+    } else if (viewId === 'cmd_dashboard' && dashPane && mapContainer && rightRail) {
+      if (mapContainer.parentElement !== dashPane) {
+        dashPane.insertBefore(mapContainer, rightRail);
+      }
+    }
+
+    // Đảm bảo Leaflet cập nhật kích thước khung vẽ
     setTimeout(() => {
-      if (window.map) window.map.invalidateSize();
+      if (mapInstance && typeof mapInstance.invalidateSize === 'function') {
+        mapInstance.invalidateSize();
+      } else if (window.map) {
+        window.map.invalidateSize();
+      }
     }, 150);
 
     renderAllComponents();
@@ -978,16 +1137,16 @@ const CommandUIController = (function () {
 
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
 
-    let items = intakeData.filter(i => !i.is_duplicate);
+    let items = (intakeData || []).filter(i => !i.is_duplicate);
 
-    // Lọc theo search
+    // Lọc theo search input an toàn
     if (state.quickSearchQuery) {
       const q = state.quickSearchQuery.toLowerCase();
       items = items.filter(i => 
-        i.contact_name.toLowerCase().includes(q) ||
-        i.phone.toLowerCase().includes(q) ||
-        i.description.toLowerCase().includes(q) ||
-        i.id.toLowerCase().includes(q)
+        (i.contact_name || '').toString().toLowerCase().includes(q) ||
+        (i.phone || '').toString().toLowerCase().includes(q) ||
+        (i.description || '').toString().toLowerCase().includes(q) ||
+        (i.id || '').toString().toLowerCase().includes(q)
       );
     }
 
@@ -996,15 +1155,23 @@ const CommandUIController = (function () {
     else if (state.activeIntakeFilter === 'crowd') items = items.filter(i => i.source === 'citizen_report');
     else if (state.activeIntakeFilter === 'hotline') items = items.filter(i => i.source === 'hotline_114');
     else if (state.activeIntakeFilter === 'sensor') items = items.filter(i => i.source === 'iot_sensor');
+    else if (state.activeIntakeFilter === 'satellite') items = items.filter(i => i.source === 'satellite_sar');
 
     if (items.length === 0) {
       listEl.innerHTML = `
         <tr>
           <td colspan="8" class="p-8 text-center text-slate-400 text-xs">
-            Không có tin nào phù hợp với bộ lọc hiện tại.
+            <div class="max-w-md mx-auto space-y-2">
+              <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-500 opacity-60"></i>
+              <div class="font-bold text-slate-300">Không có tin tiếp nhận nào phù hợp với bộ lọc hiện tại.</div>
+              <button onclick="CommandUIController.filterIntake('all')" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer text-xs">
+                Nhấn vào đây để xem tất cả tin tiếp nhận
+              </button>
+            </div>
           </td>
         </tr>
       `;
+      if (window.lucide) lucide.createIcons();
       return;
     }
 
@@ -1027,8 +1194,11 @@ const CommandUIController = (function () {
           <span>⚡ Lệnh</span>
         </button>
       ` : `
-        <span class="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 bg-slate-800/80 rounded">Chỉ xem</span>
+        <span class="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 bg-slate-800/80 rounded">🔒 Chờ lệnh</span>
       `;
+
+      const safeLat = Number(item.lat || 21.0285).toFixed(4);
+      const safeLng = Number(item.lng || 105.8542).toFixed(4);
 
       return `
         <tr class="hover:bg-slate-850 transition">
@@ -1036,15 +1206,15 @@ const CommandUIController = (function () {
           <td class="p-3 text-slate-400 font-mono text-[11px]">${formatRelativeTime(item.created_at)}</td>
           <td class="p-3">
             <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
-            ${item.duplicate_count > 0 ? `<span class="block mt-1 text-[9.5px] text-amber-400 font-bold">⚠️ +${item.duplicate_count} tin cùng vị trí</span>` : ''}
+            ${item.duplicate_count > 0 ? `<span class="block mt-1 text-[9.5px] text-amber-400 font-bold">⚠️ +${item.duplicate_count} tin cùng vị trí (50m)</span>` : ''}
           </td>
           <td class="p-3">
-            <div class="font-bold text-white">${item.contact_name}</div>
-            <div class="text-[11px] text-slate-400">${item.phone}</div>
-            <div class="text-[10px] text-slate-500">[${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]</div>
+            <div class="font-bold text-white">${item.contact_name || 'Người dân'}</div>
+            <div class="text-[11px] text-slate-400">${item.phone || 'N/A'}</div>
+            <div class="text-[10px] text-slate-500">[${safeLat}, ${safeLng}]</div>
           </td>
           <td class="p-3 max-w-xs">
-            <p class="text-[11px] text-slate-300 line-clamp-2">${item.description}</p>
+            <p class="text-[11px] text-slate-300 line-clamp-2">${item.description || 'Không có mô tả chi tiết'}</p>
             ${item.water_level_cm > 0 ? `<span class="inline-block mt-1 text-[10px] text-cyan-400 font-bold">🌊 Mực nước: ~${item.water_level_cm}cm</span>` : ''}
           </td>
           <td class="p-3">${priorityBadge}</td>
@@ -1056,9 +1226,6 @@ const CommandUIController = (function () {
           </td>
           <td class="p-3 text-right">
             <div class="flex items-center justify-end gap-1.5">
-              <button onclick="CommandUIController.flyToLocation(${item.lat}, ${item.lng}, '${item.id}')" title="Xem trên bản đồ" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded cursor-pointer transition">
-                <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-              </button>
               ${verifyBtnHtml}
               ${dispatchBtnHtml}
             </div>
@@ -1903,6 +2070,18 @@ III. MỆNH LỆNH TÁC CHIẾN TIẾP THEO:
 
   function filterIntake(sourceType) {
     state.activeIntakeFilter = sourceType;
+    
+    // Cập nhật giao diện nút tab lọc
+    const tabs = document.querySelectorAll('.cmd-intake-filter-btn');
+    tabs.forEach(btn => {
+      const type = btn.getAttribute('data-source');
+      if (type === sourceType) {
+        btn.className = 'cmd-intake-filter-btn px-2.5 py-1 rounded bg-rose-600 text-white font-black cursor-pointer shadow-xs';
+      } else {
+        btn.className = 'cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium';
+      }
+    });
+
     renderIntakeView();
   }
 

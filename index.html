@@ -668,11 +668,12 @@
 
               <!-- Source Filter Tabs -->
               <div class="flex items-center gap-1.5 overflow-x-auto bg-slate-800/80 p-1 rounded-lg border border-slate-700 text-xs font-bold">
-                <button onclick="CommandUIController.filterIntake('all')" class="px-2.5 py-1 rounded bg-rose-600 text-white cursor-pointer">Tất cả</button>
-                <button onclick="CommandUIController.filterIntake('sos')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">🆘 SOS Khẩn Cấp</button>
-                <button onclick="CommandUIController.filterIntake('crowd')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">📢 Báo Cáo Dân Sự</button>
-                <button onclick="CommandUIController.filterIntake('hotline')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">☎️ Hotline 114</button>
-                <button onclick="CommandUIController.filterIntake('sensor')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">🌊 Trạm Quan Trắc</button>
+                <button onclick="CommandUIController.filterIntake('all')" data-source="all" class="cmd-intake-filter-btn px-2.5 py-1 rounded bg-rose-600 text-white font-black cursor-pointer shadow-xs">Tất cả</button>
+                <button onclick="CommandUIController.filterIntake('sos')" data-source="sos" class="cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium">🆘 SOS Khẩn Cấp</button>
+                <button onclick="CommandUIController.filterIntake('crowd')" data-source="crowd" class="cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium">📢 Báo Cáo Dân Sự</button>
+                <button onclick="CommandUIController.filterIntake('hotline')" data-source="hotline" class="cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium">☎️ Hotline 114</button>
+                <button onclick="CommandUIController.filterIntake('sensor')" data-source="sensor" class="cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium">🌊 Trạm Quan Trắc</button>
+                <button onclick="CommandUIController.filterIntake('satellite')" data-source="satellite" class="cmd-intake-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer font-medium">🛰️ Viễn Thám SAR</button>
               </div>
             </div>
 
@@ -2370,7 +2371,7 @@
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
   <script src="js/config.js"></script>
-  <script src="js/command_ui_controller.js?v=2.7"></script>
+  <script src="js/command_ui_controller.js?v=2.8"></script>
   <script src="js/coordinator_command.js?v=2.5"></script>
   <script src="js/map_core.js?v=6.8"></script>
   <script src="js/rescue_manager.js?v=5.2"></script>
