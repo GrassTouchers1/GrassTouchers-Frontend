@@ -132,20 +132,8 @@
       </div>
     </div>
 
-    <!-- Right: Role Switcher & Action Tools -->
+    <!-- Right: Action Tools -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-      
-      <!-- Role Switcher (Compact & High Contrast) -->
-      <div class="relative shrink-0">
-        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 hover:bg-slate-750 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2 py-1.5 cursor-pointer max-w-[130px] sm:max-w-[160px] truncate transition focus:ring-1 focus:ring-amber-400 focus:outline-none">
-          <option value="director">⭐ Chỉ huy trưởng</option>
-          <option value="dispatcher">🛡️ Điều phối viên</option>
-          <option value="verifier">🔍 Xác minh viên</option>
-          <option value="analyst">📊 Chuyên viên dữ liệu</option>
-          <option value="rescue_coordinator">🚒 Đ/p Cứu hộ</option>
-          <option value="relief_coordinator">📦 Đ/p Cứu trợ</option>
-        </select>
-      </div>
 
       <!-- Tactical Layers Trigger Button -->
       <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
@@ -203,7 +191,7 @@
       
       <!-- Current Role Indicator Banner -->
       <div class="p-2.5 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between">
-        <div class="flex items-center gap-1.5 overflow-hidden">
+        <div class="flex items-center gap-1.5 overflow-hidden cursor-pointer hover:opacity-90 transition" onclick="CommandUIController.switchView('cmd_roles')" title="Nhấp để xem & chuyển đổi vai trò tác chiến (RBAC)">
           <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
           <span id="cmd-active-role-badge" class="text-[11px] font-black text-amber-300 truncate">⭐ Command Director (Toàn quyền)</span>
         </div>
@@ -2485,15 +2473,15 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261118_v12"></script>
-  <script src="js/command_ui_controller.js?v=20261118_v12"></script>
-  <script src="js/coordinator_command.js?v=20261118_v12"></script>
-  <script src="js/map_core.js?v=20261118_v12"></script>
-  <script src="js/provinces_weather_layer.js?v=20261118_v12"></script>
-  <script src="js/rescue_manager.js?v=20261118_v12"></script>
-  <script src="js/advanced_modules.js?v=20261118_v12"></script>
-  <script src="js/storm_simulator.js?v=20261118_v12"></script>
-  <script src="js/voice_sos.js?v=20261118_v12"></script>
+  <script src="js/config.js?v=20261118_v13"></script>
+  <script src="js/command_ui_controller.js?v=20261118_v13"></script>
+  <script src="js/coordinator_command.js?v=20261118_v13"></script>
+  <script src="js/map_core.js?v=20261118_v13"></script>
+  <script src="js/provinces_weather_layer.js?v=20261118_v13"></script>
+  <script src="js/rescue_manager.js?v=20261118_v13"></script>
+  <script src="js/advanced_modules.js?v=20261118_v13"></script>
+  <script src="js/storm_simulator.js?v=20261118_v13"></script>
+  <script src="js/voice_sos.js?v=20261118_v13"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
