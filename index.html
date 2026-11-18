@@ -1,25 +1,18 @@
 <!DOCTYPE html>
-
-<html lang="vi">
-
+<html lang="vi" class="h-full">
 <head>
-
   <meta charset="UTF-8">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>NORTHSTAR - Nền tảng Giám sát & Ứng phó Đa thiên tai</title>
+  <title>NORTHSTAR COMMAND – Trung tâm Điều phối Thiên tai & Cứu trợ Cứu nạn</title>
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#1d4ed8" />
-
-  
+  <meta name="theme-color" content="#0f172a" />
 
   <!-- Google Fonts: Be Vietnam Pro & Inter (Chuẩn Typography Tiếng Việt Sắc Nét, Hiện Đại) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN (MIT License) -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -28,325 +21,1072 @@
         extend: {
           fontFamily: {
             sans: ['"Be Vietnam Pro"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            command: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
           }
         }
       }
     };
   </script>
 
-  <!-- Leaflet CSS & JS (BSD-2-Clause) -->
-
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet MarkerCluster (MIT License - Clustering 130 điểm ngập) -->
+
+  <!-- Leaflet MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- Chart.js for Urban Dashboard (MIT License) -->
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Lucide Icons (ISC License) -->
-
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Custom Styles (Phụ trách: Thành viên 1) -->
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <link rel="stylesheet" href="css/style.css?v=5.4" />
-
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Command Interface Specific Overrides */
+    .cmd-nav-item {
+      transition: all 0.15s ease-in-out;
+    }
+    .cmd-nav-item:hover {
+      background-color: rgba(30, 41, 59, 0.8);
+    }
+    .cmd-view-pane {
+      animation: fadeIn 0.15s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0.8; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 
-<body class="bg-slate-100 text-slate-800 h-screen flex flex-col font-sans overflow-hidden transition-colors duration-300">
+<body class="bg-slate-900 text-slate-100 font-sans antialiased h-full flex flex-col overflow-hidden select-none">
 
-
-
-  <!-- Header: Thanh công cụ FloodNav 3 Nhóm Chức năng Tối ưu (FE-02) -->
-  <header class="floating-header mx-2 sm:mx-4 mt-2 sm:mt-2.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-700 text-white rounded-2xl shadow-xl border border-white/20 z-40 flex-shrink-0 backdrop-blur-md">
-    <div class="w-full px-3 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2 sm:gap-3">
-
-      <!-- LOGO & NHẬN DIỆN THƯƠNG HIỆU -->
-      <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-        <div class="p-1.5 sm:p-2 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner flex-shrink-0">
-          <i data-lucide="compass" class="w-4 h-4 sm:w-5 sm:h-5 text-cyan-200"></i>
-        </div>
-        <div>
-          <h1 class="text-xs sm:text-base font-black tracking-tight leading-tight">
-            <span>NORTHSTAR</span>
-          </h1>
-          <p class="text-[10px] text-blue-100 hidden 2xl:block leading-tight">Vietnam Disaster Intelligence & Response</p>
-        </div>
-      </div>
-
-      <!-- NHÓM 1 – CHỨC NĂNG CHÍNH (Tabs Tìm đường, Điểm ngập, Báo ngập) -->
-      <nav aria-label="Chức năng chính" class="hidden sm:flex items-center bg-black/25 p-1 rounded-xl border border-white/10 shadow-inner flex-shrink-0">
-        <button id="hdr-btn-route" onclick="switchTab('route')" title="Lập lộ trình và điều hướng né điểm ngập an toàn" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/25 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm border border-white/20">
-          <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyan-200"></i>
-          <span>Tìm đường</span>
-        </button>
-        <button id="hdr-btn-points" onclick="switchTab('points')" title="Xem danh sách 130 trạm quan trắc mực nước IoT" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
-          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-300"></i>
-          <span>Điểm ngập</span>
-          <span id="hdr-points-count" class="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-900 font-bold ml-0.5">130</span>
-        </button>
-        <button id="hdr-btn-report" onclick="switchTab('report')" title="Gửi báo cáo ngập tại hiện trường từ cộng đồng" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
-          <i data-lucide="send" class="w-3.5 h-3.5 text-emerald-300"></i>
-          <span>Báo ngập</span>
-        </button>
-        <button id="hdr-btn-rescue" onclick="switchTab('rescue')" title="Cứu hộ khẩn cấp & Sơ tán an toàn" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
-          <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-300"></i>
-          <span>Cứu hộ SOS</span>
-        </button>
-        <button id="hdr-btn-command" onclick="switchTab('command')" title="Bàn Tác Chiến Tiếp Nhận & Điều Phối Thông Tin 24/7" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 font-semibold text-xs transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-300"></i>
-          <span class="font-bold">Điều phối</span>
-          <span id="hdr-command-badge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold ml-0.5">8</span>
-        </button>
-      </nav>
-
-      <!-- Nút Chuyển nhanh Chế độ Bàn Tác chiến Điều Phối Viên -->
-      <button id="hdr-btn-command-portal" onclick="CoordinatorCommand.toggleCommandMode()" title="Bật/Tắt Giao diện Bàn Tác Chiến Điều Phối Viên 24/7" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 border border-rose-400/50 rounded-xl text-xs font-black text-white transition active:scale-95 shadow-md flex-shrink-0 cursor-pointer">
-        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-        <i data-lucide="radio" class="w-3.5 h-3.5 text-amber-200"></i>
-        <span>ĐIỀU PHỐI (COMMAND)</span>
-        <span id="cmd-unprocessed-badge" class="px-1.5 py-0.2 rounded-full bg-black/30 text-white text-[9.5px] font-mono font-bold">8 mới</span>
+  <!-- ========================================== -->
+  <!-- 1. TOP COMMAND HEADER                     -->
+  <!-- ========================================== -->
+  <header id="command-header" class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 z-50 shrink-0 gap-2 shadow-md">
+    
+    <!-- Left: Branding & Status Indicator -->
+    <div class="flex items-center gap-3 shrink-0">
+      <button id="btn-toggle-sidebar" onclick="CommandUIController.toggleSidebar()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Thu gọn / Mở rộng Sidebar">
+        <i data-lucide="menu" class="w-5 h-5" id="cmd-sidebar-collapse-icon"></i>
       </button>
 
-      <!-- NHÓM 2 – GIÁM SÁT (Trạng thái PostGIS, Thời tiết, Điều chỉnh mô phỏng mưa) -->
-      <div id="header-group-monitoring" class="hidden xl:flex items-center gap-1.5 bg-black/20 p-1 px-2 rounded-xl border border-white/10 flex-shrink-0">
-        <!-- 1. Trạng thái PostGIS -->
-        <div id="postgis-status-badge" title="Trạng thái kết nối cơ sở dữ liệu không gian PostGIS" class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 rounded-lg text-[11px] font-semibold cursor-default">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>PostGIS</span>
+      <div class="flex items-center gap-2 cursor-pointer" onclick="CommandUIController.switchView('cmd_dashboard')">
+        <div class="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-black shadow-inner">
+          🛰️
         </div>
-
-        <!-- 2. Thời tiết Open-Meteo -->
-        <div id="weather-badge" title="Dữ liệu thời tiết & dự báo lượng mưa thực tế từ Open-Meteo API" class="flex items-center gap-1 px-2 py-1 bg-white/10 border border-white/15 text-cyan-100 rounded-lg text-[11px] font-medium cursor-default">
-          <i data-lucide="cloud-sun" class="w-3.5 h-3.5 text-cyan-200"></i>
-          <span>Hà Nội: <b>☀️ Tạnh</b></span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-sm tracking-wider text-white">NORTHSTAR <span class="text-rose-500 font-black">COMMAND</span></span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              TRỰC CHIẾN 24/7
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận & Điều phối Cứu trợ Cứu nạn</p>
         </div>
+      </div>
+    </div>
 
-        <!-- Vạch phân tách nhỏ trong nhóm -->
-        <div class="h-3.5 w-px bg-white/20 mx-0.5"></div>
+    <!-- Center: Operational Region & Search -->
+    <div class="flex items-center gap-2 flex-1 max-w-xl mx-2">
+      <!-- Region Selector -->
+      <div class="relative shrink-0">
+        <select id="cmd-region-selector" onchange="CommandUIController.switchRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2.5 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer">
+          <option value="all">📍 Toàn Miền Bắc (Tổng quan)</option>
+          <option value="hanoi">🏛️ TP. Hà Nội</option>
+          <option value="quangninh">🌊 Tỉnh Quảng Ninh</option>
+          <option value="laocai">⛰️ Tỉnh Lào Cai</option>
+          <option value="yenbai">🏞️ Tỉnh Yên Bái</option>
+          <option value="caobang">🌲 Tỉnh Cao Bằng</option>
+        </select>
+      </div>
 
-        <!-- 3. Lượng mưa & điều chỉnh mô phỏng mưa -->
-        <div class="flex items-center gap-1">
-          <select id="storm-scenario-select" onchange="StormSimulator.applyScenario(this.value)" title="Chọn kịch bản thời tiết mưa bão mô phỏng" class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-[11px] font-semibold rounded-lg px-2 py-1 outline-none cursor-pointer backdrop-blur-sm transition">
-            <option value="clear" class="text-slate-900">☀️ Tạnh (0mm)</option>
-            <option value="light_rain" class="text-slate-900">🌦️ Mưa (20mm)</option>
-            <option value="heavy_storm" class="text-slate-900">⛈️ Lớn (50mm)</option>
-            <option value="extreme_flood" class="text-slate-900">🌊 Bão (100mm)</option>
-          </select>
+      <!-- Quick Search Bar -->
+      <div class="relative flex-1">
+        <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="🔍 Tìm mã SOS, nạn nhân, vị trí, trạm đo, đội xe..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-3 py-1.5 pl-8 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition" />
+        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
+      </div>
 
-          <!-- Input slider ẩn hỗ trợ kịch bản mô phỏng chạy trơn tru -->
-          <input id="storm-slider" type="range" min="0" max="100" step="5" value="0" class="hidden" oninput="StormSimulator.onSliderInput(this.value)">
-          <span id="storm-slider-value" class="hidden">0 mm/h</span>
-          <span id="sim-current-scenario" class="hidden"></span>
+      <!-- Sync Status Badge -->
+      <div class="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/60 px-2.5 py-1 rounded-md border border-slate-700/60 shrink-0">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span id="cmd-last-sync-time">Đồng bộ: Vừa xong</span>
+      </div>
+    </div>
 
-          <button id="btn-reset-simulator" onclick="StormSimulator.resetToDefault()" title="Trở về kịch bản thời tiết mặc định" class="p-1 bg-white/15 hover:bg-white/25 hover:border-cyan-300 border border-white/20 rounded-lg text-[11px] font-semibold flex items-center transition text-white shadow-sm">
-            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-cyan-200"></i>
-          </button>
+    <!-- Right: Role Switcher & Action Tools -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      
+      <!-- Role Switcher -->
+      <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 rounded-lg px-2 py-1">
+        <span class="text-xs">👤</span>
+        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-transparent text-xs font-bold text-amber-300 focus:outline-none cursor-pointer">
+          <option value="director" class="bg-slate-800 text-white">⭐ Command Director (Toàn quyền)</option>
+          <option value="dispatcher" class="bg-slate-800 text-white">🛡️ Dispatcher (Tiếp nhận & Phân công)</option>
+          <option value="verifier" class="bg-slate-800 text-white">🔍 Information Verifier (Thẩm định tin)</option>
+          <option value="analyst" class="bg-slate-800 text-white">📊 Data Analyst (Phân tích dữ liệu)</option>
+          <option value="rescue_coordinator" class="bg-slate-800 text-white">🚒 Rescue Coordinator (Điều phối cứu nạn)</option>
+          <option value="relief_coordinator" class="bg-slate-800 text-white">📦 Relief Coordinator (Điều phối cứu trợ)</option>
+        </select>
+      </div>
+
+      <!-- Tactical Layers Trigger Button -->
+      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Bật/Tắt Bảng điều khiển Lớp Bản Đồ Tác Chiến">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Lớp Tác Chiến</span>
+      </button>
+
+      <!-- SitRep Trigger Button -->
+      <button onclick="CommandUIController.switchView('cmd_sitrep')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Xem Báo cáo Tác chiến SitRep Ban chỉ đạo PCTT">
+        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">SitRep</span>
+      </button>
+
+      <!-- Dark / Light Mode -->
+      <button onclick="toggleDarkMode()" id="dark-mode-btn" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Chuyển chế độ Sáng / Tối">
+        <i data-lucide="moon" class="w-4 h-4" id="dark-mode-icon"></i>
+      </button>
+
+      <!-- Onboarding Help -->
+      <button onclick="document.getElementById('onboarding-modal').classList.remove('hidden')" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer font-black text-xs" title="Hướng dẫn sử dụng trung tâm điều phối">
+        ?
+      </button>
+
+      <!-- Fullscreen -->
+      <button onclick="CommandUIController.toggleFullscreen()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Toàn màn hình">
+        <i data-lucide="maximize" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Mode Switch Toggle: COMMAND vs CITIZEN -->
+      <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 ml-1">
+        <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[11px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
+          🛡️ COMMAND
+        </button>
+        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[11px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
+          🌐 DÂN SỰ
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN LAYOUT: SIDEBAR + WORKSPACE        -->
+  <!-- ========================================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- A. LEFT OPERATIONS SIDEBAR (8 CATEGORIES) -->
+    <aside id="cmd-tactical-sidebar" class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-40 transition-all duration-200 select-none overflow-y-auto">
+      
+      <!-- Current Role Indicator Banner -->
+      <div class="p-2.5 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-1.5 overflow-hidden">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></div>
+          <span id="cmd-active-role-badge" class="text-[11px] font-black text-amber-300 truncate">⭐ Command Director (Toàn quyền)</span>
         </div>
       </div>
 
-      <!-- NHÓM 3 – TIỆN ÍCH (Giọng nói, Thống kê, Sáng/Tối, Làm mới & Menu phụ) -->
-      <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-        <!-- 1. Trợ lý giọng nói -->
-        <button id="btn-voice-toggle" onclick="VoiceWarning.toggleVoice()" title="Bật/Tắt Cảnh báo Giọng nói Tiếng Việt" class="p-1.5 sm:px-2 py-1 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs font-medium transition flex items-center gap-1 text-white">
-          <i id="voice-toggle-icon" data-lucide="volume-2" class="w-3.5 h-3.5 text-cyan-200"></i>
-          <span class="hidden 2xl:inline text-[11px]">Giọng nói</span>
-        </button>
+      <!-- Navigation Tree (8 Categories) -->
+      <div class="p-2 space-y-3 flex-1 text-xs">
+        
+        <!-- Category 1: TỔNG QUAN (COP) -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">I. TỔNG QUAN TÁC CHIẾN</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-white font-bold bg-rose-600 shadow-sm text-left cursor-pointer" data-view="cmd_dashboard" onclick="CommandUIController.switchView('cmd_dashboard')">
+              <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
+              <span class="cmd-nav-label flex-1 truncate">Bảng Điều Hành COP</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- 2. Thống kê Đô thị -->
-        <button onclick="FloodDashboard.openDashboard()" title="Xem Bảng Thống kê Đô thị & Biểu đồ ngập lụt" class="p-1.5 sm:px-2 py-1 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs font-semibold flex items-center gap-1 transition text-white">
-          <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-emerald-300"></i>
-          <span class="hidden 2xl:inline text-[11px]">Thống kê</span>
-        </button>
+        <!-- Category 2: TIẾP NHẬN & PHÂN LOẠI -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">II. TIẾP NHẬN & PHÂN LOẠI</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_intake" onclick="CommandUIController.switchView('cmd_intake')">
+              <i data-lucide="inbox" class="w-4 h-4 shrink-0 text-amber-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Trung Tâm Tiếp Nhận</span>
+              <span id="cmd-hdr-badge-unprocessed" class="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-600 text-white shrink-0">0</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_sos" onclick="CommandUIController.switchView('cmd_sos')">
+              <i data-lucide="alert-octagon" class="w-4 h-4 shrink-0 text-rose-500"></i>
+              <span class="cmd-nav-label flex-1 truncate">Yêu Cầu SOS Khẩn Cấp</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_reports" onclick="CommandUIController.switchView('cmd_reports')">
+              <i data-lucide="megaphone" class="w-4 h-4 shrink-0 text-sky-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Báo Cáo Thiên Tai Dân Sự</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_verification" onclick="CommandUIController.switchView('cmd_verification')">
+              <i data-lucide="check-check" class="w-4 h-4 shrink-0 text-emerald-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Hàng Đợi Xác Minh & AI</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- 3. Chế độ Sáng / Tối -->
-        <button onclick="toggleDarkMode()" title="Chuyển chế độ Giao diện Sáng / Tối" class="p-1.5 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs transition text-white">
-          <i id="dark-mode-icon" data-lucide="moon" class="w-3.5 h-3.5 text-amber-200"></i>
-        </button>
+        <!-- Category 3: GIÁM SÁT THIÊN TAI -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">III. GIÁM SÁT THIÊN TAI</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_weather" onclick="CommandUIController.switchView('cmd_weather')">
+              <i data-lucide="cloud-rain" class="w-4 h-4 shrink-0 text-blue-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Thời Tiết & Bão Mưa</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_flood_intel" onclick="CommandUIController.switchView('cmd_flood_intel')">
+              <i data-lucide="waves" class="w-4 h-4 shrink-0 text-teal-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">130 Trạm Thủy Văn & Lũ</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- 4. Nút Làm mới trực tiếp trên Desktop -->
-        <button onclick="loadFloodPoints()" class="hidden sm:flex p-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-900 rounded-lg text-xs font-bold shadow transition flex-shrink-0 items-center justify-center" title="Làm mới toàn bộ dữ liệu quan trắc">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-        </button>
+        <!-- Category 4: BẢN ĐỒ TÁC CHIẾN (GIS) -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">IV. BẢN ĐỒ TÁC CHIẾN (GIS)</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_disaster_map" onclick="CommandUIController.switchView('cmd_disaster_map')">
+              <i data-lucide="map" class="w-4 h-4 shrink-0 text-indigo-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Bản Đồ Tác Chiến Fullscreen</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_safe_zones" onclick="CommandUIController.switchView('cmd_safe_zones')">
+              <i data-lucide="shield" class="w-4 h-4 shrink-0 text-emerald-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Điểm Sơ Tán An Toàn</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- 5. Menu phụ (Tiện ích mở rộng khi màn hình hẹp & Trợ giúp) -->
-        <div class="relative">
-          <button id="btn-header-more" onclick="toggleHeaderMenu(event)" title="Thêm tùy chọn & Tiện ích khác" class="p-1.5 bg-white/15 hover:bg-white/25 border border-white/15 rounded-lg text-xs font-semibold transition flex items-center text-white">
-            <i data-lucide="more-horizontal" class="w-3.5 h-3.5 text-cyan-200"></i>
-          </button>
+        <!-- Category 5: QUẢN LÝ NGUỒN LỰC -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">V. QUẢN LÝ NGUỒN LỰC</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_rescue_teams" onclick="CommandUIController.switchView('cmd_rescue_teams')">
+              <i data-lucide="truck" class="w-4 h-4 shrink-0 text-rose-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Đội Cứu Hộ & Phương Tiện</span>
+            </button>
+          </div>
+        </div>
 
-          <!-- Dropdown Menu Phụ -->
-          <div id="header-more-dropdown" class="hidden absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-50 text-xs backdrop-blur-md">
-            <!-- Chức năng chính trên mobile khi ẩn thanh tabs trên header -->
-            <div class="sm:hidden border-b border-slate-100 dark:border-slate-800 pb-1 mb-1">
-              <div class="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chức năng chính</div>
-              <button onclick="switchTab('route'); closeHeaderMenu();" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-                <i data-lucide="navigation" class="w-4 h-4 text-cyan-600"></i>
-                <span>Tìm đường né ngập</span>
-              </button>
-              <button onclick="switchTab('points'); closeHeaderMenu();" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
-                <span>Danh sách 130 trạm quan trắc</span>
-              </button>
-              <button onclick="switchTab('report'); closeHeaderMenu();" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-                <i data-lucide="send" class="w-4 h-4 text-emerald-500"></i>
-                <span>Báo cáo ngập lụt</span>
-              </button>
-              <button onclick="switchTab('rescue'); closeHeaderMenu();" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-                <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
-                <span>Cứu hộ SOS</span>
-              </button>
-              <button onclick="switchTab('command'); closeHeaderMenu();" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-black text-rose-600 dark:text-rose-400">
-                <i data-lucide="shield-check" class="w-4 h-4 text-rose-600"></i>
-                <span>Trung tâm Điều phối (Command)</span>
-              </button>
-            </div>
-            <button onclick="toggleHazardLayersPanel(); closeHeaderMenu();" title="Bật/Tắt các lớp bản đồ thiên tai (Dấu 3 lớp)" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-              <i data-lucide="layers" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
-              <span>Lớp bản đồ thiên tai (Dấu 3 lớp)</span>
+        <!-- Category 6: ĐIỀU PHỐI TÁC CHIẾN -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">VI. ĐIỀU PHỐI TÁC CHIẾN</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_operations" onclick="CommandUIController.switchView('cmd_operations')">
+              <i data-lucide="navigation-2" class="w-4 h-4 shrink-0 text-amber-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Nhiệm Vụ & Điều Phối Tuyến</span>
             </button>
-            <button onclick="openHelpGuide(); closeHeaderMenu();" title="Mở hướng dẫn sử dụng nhanh" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-              <i data-lucide="help-circle" class="w-4 h-4 text-cyan-600"></i>
-              <span>Hướng dẫn sử dụng (?)</span>
+          </div>
+        </div>
+
+        <!-- Category 7: BÁO CÁO & PHÂN TÍCH -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">VII. BÁO CÁO & PHÂN TÍCH</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_sitrep" onclick="CommandUIController.switchView('cmd_sitrep')">
+              <i data-lucide="file-check-2" class="w-4 h-4 shrink-0 text-teal-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Báo Cáo Tác Chiến (SitRep)</span>
             </button>
-            <button onclick="loadFloodPoints(); closeHeaderMenu();" title="Tải lại toàn bộ dữ liệu quan trắc mới nhất" class="sm:hidden w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-              <i data-lucide="refresh-cw" class="w-4 h-4 text-blue-600"></i>
-              <span>Làm mới dữ liệu</span>
+          </div>
+        </div>
+
+        <!-- Category 8: HỆ THỐNG -->
+        <div>
+          <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">VIII. HỆ THỐNG & PHÂN QUYỀN</div>
+          <div class="space-y-0.5">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_roles" onclick="CommandUIController.switchView('cmd_roles')">
+              <i data-lucide="users" class="w-4 h-4 shrink-0 text-purple-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Phân Quyền Vai Trò (RBAC)</span>
             </button>
-            <button onclick="window.jumpToRegion ? window.jumpToRegion('all') : zoomToAllPoints(); closeHeaderMenu();" title="Xem toàn cảnh mạng lưới quan trắc và thiên tai Miền Bắc" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium border-t border-slate-100 dark:border-slate-800">
-              <i data-lucide="maximize" class="w-4 h-4 text-indigo-600"></i>
-              <span>Toàn cảnh Miền Bắc (Overview)</span>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_citizen_preview" onclick="CommandUIController.switchView('cmd_citizen_preview')">
+              <i data-lucide="smartphone" class="w-4 h-4 shrink-0 text-sky-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Cổng Dân Sự (Citizen Portal)</span>
             </button>
-            <button onclick="FloodDashboard.openDashboard(); closeHeaderMenu();" title="Mở Dashboard thống kê" class="2xl:hidden w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-              <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-600"></i>
-              <span>Bảng Thống kê Đô thị</span>
-            </button>
-            <button onclick="openOpenDataModal(); closeHeaderMenu();" title="Xem danh mục & Giấy phép Dữ liệu Mở (Open Data Sources)" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium border-t border-slate-100 dark:border-slate-800">
-              <i data-lucide="database" class="w-4 h-4 text-emerald-600"></i>
-              <span>Nguồn Dữ liệu Mở & Pháp lý</span>
-            </button>
-            <button onclick="SitRepReporter.openReportModal(); closeHeaderMenu();" title="Xem & In Báo Cáo Tác Chiến PCTT (SitRep chuẩn QĐ 18/2021/QĐ-TTg)" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium border-t border-slate-100 dark:border-slate-800">
-              <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
-              <span>Báo Cáo Tác Chiến PCTT (SitRep)</span>
-            </button>
-            <button onclick="TimelineSimulator.toggleBar(); closeHeaderMenu();" title="Bật/Tắt Thanh trượt Mô phỏng Diễn biến Lũ T+0h -> T+24h" class="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-medium">
-              <i data-lucide="clock" class="w-4 h-4 text-cyan-600"></i>
-              <span>Mô phỏng Dòng Thời Gian Lũ</span>
-            </button>
-            <!-- Hiển thị bộ chọn kịch bản mưa khi ở màn hình nhỏ (< lg) -->
-            <div class="lg:hidden border-t border-slate-100 dark:border-slate-800 pt-1 mt-1">
-              <div class="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Mô phỏng thời tiết</span>
-                <button type="button" onclick="StormSimulator.resetToDefault(); closeHeaderMenu();" class="text-cyan-600 dark:text-cyan-400 hover:underline text-[10px] font-bold flex items-center gap-1">
-                  <i data-lucide="rotate-ccw" class="w-2.5 h-2.5"></i> Mặc định
-                </button>
-              </div>
-              <div class="px-3 py-1">
-                <select id="mobile-storm-select" onchange="StormSimulator.applyScenario(this.value); closeHeaderMenu();" class="w-full p-1.5 bg-slate-100 dark:bg-slate-800 rounded text-xs outline-none">
-                  <option value="clear">☀️ Tạnh (0mm)</option>
-                  <option value="light_rain">🌦️ Mưa (20mm)</option>
-                  <option value="heavy_storm">⛈️ Lớn (50mm)</option>
-                  <option value="extreme_flood">🌊 Bão (100mm)</option>
-                </select>
-              </div>
-            </div>
           </div>
         </div>
 
       </div>
 
-    </div>
-  </header>
-
-
-
-  <!-- Main Work Area (Hỗ trợ Mobile Full-screen Map & Collapsible Drawer) -->
-
-  <div class="flex-1 flex flex-col sm:flex-row relative overflow-hidden">
-
-    <!-- BĂNG CHỈ SỐ TÁC CHIẾN COP NỔI (COMMON OPERATING PICTURE) KHI VÀO CHẾ ĐỘ ĐIỀU PHỐI -->
-    <div id="command-cop-banner" class="hidden absolute top-3 left-1/2 transform -translate-x-1/2 z-40 bg-slate-900/95 hover:bg-slate-900 text-white px-4 py-2 rounded-2xl shadow-2xl border border-rose-500/50 backdrop-blur-md transition-all duration-300 flex items-center gap-3 text-xs max-w-4xl w-[94%] sm:w-auto">
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-        <span class="font-black text-rose-300 uppercase tracking-wide text-[11px]">NORTHSTAR COMMAND COP:</span>
+      <!-- Sidebar Status Footer -->
+      <div class="p-2.5 border-t border-slate-800 bg-slate-950/80 text-[10.5px] text-slate-400">
+        <div class="flex items-center justify-between">
+          <span>Hệ thống:</span>
+          <span class="font-bold text-emerald-400">Sẵn sàng</span>
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-slate-500 mt-0.5">
+          <span>Engine:</span>
+          <span>PostGIS + A* Routing</span>
+        </div>
       </div>
-      <div class="hidden md:flex items-center gap-3 text-[11.5px] border-l border-white/20 pl-3">
-        <div>📥 Tiếp nhận: <b id="cop-banner-intake" class="text-white">8</b> (<span class="text-rose-300 font-bold">3 chờ duyệt</span>)</div>
-        <div>🆘 Khẩn cấp: <b id="cop-banner-sos" class="text-rose-400 font-black">4 ca</b></div>
-        <div>🚤 Lực lượng: <b id="cop-banner-units" class="text-cyan-300 font-bold">4 / 5 sẵn sàng</b></div>
-        <div>🚑 Điều phối: <b id="cop-banner-missions" class="text-amber-300 font-bold">2 nhiệm vụ</b></div>
+    </aside>
+
+    <!-- B. CENTRAL WORKSPACE CONTAINER -->
+    <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-950">
+
+      <!-- TOP COP QUICK METRICS BANNER -->
+      <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-30">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
+          
+          <!-- KPI 1: SOS Yêu cầu khẩn cấp -->
+          <div class="bg-rose-950/30 border border-rose-800/40 rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div class="text-[10.5px] font-bold text-rose-400 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                SOS Khẩn Cấp
+              </div>
+              <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">0</div>
+            </div>
+            <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500/40"></i>
+          </div>
+
+          <!-- KPI 2: Tiếp nhận chưa xử lý -->
+          <div class="bg-amber-950/30 border border-amber-800/40 rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div class="text-[10.5px] font-bold text-amber-400 flex items-center gap-1">
+                <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
+                Chờ Tiếp Nhận
+              </div>
+              <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">0</div>
+            </div>
+            <i data-lucide="clock" class="w-6 h-6 text-amber-500/40"></i>
+          </div>
+
+          <!-- KPI 3: Đang điều phối tác chiến -->
+          <div class="bg-blue-950/30 border border-blue-800/40 rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div class="text-[10.5px] font-bold text-blue-400 flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
+                Đang Điều Phối
+              </div>
+              <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">0</div>
+            </div>
+            <i data-lucide="compass" class="w-6 h-6 text-blue-500/40"></i>
+          </div>
+
+          <!-- KPI 4: Đội cứu hộ sẵn sàng -->
+          <div class="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div class="text-[10.5px] font-bold text-emerald-400 flex items-center gap-1">
+                <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
+                Lực Lượng Trực
+              </div>
+              <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 Đội</div>
+            </div>
+            <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500/40"></i>
+          </div>
+
+          <!-- KPI 5: Điểm sơ tán an toàn -->
+          <div class="hidden lg:flex bg-teal-950/30 border border-teal-800/40 rounded-lg p-2 items-center justify-between">
+            <div>
+              <div class="text-[10.5px] font-bold text-teal-400 flex items-center gap-1">
+                <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
+                Điểm Trú Ẩn Mở
+              </div>
+              <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">8 Điểm</div>
+            </div>
+            <i data-lucide="warehouse" class="w-6 h-6 text-teal-500/40"></i>
+          </div>
+
+        </div>
       </div>
-      <div class="flex items-center gap-2 ml-auto">
-        <button onclick="CoordinatorCommand.refreshAllData()" title="Làm mới số liệu" class="p-1 hover:bg-white/20 rounded-lg text-slate-300 hover:text-white transition cursor-pointer">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-        </button>
-        <button onclick="CoordinatorCommand.toggleCommandMode(false)" title="Đóng chế độ điều phối" class="p-1 hover:bg-white/20 rounded-lg text-slate-300 hover:text-white transition cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+
+      <!-- DYNAMIC VIEW PANES CONTAINER -->
+      <div id="command-view-container" class="flex-1 relative overflow-hidden">
+
+        <!-- ============================================== -->
+        <!-- PANE 1: COP COMMAND DASHBOARD (DEFAULT)        -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_dashboard" class="cmd-view-pane w-full h-full relative flex">
+          
+          <!-- Tactical GIS Map Area (Main Canvas) -->
+          <div class="flex-1 h-full relative" id="map-container">
+            <div id="map" class="w-full h-full z-0"></div>
+
+            <!-- Floating Controls Preserved Inside Map -->
+            <div id="regional-focus-control" class="absolute top-4 left-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold hidden sm:flex items-center gap-2 select-none">
+        <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-1 select-none pointer-events-none">
+          <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
+          <span class="text-[11px] uppercase tracking-wider">Phân vùng:</span>
+        </div>
+        <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2.5 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+          <option value="all">🌐 Toàn Miền Bắc (Tổng quan)</option>
+          <option value="hanoi">📍 Hà Nội & Đồng Bằng</option>
+          <option value="taybac">⛰️ Tây Bắc (Lào Cai - Yên Bái)</option>
+          <option value="vietbac">🌊 Việt Bắc (Thái Nguyên - Bắc Giang)</option>
+          <option value="dongbac">🏔️ Đông Bắc (Cao Bằng - Lạng Sơn)</option>
+          <option value="quangninh">🏖️ Duyên Hải (Quảng Ninh - Hải Phòng)</option>
+          <option value="songda">🏞️ Sông Đà (Phú Thọ - Hòa Bình)</option>
+        </select>
       </div>
-    </div>
+            <div id="multi-hazard-layer-control" class="hidden absolute top-16 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-3 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-2 min-w-[250px] transition-all duration-200">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400"></i>
+            <span>Lớp Bản Đồ Thiên Tai</span>
+          </div>
+          <button type="button" onclick="toggleHazardLayersPanel(false)" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded text-xs font-bold cursor-pointer" title="Thu gọn">✕</button>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-floods" checked onchange="window.toggleFloodPointsLayer ? window.toggleFloodPointsLayer(this.checked) : null" class="rounded text-blue-600 focus:ring-blue-500">
+          <span>🌊 Trạm thủy văn & quan trắc ngập</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-disasters" checked onchange="NorthStarRescue.toggleLayer('disasters', this.checked)" class="rounded text-amber-500 focus:ring-amber-500">
+          <span>⚠️ Vùng thiên tai & sự cố</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-shelters" checked onchange="NorthStarRescue.toggleLayer('shelters', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500">
+          <span>🛡️ Điểm sơ tán an toàn</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-sos" checked onchange="NorthStarRescue.toggleLayer('sos', this.checked)" class="rounded text-rose-600 focus:ring-rose-500">
+          <span>🆘 Tín hiệu SOS cộng đồng</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+          <input type="checkbox" id="layer-toggle-sar" onchange="SarFloodManager.toggle(this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500">
+          <span class="text-cyan-700 dark:text-cyan-400 font-bold">🛰️ Vùng ngập viễn thám Sentinel-1 SAR</span>
+        </label>
 
-
-
-    <!-- Left Sidebar Control Panel (Thành viên 1) -->
-    <aside id="sidebar-panel" class="fixed inset-x-0 bottom-0 top-[58px] sm:top-0 sm:relative sm:inset-auto w-full sm:w-[420px] bg-white shadow-2xl z-30 flex flex-col h-[calc(100vh-58px)] sm:h-full border-r border-slate-200 rounded-t-2xl sm:rounded-none transition-all duration-300 translate-y-0">
-
-      <!-- Nút Thu gọn / Mở rộng Sidebar Desktop (Google Maps style) -->
-      <button type="button" id="btn-toggle-sidebar" onclick="toggleSidebarCollapse()" title="Thu gọn / Mở rộng bảng điều khiển"
-              class="hidden sm:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-50 w-7 h-14 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 rounded-r-xl border border-l-0 border-slate-300 shadow-xl items-center justify-center cursor-pointer transition-all hover:w-8 group">
-        <i id="sidebar-collapse-icon" data-lucide="chevron-left" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110"></i>
-      </button>
-
-      <!-- Mobile Bar: Drag indicator & Thu gọn xem bản đồ (sm:hidden) -->
-      <div class="sm:hidden flex items-center justify-between px-4 py-2 bg-slate-100 border-b border-slate-200 rounded-t-2xl flex-shrink-0">
-        <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5" id="mobile-sidebar-title">
-          <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-blue-600"></i> Bảng điều khiển tìm đường
-        </span>
-        <button type="button" onclick="toggleMobilePanel(false)" class="flex items-center gap-1 text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 active:scale-95 shadow-sm transition">
-          <i data-lucide="map" class="w-3.5 h-3.5"></i>
-          <span>Xem bản đồ</span>
-        </button>
+        <!-- Lớp Bản Đồ Nền -->
+        <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold pb-0.5">Bản Đồ Nền</div>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+            <input type="radio" name="base-map-radio" value="osm" checked onchange="window.switchBaseLayer('osm')" class="text-blue-600 focus:ring-blue-500">
+            <span>🗺️ OSM Chuẩn (Cập nhật mới)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+            <input type="radio" name="base-map-radio" value="intl" onchange="window.switchBaseLayer('intl')" class="text-blue-600 focus:ring-blue-500">
+            <span>🌐 OpenStreetMap Quốc tế</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+            <input type="radio" name="base-map-radio" value="dark" onchange="window.switchBaseLayer('dark')" class="text-blue-600 focus:ring-blue-500">
+            <span>🌙 Chế độ Ban đêm (Dark)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
+            <input type="radio" name="base-map-radio" value="esri" onchange="window.switchBaseLayer('esri')" class="text-blue-600 focus:ring-blue-500">
+            <span>🛰️ Bản đồ ESRI</span>
+          </label>
+        </div>
       </div>
+            <div id="timeline-simulation-bar" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-xl bg-white/95 dark:bg-slate-900/95 p-3 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold space-y-2 select-none animate-fade-in">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
+            <span id="timeline-step-label" class="font-extrabold text-blue-900 dark:text-cyan-400">T+0h: Trước bão (Bình thường)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="timeline-rain-badge" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[10px]">🌧️ 2mm</span>
+            <button onclick="TimelineSimulator.toggleBar()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base leading-none p-1 cursor-pointer">&times;</button>
+          </div>
+        </div>
+        <p id="timeline-step-desc" class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">Các trạm thủy văn và điểm đo nội đô đều trong ngưỡng an toàn, dòng chảy bình thường.</p>
+        <div class="flex items-center gap-3 pt-1">
+          <button id="timeline-play-btn" onclick="TimelineSimulator.togglePlay()" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition active:scale-95 cursor-pointer">
+            <i data-lucide="play" class="w-4 h-4"></i>
+          </button>
+          <input type="range" id="timeline-slider" min="0" max="24" step="1" value="0" list="timeline-ticks" oninput="TimelineSimulator.setHour(this.value)" class="flex-1 accent-blue-600 cursor-pointer">
+          <datalist id="timeline-ticks">
+            <option value="0" label="T+0"></option>
+            <option value="3" label="T+3"></option>
+            <option value="6" label="T+6"></option>
+            <option value="12" label="T+12"></option>
+            <option value="24" label="T+24"></option>
+          </datalist>
+          <div class="flex gap-1 text-[10px] font-bold text-slate-400">
+            <button onclick="TimelineSimulator.setHour(0)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">0h</button>
+            <button onclick="TimelineSimulator.setHour(3)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">3h</button>
+            <button onclick="TimelineSimulator.setHour(6)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">6h</button>
+            <button onclick="TimelineSimulator.setHour(12)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">12h</button>
+            <button onclick="TimelineSimulator.setHour(24)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">24h</button>
+          </div>
+        </div>
+      </div>
+            <div id="viewport-flood-alert" class="hidden absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-2 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md z-[990] flex items-center gap-2.5 border transition-all duration-300 pointer-events-auto">
 
-      <!-- Tabs Navigation -->
-      <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
-        <button onclick="switchTab('route')" id="tab-btn-route" class="flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold">
-          <i data-lucide="navigation" class="w-4 h-4"></i>
-          <span>Tìm đường</span>
-        </button>
-        <button onclick="switchTab('points')" id="tab-btn-points" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
+        <div id="viewport-alert-icon" class="p-1 rounded-full flex-shrink-0">
+
           <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-          <span>Điểm ngập (<span id="points-count">130</span>)</span>
+
+        </div>
+
+        <div class="flex-1 truncate" id="viewport-alert-text">
+
+          Đang quét điểm ngập khu vực...
+
+        </div>
+
+        <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2.5 py-1 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow">
+
+          Xem
+
         </button>
-        <button onclick="switchTab('report')" id="tab-btn-report" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
-          <i data-lucide="send" class="w-4 h-4"></i>
-          <span>Báo ngập</span>
-        </button>
-        <button onclick="switchTab('rescue')" id="tab-btn-rescue" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
-          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
-          <span>Cứu hộ SOS</span>
-        </button>
-        <button onclick="switchTab('command')" id="tab-btn-command" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 flex items-center justify-center gap-1.5 transition text-rose-700 dark:text-rose-400 font-extrabold" title="Bàn tác chiến Tiếp nhận & Điều phối">
-          <i data-lucide="shield-check" class="w-4 h-4 text-rose-600"></i>
-          <span>Điều phối</span>
-        </button>
-        <!-- Nút thu gọn nhanh trên thanh tab -->
-        <button type="button" onclick="toggleSidebarCollapse()" title="Thu gọn bảng điều khiển" class="hidden sm:flex px-2.5 py-3 text-slate-400 hover:text-slate-700 hover:bg-slate-100 border-l border-slate-200 transition items-center justify-center flex-shrink-0">
-          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
-        </button>
+
+      </div>
+            <div id="pick-hint" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-4 py-2 rounded-full shadow-xl text-xs font-semibold backdrop-blur-sm z-[1000] flex items-center gap-2 border border-slate-700">
+
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+
+        <span id="pick-hint-text">Nhấp lên bản đồ để chọn vị trí...</span>
+
+        <button onclick="cancelPickMode()" class="ml-2 text-slate-400 hover:text-white">&times;</button>
+
+      </div>
+            <div id="ai-assistant-widget" class="fixed bottom-20 right-6 z-[1000] select-none">
+    <button onclick="AIAssistant.toggle()" class="relative p-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80" title="Trợ lý AI Trực ban Thiên tai 24/7">
+      <i data-lucide="bot" class="w-6 h-6"></i>
+      <span id="ai-assistant-badge" class="absolute -top-1 -right-1 flex h-4 w-4">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 text-[9px] font-black text-white items-center justify-center">AI</span>
+      </span>
+    </button>
+
+    <!-- AI Assistant Panel -->
+    <div id="ai-assistant-panel" class="hidden absolute bottom-16 right-0 w-80 sm:w-96 h-[480px] bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-indigo-100 dark:border-slate-800 backdrop-blur-md flex flex-col overflow-hidden animate-fade-in">
+      <!-- Header -->
+      <div class="p-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 rounded-lg bg-white/20">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h4 class="font-extrabold text-xs leading-none">Trợ Lý AI Trực Ban NorthStar</h4>
+            <span class="text-[9.5px] text-cyan-200">Hỗ trợ khẩn cấp & Điều phối 24/7</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span id="ai-provider-badge" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white/20 text-cyan-100 flex items-center gap-1">
+            <span id="ai-provider-dot" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            <span id="ai-provider-label">AI Ready</span>
+          </span>
+          <button onclick="AIAssistant.toggle()" class="text-white/80 hover:text-white p-1 text-base leading-none cursor-pointer">&times;</button>
+        </div>
       </div>
 
-      <!-- Tab Contents Area -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+      <!-- Quick suggestion chips -->
+      <div class="p-2 bg-indigo-50/60 dark:bg-slate-800/60 border-b border-indigo-100 dark:border-slate-700 flex gap-1.5 overflow-x-auto text-[10px] whitespace-nowrap custom-scrollbar">
+        <button onclick="AIAssistant.send('Cầu Giấy về Láng Hạ có ngập không?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">🛣️ Tuyến Cầu Giấy</button>
+        <button onclick="AIAssistant.send('Kỹ năng an toàn điện khi ngập nhà?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">⚡ An toàn điện</button>
+        <button onclick="AIAssistant.send('Tình hình lũ quét Làng Nủ - Bảo Yên?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">🌊 Lũ quét Làng Nủ</button>
+        <button onclick="AIAssistant.send('Cách lọc nước uống khi bị cô lập?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">💧 Nước sạch</button>
+      </div>
 
-        <!-- TAB 1: TÌM ĐƯỜNG TRÁNH NGẬP -->
-        <div id="tab-route" class="space-y-4">
+      <!-- Message Thread -->
+      <div id="ai-assistant-thread" class="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar text-xs">
+        <div class="flex justify-start">
+          <div class="max-w-[85%] rounded-2xl p-2.5 bg-indigo-50 text-slate-800 border border-indigo-100 text-xs">
+            Xin chào! Tôi là <b>Trợ lý AI Trực ban Thiên tai NorthStar</b>. Hãy hỏi tôi về tình trạng ngập đường phố, hướng dẫn sơ tán hoặc kỹ năng ứng phó khẩn cấp!
+          </div>
+        </div>
+      </div>
+
+      <!-- Input bar -->
+      <div class="p-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-1.5 items-center">
+        <input type="text" id="ai-assistant-input" onkeydown="if(event.key==='Enter') AIAssistant.send()" placeholder="Nhập câu hỏi hoặc tình huống khẩn cấp..." class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="AIAssistant.send()" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition active:scale-95 flex-shrink-0 cursor-pointer">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+            <!-- Bottom Floating Layers Toggle Button (Zero Header Overlap) -->
+            <button id="btn-toggle-hazard-layers-float" onclick="CommandUIController.toggleTacticalLayers()" class="fixed bottom-6 right-6 z-30 px-3.5 py-2 bg-slate-900/95 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-xl shadow-xl font-extrabold text-xs flex items-center gap-2 backdrop-blur transition cursor-pointer active:scale-95">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+              <span>Lớp bản đồ</span>
+            </button>
+          </div>
+
+          <!-- Right Tactical Triage Feed (Split Screen) -->
+          <div id="dashboard-triage-panel" class="w-84 xl:w-96 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20 backdrop-blur">
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                <h3 class="font-extrabold text-xs tracking-wide text-white uppercase">Dòng Tin Cứu Hộ Trực Tiếp</h3>
+              </div>
+              <button onclick="CommandUIController.switchView('cmd_intake')" class="text-xs text-blue-400 font-bold hover:underline">Xem tất cả &rarr;</button>
+            </div>
+
+            <!-- Triage Feed List -->
+            <div id="dashboard-live-feed" class="flex-1 overflow-y-auto p-2.5 space-y-2.5 text-xs">
+              <!-- Dynamically populated or fallback items -->
+              <div class="p-3 rounded-lg bg-rose-950/40 border border-rose-700/60 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white">🆘 CẤP THIẾT</span>
+                  <span class="text-[10.5px] text-slate-400">Vừa gửi</span>
+                </div>
+                <div class="font-bold text-slate-100 mt-1">Xã Bảo Hà, H. Bảo Yên, Lào Cai</div>
+                <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">4 người mắc kẹt trên nóc nhà, nước lũ dâng ngập 2.5m, có trẻ em 3 tuổi. Cần ca nô cứu hộ gấp.</div>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-rose-800/40">
+                  <span class="text-[10px] text-rose-300 font-semibold">📞 0984.123.456</span>
+                  <button onclick="CommandUIController.openDispatchModal('SOS-LC-01')" class="px-2 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-black text-[10.5px] cursor-pointer shadow-xs transition">
+                    ⚡ Phát lệnh điều phối
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-amber-950/30 border border-amber-700/50 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-600 text-white">⚠️ SẠT LỞ ĐƯỜNG</span>
+                  <span class="text-[10.5px] text-slate-400">5 phút trước</span>
+                </div>
+                <div class="font-bold text-slate-100 mt-1">Quốc lộ 4D, Đèo Ô Quy Hồ, Lai Châu</div>
+                <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">Đất đá sạt lở dài 40m, chia cắt giao thông hoàn toàn. 2 xe tải kẹt giữa đoạn sạt.</div>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-amber-800/40">
+                  <span class="text-[10px] text-amber-300 font-semibold">Nguồn: Báo cáo Dân sự</span>
+                  <button onclick="CommandUIController.switchView('cmd_reports')" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[10.5px] cursor-pointer transition">
+                    Xác minh tin
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-blue-950/30 border border-blue-700/50 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-600 text-white">🌊 LŨ DÂNG CAO</span>
+                  <span class="text-[10.5px] text-slate-400">12 phút trước</span>
+                </div>
+                <div class="font-bold text-slate-100 mt-1">Trạm Thủy văn Sông Thao (Yên Bái)</div>
+                <div class="text-[11px] text-slate-300 mt-0.5">Mực nước đạt 32.50m (Vượt Báo Động 3 + 0.5m). Nguy cơ ngập diện rộng phường Hồng Hà.</div>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-blue-800/40">
+                  <span class="text-[10px] text-blue-300 font-semibold">IoT Sensor Alert</span>
+                  <button onclick="CommandUIController.switchView('cmd_flood_intel')" class="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-white font-bold text-[10.5px] cursor-pointer transition">
+                    Xem trạm đo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Action Bar on Right Panel -->
+            <div class="p-2.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+              <button onclick="document.getElementById('voice-sos-modal').classList.remove('hidden')" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition cursor-pointer">
+                <i data-lucide="mic" class="w-3.5 h-3.5 text-rose-400"></i>
+                Voice SOS
+              </button>
+              <button onclick="CommandUIController.switchView('cmd_operations')" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer">
+                <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+                Điều Phối Xe
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 2: INFORMATION HUB INTAKE TABLE           -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_intake" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            
+            <!-- Intake Header & Filters -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="inbox" class="w-5 h-5 text-amber-400"></i>
+                  TRUNG TÂM TIẾP NHẬN THÔNG TIN ĐA KÊNH
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Tiếp nhận, chuẩn hóa, phát hiện trùng lặp không gian (Deduplication) và chuyển giao điều phối.</p>
+              </div>
+
+              <!-- Source Filter Tabs -->
+              <div class="flex items-center gap-1.5 overflow-x-auto bg-slate-800/80 p-1 rounded-lg border border-slate-700 text-xs font-bold">
+                <button onclick="CommandUIController.filterIntake('all')" class="px-2.5 py-1 rounded bg-rose-600 text-white cursor-pointer">Tất cả</button>
+                <button onclick="CommandUIController.filterIntake('sos')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">🆘 SOS Khẩn Cấp</button>
+                <button onclick="CommandUIController.filterIntake('crowd')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">📢 Báo Cáo Dân Sự</button>
+                <button onclick="CommandUIController.filterIntake('hotline')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">☎️ Hotline 114</button>
+                <button onclick="CommandUIController.filterIntake('sensor')" class="px-2.5 py-1 rounded text-slate-300 hover:bg-slate-700 cursor-pointer">🌊 Trạm Quan Trắc</button>
+              </div>
+            </div>
+
+            <!-- Intake Table Container -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-800/80 text-slate-300 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-700">
+                    <tr>
+                      <th class="p-3">Mã Tin</th>
+                      <th class="p-3">Thời Gian</th>
+                      <th class="p-3">Nguồn Tiếp Nhận</th>
+                      <th class="p-3">Địa Điểm / Tọa Độ</th>
+                      <th class="p-3">Tình Trạng / Nhu Cầu</th>
+                      <th class="p-3">Độ Khẩn Cấp</th>
+                      <th class="p-3">Trạng Thái</th>
+                      <th class="p-3 text-right">Hành Động Tác Chiến</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cmd-intake-table-body" class="divide-y divide-slate-800/70 font-medium">
+                    <!-- Populated dynamically by command_ui_controller.js -->
+                    <tr>
+                      <td colspan="8" class="p-8 text-center text-slate-400">Đang đồng bộ dữ liệu tiếp nhận...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 3: SOS REQUESTS TRIAGE                    -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_sos" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
+                  DANH SÁCH YÊU CẦU CỨU HỘ KHẨN CẤP (SOS)
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Ưu tiên xử lý người già, trẻ nhỏ, phụ nữ mang thai và người bị cô lập trong vùng nước sâu.</p>
+              </div>
+              <button onclick="document.getElementById('voice-sos-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition cursor-pointer shadow-sm">
+                <i data-lucide="mic" class="w-4 h-4"></i>
+                Tiếp Nhận Voice SOS
+              </button>
+            </div>
+
+            <!-- SOS Cards Container -->
+            <div id="cmd-sos-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 4: DISASTER REPORTS (CROWDSOURCED)         -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_reports" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i data-lucide="megaphone" class="w-5 h-5 text-sky-400"></i>
+                BÁO CÁO THIÊN TAI VÀ SỰ CỐ TỪ CỘNG ĐỒNG
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Xác minh hình ảnh hiện trường, mức độ ngập lụt, sạt lở đất và tình trạng cầu cống.</p>
+            </div>
+            
+            <div id="cmd-reports-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 5: VERIFICATION QUEUE & AI SEMANTIC CHECK  -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_verification" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i data-lucide="check-check" class="w-5 h-5 text-emerald-400"></i>
+                HÀNG ĐỢI XÁC MINH VÀ LỌC TRÙNG THÔNG MINH
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Thuật toán phát hiện trùng lặp bán kính 50m & phân tích ngôn ngữ tự nhiên từ tin báo.</p>
+            </div>
+
+            <div id="cmd-verification-container" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 6: WEATHER & STORM RADAR (OPEN-METEO)     -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_weather" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="cloud-rain" class="w-5 h-5 text-blue-400"></i>
+                  GIÁM SÁT KHÍ TƯỢNG VÀ BỘ GIẢ LẬP MƯA BÃO (OPEN-METEO)
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Dữ liệu thời tiết theo giờ, cảnh báo lượng mưa cực đoan và kịch bản mưa dâng nước lũ.</p>
+              </div>
+            </div>
+
+            <!-- Weather Grid for Northern Vietnam -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="font-bold text-slate-200">🏛️ TP. Hà Nội</div>
+                <div class="text-2xl font-black text-amber-300 mt-1">26°C - Tạnh ráo</div>
+                <div class="text-slate-400 mt-1">Lượng mưa: 0.0 mm/h | Gió: 12 km/h Đông Bắc</div>
+              </div>
+              <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="font-bold text-slate-200">⛰️ Tỉnh Lào Cai (Bảo Yên, Sa Pa)</div>
+                <div class="text-2xl font-black text-rose-400 mt-1">22°C - Mưa to 85mm</div>
+                <div class="text-slate-400 mt-1">Nguy cơ lũ quét, sạt lở đất cấp độ 3 rất cao</div>
+              </div>
+              <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="font-bold text-slate-200">🌊 Tỉnh Quảng Ninh (Hạ Long, Cẩm Phả)</div>
+                <div class="text-2xl font-black text-blue-400 mt-1">24°C - Mưa rào</div>
+                <div class="text-slate-400 mt-1">Sóng biển 2.5m | Triều cường dự kiến dâng lúc 18h</div>
+              </div>
+            </div>
+
+            <!-- Storm Simulation Interactive Controls -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
+              <h3 class="font-bold text-sm text-white">Bộ Giả Lập Kịch Bản Mưa Bão (Storm Simulation Engine)</h3>
+              <p class="text-xs text-slate-400">Kéo thanh trượt lượng mưa để mô phỏng mức độ ngập tại các lưu vực sông và trạm đo:</p>
+              <div class="flex items-center gap-4">
+                <input type="range" min="0" max="100" step="5" value="0" id="cmd-sim-rainfall-slider" oninput="document.getElementById('cmd-sim-rainfall-val').textContent = this.value + ' mm'; if(window.setSimulationRainfall) setSimulationRainfall(this.value);" class="flex-1 accent-rose-500 cursor-pointer" />
+                <span id="cmd-sim-rainfall-val" class="font-black text-rose-400 text-sm w-16 text-right">0 mm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 7: 130 HYDRO STATIONS & FLOOD INTEL       -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_flood_intel" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i data-lucide="waves" class="w-5 h-5 text-teal-400"></i>
+                130 TRẠM THỦY VĂN & VÙNG NGẬP VIỄN THÁM SENTINEL-1 SAR
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Giám sát mực nước lũ sông Hồng, sông Thao, sông Chảy và sông Đuống.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div id="cmd-flood-stations-list" class="space-y-2">
+                <!-- Dynamically rendered stations -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 8: DISASTER MAP (FULLSCREEN GIS)          -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_disaster_map" class="cmd-view-pane hidden w-full h-full relative">
+          <!-- The map container is moved or sized here when active -->
+          <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+            Bản đồ Tác chiến Toàn màn hình đang mở. (Sử dụng thanh công cụ bên trên hoặc phím tắt ESC để điều hướng).
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 9: RESCUE FLEET & VEHICLES MANAGEMENT     -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_rescue_teams" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="truck" class="w-5 h-5 text-rose-400"></i>
+                  QUẢN LÝ LỰC LƯỢNG PHẢN ỨNG NHANH & PHƯƠNG TIỆN CỨU HỘ
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Theo dõi vị trí GPS, trạng thái sẵn sàng chiến đấu, quân số và trang thiết bị chuyên dụng.</p>
+              </div>
+            </div>
+
+            <!-- Fleet Cards Grid -->
+            <div id="cmd-fleet-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <!-- Dynamically populated by command_ui_controller.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 10: SAFE ZONES & EVACUATION SHELTERS      -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_safe_zones" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="shield" class="w-5 h-5 text-emerald-400"></i>
+                  ĐIỂM SƠ TÁN AN TOÀN & TRUNG TÂM TIẾP NHẬN DÂN CƯ
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Sức chứa tối đa, số lượng người dân đang tạm trú, nhu yếu phẩm dự trữ và tình trạng y tế.</p>
+              </div>
+            </div>
+
+            <!-- Shelters Container -->
+            <div id="cmd-shelters-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Dynamically populated by command_ui_controller.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 11: MISSIONS & TACTICAL ROUTE DISPATCH    -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_operations" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-7xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="navigation-2" class="w-5 h-5 text-amber-400"></i>
+                  QUẢN LÝ NHIỆM VỤ ĐIỀU PHỐI & LỘ TRÌNH CỨU NẠN
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Thuật toán định tuyến an toàn né ngập kết hợp luân chuyển nạn nhân đến điểm sơ tán gần nhất.</p>
+              </div>
+            </div>
+
+            <!-- Active Missions List -->
+            <div id="cmd-missions-container" class="space-y-3">
+              <!-- Dynamically populated by command_ui_controller.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 12: SITUATION REPORT (SITREP) VIEWER      -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_sitrep" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-5xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="file-check-2" class="w-5 h-5 text-teal-400"></i>
+                  BÁO CÁO TÌNH HÌNH TÁC CHIẾN (SITREP)
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Chuẩn hóa theo định dạng Báo cáo Ban Chỉ đạo Quốc gia về Phòng chống Thiên tai.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="CommandUIController.copySitRepToClipboard()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 cursor-pointer transition">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                  Sao chép Báo cáo
+                </button>
+              </div>
+            </div>
+
+            <!-- SitRep Content Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 font-mono text-xs text-slate-200 leading-relaxed shadow-xl">
+              <pre id="cmd-sitrep-text" class="whitespace-pre-wrap font-sans">Đang tổng hợp báo cáo SitRep...</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 13: ROLES & RBAC PERMISSION MATRIX        -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_roles" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-6xl mx-auto space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
+                MA TRẬN PHÂN QUYỀN VAI TRÒ TÁC CHIẾN (RBAC MATRIX)
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Bảo vệ an toàn dữ liệu cá nhân, phân định quyền hạn tác chiến giữa các bộ phận.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-800/80 text-slate-300 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-700">
+                  <tr>
+                    <th class="p-3">Vai Trò</th>
+                    <th class="p-3">Xem COP</th>
+                    <th class="p-3">Xác Minh Tin</th>
+                    <th class="p-3">Phát Lệnh Điều Phối</th>
+                    <th class="p-3">Quản Lý Đội Xe</th>
+                    <th class="p-3">Xuất SitRep</th>
+                    <th class="p-3">Quản Trị Hệ Thống</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/70 font-medium">
+                  <tr>
+                    <td class="p-3 font-bold text-amber-300">⭐ Command Director (Chỉ huy trưởng)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Toàn quyền</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-bold text-blue-300">🛡️ Dispatcher (Điều phối viên)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-bold text-teal-300">🔍 Information Verifier (Xác minh viên)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-bold text-indigo-300">📊 Data Analyst (Chuyên viên Dữ liệu)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-slate-400">Chỉ xem</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-slate-400">Chỉ xem</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-bold text-rose-300">🚒 Rescue Coordinator (Điều phối cứu hộ)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-slate-400">Chỉ xem</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-bold text-purple-300">📦 Relief Coordinator (Điều phối cứu trợ)</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có</td>
+                    <td class="p-3 text-slate-400">Chỉ xem</td>
+                    <td class="p-3 text-emerald-400 font-bold">✓ Có (Cứu trợ)</td>
+                    <td class="p-3 text-slate-400">Chỉ xem</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                    <td class="p-3 text-rose-400 font-bold">✗ Không</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE 14: PRESERVED CITIZEN PREVIEW PORTAL      -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_citizen_preview" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
+          <div class="max-w-4xl mx-auto space-y-4">
+            
+            <!-- Citizen Portal Header -->
+            <div class="bg-blue-950/40 border border-blue-800/60 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-extrabold text-blue-200 flex items-center gap-2">
+                  <i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>
+                  NORTHSTAR CITIZEN – GIAO DIỆN DÂN SỰ (PREVIEW)
+                </h2>
+                <p class="text-xs text-blue-300/80 mt-0.5">Bảo toàn nguyên vẹn 100% thuật toán tìm đường né ngập A*, gửi yêu cầu cứu trợ SOS và báo cáo thiên tai.</p>
+              </div>
+              <button onclick="CommandUIController.switchView('cmd_dashboard')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 cursor-pointer transition">
+                &larr; Quay lại Command COP
+              </button>
+            </div>
+
+            <!-- Citizen Tabs Navigation -->
+            <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 text-xs font-bold">
+              <button onclick="switchTab('route')" id="citizen-tab-btn-route" class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-center cursor-pointer transition">🚗 Tìm Lộ Trình Né Ngập</button>
+              <button onclick="switchTab('points')" id="citizen-tab-btn-points" class="flex-1 py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">⚠️ Điểm Ngập (130)</button>
+              <button onclick="switchTab('report')" id="citizen-tab-btn-report" class="flex-1 py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">📸 Báo Ngập Hiện Trường</button>
+              <button onclick="switchTab('rescue')" id="citizen-tab-btn-rescue" class="flex-1 py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">🆘 Gửi Cứu Hộ Khẩn Cấp</button>
+            </div>
+
+            <!-- Citizen Tab Contents Container -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div id="tab-route" class="space-y-4">
           <div id="algo-info-card" class="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-800 flex items-start gap-2 relative transition-all">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600"></i>
             <div class="leading-relaxed flex-1 text-[11px]">
@@ -733,12 +1473,7 @@
           </div>
 
         </div>
-
-
-
-        <!-- TAB 2: DANH SÁCH ĐIỂM NGẬP -->
-
-        <div id="tab-points" class="hidden space-y-3">
+              <div id="tab-points" class="hidden space-y-3">
 
           <div class="text-xs text-slate-600">
 
@@ -765,12 +1500,7 @@
           <div id="points-list" class="space-y-2"></div>
 
         </div>
-
-
-
-        <!-- TAB 3: BÁO CÁO NGƯỜI DÂN -->
-
-        <div id="tab-report" class="hidden space-y-4">
+              <div id="tab-report" class="hidden space-y-4">
 
           <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800">
 
@@ -867,11 +1597,7 @@
           </button>
 
         </div>
-
-        <!-- ========================================================
-             TAB 4: CỨU HỘ KHẨN CẤP, SƠ TÁN & ĐA THIÊN TAI (NORTHSTAR)
-             ======================================================== -->
-        <div id="tab-rescue" class="hidden space-y-4">
+              <div id="tab-rescue" class="hidden space-y-4">
           <!-- 0. Thẻ Kêu Cứu Khẩn Cấp Bằng Giọng Nói (AI Voice SOS - Groq Whisper) -->
           <div class="bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 text-white p-3.5 rounded-2xl shadow-xl border border-rose-400/40 relative overflow-hidden group">
             <div class="flex items-center gap-2.5">
@@ -1041,374 +1767,20 @@
             </div>
           </div>
         </div>
-
-        <!-- TAB 5: BÀN TÁC CHIẾN TIẾP NHẬN & ĐIỀU PHỐI (NORTHSTAR COMMAND) -->
-        <div id="tab-command" class="hidden space-y-3.5">
-          <!-- Card Giới thiệu & Thống kê Tác chiến COP -->
-          <div class="bg-gradient-to-r from-rose-900 via-slate-900 to-indigo-950 text-white p-3.5 rounded-2xl shadow-lg border border-rose-500/30 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                <div>
-                  <h3 class="text-xs font-black tracking-wider uppercase text-rose-200">NORTHSTAR COMMAND CENTER</h3>
-                  <p class="text-[10px] text-slate-300">Trung tâm Tiếp nhận & Điều phối Cứu hộ Thiên tai 24/7</p>
-                </div>
-              </div>
-              <button onclick="CoordinatorCommand.refreshAllData()" title="Làm mới dòng dữ liệu tác chiến" class="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition active:scale-95 cursor-pointer">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-              </button>
             </div>
 
-            <!-- Băng 4 chỉ số tác chiến COP tóm tắt -->
-            <div class="grid grid-cols-4 gap-1.5 text-center">
-              <div class="bg-white/10 p-2 rounded-xl border border-white/10">
-                <div class="text-[9.5px] text-slate-300">Tiếp nhận</div>
-                <div id="cop-stat-intake" class="text-sm font-black text-white">8</div>
-                <div class="text-[9px] text-rose-300 font-bold"><span id="cop-stat-pending">3</span> chờ duyệt</div>
-              </div>
-              <div class="bg-white/10 p-2 rounded-xl border border-white/10">
-                <div class="text-[9.5px] text-slate-300">SOS Khẩn</div>
-                <div id="cop-stat-sos" class="text-sm font-black text-rose-400">4</div>
-                <div class="text-[9px] text-rose-300 font-bold">Cần cứu ngay</div>
-              </div>
-              <div class="bg-white/10 p-2 rounded-xl border border-white/10">
-                <div class="text-[9.5px] text-slate-300">Lực lượng</div>
-                <div id="cop-stat-units" class="text-sm font-black text-cyan-300">4 / 5</div>
-                <div class="text-[9px] text-emerald-300 font-bold">Sẵn sàng</div>
-              </div>
-              <div class="bg-white/10 p-2 rounded-xl border border-white/10">
-                <div class="text-[9.5px] text-slate-300">Nhiệm vụ</div>
-                <div id="cop-stat-missions" class="text-sm font-black text-amber-300">2</div>
-                <div class="text-[9px] text-amber-300 font-bold">Đang điều phối</div>
-              </div>
-            </div>
           </div>
-
-          <!-- Thanh Chuyển Phân Hệ Tác Chiến (Subtabs: Intake, Dispatch, Units, SitRep) -->
-          <div class="flex border-b border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1">
-            <button id="cmd-subtab-btn-intake" onclick="CoordinatorCommand.switchCommandSubTab('intake')" class="flex-1 py-1.5 px-1 text-center font-black text-xs border-b-2 border-rose-600 text-rose-700 dark:text-rose-400 transition bg-rose-50/50 dark:bg-rose-950/30 rounded-lg cursor-pointer">
-              📥 Tiếp nhận
-            </button>
-            <button id="cmd-subtab-btn-dispatch" onclick="CoordinatorCommand.switchCommandSubTab('dispatch')" class="flex-1 py-1.5 px-1 text-center font-semibold text-xs border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 transition rounded-lg cursor-pointer">
-              🚑 Điều phối
-            </button>
-            <button id="cmd-subtab-btn-units" onclick="CoordinatorCommand.switchCommandSubTab('units')" class="flex-1 py-1.5 px-1 text-center font-semibold text-xs border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 transition rounded-lg cursor-pointer">
-              🚤 Lực lượng
-            </button>
-            <button id="cmd-subtab-btn-sitrep" onclick="CoordinatorCommand.switchCommandSubTab('sitrep')" class="flex-1 py-1.5 px-1 text-center font-semibold text-xs border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 transition rounded-lg cursor-pointer">
-              📄 SitRep
-            </button>
-          </div>
-
-          <!-- PHÂN HỆ 1: TIẾP NHẬN & THẨM TRA THÔNG TIN (INFORMATION HUB) -->
-          <div id="cmd-subtab-pane-intake" class="space-y-2.5">
-            <!-- Thanh lọc nhanh nguồn tin & trạng thái -->
-            <div class="flex items-center justify-between gap-1 overflow-x-auto pb-1 text-[11px]">
-              <div class="flex items-center gap-1">
-                <button onclick="CoordinatorCommand.setIntakeFilter('all')" class="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 font-bold hover:bg-slate-300 cursor-pointer">Tất cả</button>
-                <button onclick="CoordinatorCommand.setIntakeFilter('pending')" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 cursor-pointer">⏳ Chờ duyệt</button>
-                <button onclick="CoordinatorCommand.setIntakeFilter('critical')" class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold hover:bg-rose-200 cursor-pointer">🔴 Khẩn cấp</button>
-                <button onclick="CoordinatorCommand.setIntakeFilter('verified')" class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold hover:bg-teal-200 cursor-pointer">✓ Đã xác thực</button>
-                <button onclick="CoordinatorCommand.setIntakeFilter('dispatched')" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 cursor-pointer">🚑 Đang cứu</button>
-              </div>
-            </div>
-
-            <!-- Dòng tin tiếp nhận thời gian thực (Feed) -->
-            <div id="cmd-intake-feed-list" class="space-y-2.5 max-h-[58vh] overflow-y-auto pr-1">
-              <!-- Render via CoordinatorCommand.renderIntakeList() -->
-            </div>
-          </div>
-
-          <!-- PHÂN HỆ 2: ĐIỀU PHỐI CỨU NẠN & GIAO NHIỆM VỤ (RESCUE DISPATCH) -->
-          <div id="cmd-subtab-pane-dispatch" class="hidden space-y-2.5">
-            <div class="flex items-center justify-between bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200 dark:border-blue-900 text-xs">
-              <span class="text-blue-900 dark:text-blue-200 font-bold flex items-center gap-1.5">
-                <i data-lucide="navigation-2" class="w-3.5 h-3.5 text-blue-600"></i>
-                Hàng đợi Điều Phối Cứu Nạn
-              </span>
-              <button onclick="CoordinatorCommand.refreshAllData()" class="text-blue-600 font-semibold hover:underline text-[11px]">Làm mới</button>
-            </div>
-
-            <div id="cmd-dispatch-missions-list" class="space-y-2.5 max-h-[58vh] overflow-y-auto pr-1">
-              <!-- Render via CoordinatorCommand.renderMissionsList() -->
-            </div>
-          </div>
-
-          <!-- PHÂN HỆ 3: LỰC LƯỢNG & ĐIỂM SƠ TÁN (UNITS & SHELTERS) -->
-          <div id="cmd-subtab-pane-units" class="hidden space-y-2.5">
-            <div class="flex items-center justify-between bg-cyan-50 dark:bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-200 dark:border-cyan-900 text-xs">
-              <span class="text-cyan-900 dark:text-cyan-200 font-bold flex items-center gap-1.5">
-                <i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-600"></i>
-                Danh Sách Đội Cứu Nạn Cơ Động 24/7
-              </span>
-            </div>
-
-            <div id="cmd-units-list" class="space-y-2.5 max-h-[58vh] overflow-y-auto pr-1">
-              <!-- Render via CoordinatorCommand.renderUnitsList() -->
-            </div>
-          </div>
-
-          <!-- PHÂN HỆ 4: BÁO CÁO TÌNH HUỐNG TÁC CHIẾN (SITREP) -->
-          <div id="cmd-subtab-pane-sitrep" class="hidden space-y-2.5">
-            <div class="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-              <div class="font-extrabold flex items-center gap-1.5">
-                <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-600"></i>
-                Báo Cáo Nhanh Tình Hình Tác Chiến (SitRep PCTT)
-              </div>
-              <p class="text-[10.5px] text-slate-600 dark:text-slate-300">
-                Tự động tổng hợp số liệu tiếp nhận, số ca đã giải cứu, lực lượng trực ban để gửi trực tiếp cho Ban Chỉ huy PCTT & TKCN.
-              </p>
-            </div>
-
-            <textarea id="cmd-sitrep-preview-text" rows="12" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono leading-relaxed outline-none focus:ring-1 focus:ring-rose-500 text-slate-800 dark:text-slate-200 resize-none"></textarea>
-
-            <div class="flex items-center gap-2">
-              <button onclick="CoordinatorCommand.copySitRepText()" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
-                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                <span>Sao Chép Báo Cáo SitRep</span>
-              </button>
-              <button onclick="window.print()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs transition flex items-center gap-1 cursor-pointer">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                <span>In</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-
-
-      </div>
-
-
-
-      <!-- Footer Legend -->
-      <div class="p-2.5 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-1.5">
-        <span class="font-bold text-slate-700">Chú giải:</span>
-        <div class="flex flex-wrap items-center gap-2.5">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> &lt;5cm An toàn</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 5-20cm Chú ý</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span> &ge;20cm Nguy hiểm</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span> Dữ liệu cũ</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Mất kết nối</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Chưa có DL</span>
-        </div>
-      </div>
-
-    </aside>
-
-
-
-    <!-- Map Canvas Container (Hiển thị 100% không gian trên Mobile & Desktop) -->
-
-    <main class="w-full h-full flex-1 relative z-0">
-
-      <div id="map" class="w-full h-full"></div>
-
-      <!-- Floating Regional Focus Selector (NorthStar Giám sát Miền Bắc) -->
-      <div id="regional-focus-control" class="absolute top-4 left-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-2 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold hidden sm:flex items-center gap-2 select-none">
-        <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-1 select-none pointer-events-none">
-          <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
-          <span class="text-[11px] uppercase tracking-wider">Phân vùng:</span>
-        </div>
-        <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2.5 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-          <option value="all">🌐 Toàn Miền Bắc (Tổng quan)</option>
-          <option value="hanoi">📍 Hà Nội & Đồng Bằng</option>
-          <option value="taybac">⛰️ Tây Bắc (Lào Cai - Yên Bái)</option>
-          <option value="vietbac">🌊 Việt Bắc (Thái Nguyên - Bắc Giang)</option>
-          <option value="dongbac">🏔️ Đông Bắc (Cao Bằng - Lạng Sơn)</option>
-          <option value="quangninh">🏖️ Duyên Hải (Quảng Ninh - Hải Phòng)</option>
-          <option value="songda">🏞️ Sông Đà (Phú Thọ - Hòa Bình)</option>
-        </select>
-      </div>
-
-      <!-- Floating Button: Dấu 3 lớp (Layers) để Bật/Tắt Lớp bản đồ thiên tai & Bản đồ nền -->
-      <button id="btn-toggle-hazard-layers-float" onclick="toggleHazardLayersPanel()" title="Lớp bản đồ (Dấu 3 lớp)" class="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 text-blue-600 dark:text-cyan-400 w-10 h-10 rounded-xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[995] flex items-center justify-center hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer select-none active:scale-95" aria-label="Lớp bản đồ">
-        <i data-lucide="layers" class="w-5 h-5 text-blue-600 dark:text-cyan-400"></i>
-      </button>
-
-      <!-- Floating Multi-Hazard & Base Layer Control (NorthStar) -->
-      <div id="multi-hazard-layer-control" class="hidden absolute top-16 right-4 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-3 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md z-[996] text-xs font-semibold space-y-2 min-w-[250px] transition-all duration-200">
-        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
-          <div class="flex items-center gap-1.5">
-            <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400"></i>
-            <span>Lớp Bản Đồ Thiên Tai</span>
-          </div>
-          <button type="button" onclick="toggleHazardLayersPanel(false)" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded text-xs font-bold cursor-pointer" title="Thu gọn">✕</button>
-        </div>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-          <input type="checkbox" id="layer-toggle-floods" checked onchange="window.toggleFloodPointsLayer ? window.toggleFloodPointsLayer(this.checked) : null" class="rounded text-blue-600 focus:ring-blue-500">
-          <span>🌊 Trạm thủy văn & quan trắc ngập</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-          <input type="checkbox" id="layer-toggle-disasters" checked onchange="NorthStarRescue.toggleLayer('disasters', this.checked)" class="rounded text-amber-500 focus:ring-amber-500">
-          <span>⚠️ Vùng thiên tai & sự cố</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-          <input type="checkbox" id="layer-toggle-shelters" checked onchange="NorthStarRescue.toggleLayer('shelters', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500">
-          <span>🛡️ Điểm sơ tán an toàn</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-          <input type="checkbox" id="layer-toggle-sos" checked onchange="NorthStarRescue.toggleLayer('sos', this.checked)" class="rounded text-rose-600 focus:ring-rose-500">
-          <span>🆘 Tín hiệu SOS cộng đồng</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-          <input type="checkbox" id="layer-toggle-sar" onchange="SarFloodManager.toggle(this.checked)" class="rounded text-cyan-600 focus:ring-cyan-500">
-          <span class="text-cyan-700 dark:text-cyan-400 font-bold">🛰️ Vùng ngập viễn thám Sentinel-1 SAR</span>
-        </label>
-
-        <!-- Lớp Bản Đồ Nền -->
-        <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
-          <div class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold pb-0.5">Bản Đồ Nền</div>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-            <input type="radio" name="base-map-radio" value="osm" checked onchange="window.switchBaseLayer('osm')" class="text-blue-600 focus:ring-blue-500">
-            <span>🗺️ OSM Chuẩn (Cập nhật mới)</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-            <input type="radio" name="base-map-radio" value="intl" onchange="window.switchBaseLayer('intl')" class="text-blue-600 focus:ring-blue-500">
-            <span>🌐 OpenStreetMap Quốc tế</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-            <input type="radio" name="base-map-radio" value="dark" onchange="window.switchBaseLayer('dark')" class="text-blue-600 focus:ring-blue-500">
-            <span>🌙 Chế độ Ban đêm (Dark)</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer hover:opacity-80 text-slate-800 dark:text-slate-100">
-            <input type="radio" name="base-map-radio" value="esri" onchange="window.switchBaseLayer('esri')" class="text-blue-600 focus:ring-blue-500">
-            <span>🛰️ Bản đồ ESRI</span>
-          </label>
-        </div>
-      </div>
-
-
-
-      <!-- Map Floating Helper -->
-
-      <div id="pick-hint" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-4 py-2 rounded-full shadow-xl text-xs font-semibold backdrop-blur-sm z-[1000] flex items-center gap-2 border border-slate-700">
-
-        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-
-        <span id="pick-hint-text">Nhấp lên bản đồ để chọn vị trí...</span>
-
-        <button onclick="cancelPickMode()" class="ml-2 text-slate-400 hover:text-white">&times;</button>
-
-      </div>
-
-
-
-      <!-- Floating Viewport Alert (Hiện cảnh báo điểm ngập trong khung nhìn khi kéo bản đồ) -->
-
-      <div id="viewport-flood-alert" class="hidden absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-2 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md z-[990] flex items-center gap-2.5 border transition-all duration-300 pointer-events-auto">
-
-        <div id="viewport-alert-icon" class="p-1 rounded-full flex-shrink-0">
-
-          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-
-        </div>
-
-        <div class="flex-1 truncate" id="viewport-alert-text">
-
-          Đang quét điểm ngập khu vực...
-
-        </div>
-
-        <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2.5 py-1 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow">
-
-          Xem
-
-        </button>
-
-      </div>
-
-      <!-- Floating Timeline Simulation Bar (NorthStar) -->
-      <div id="timeline-simulation-bar" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-xl bg-white/95 dark:bg-slate-900/95 p-3 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 backdrop-blur-md z-[990] text-xs font-semibold space-y-2 select-none animate-fade-in">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
-            <span id="timeline-step-label" class="font-extrabold text-blue-900 dark:text-cyan-400">T+0h: Trước bão (Bình thường)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="timeline-rain-badge" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[10px]">🌧️ 2mm</span>
-            <button onclick="TimelineSimulator.toggleBar()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base leading-none p-1 cursor-pointer">&times;</button>
-          </div>
-        </div>
-        <p id="timeline-step-desc" class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">Các trạm thủy văn và điểm đo nội đô đều trong ngưỡng an toàn, dòng chảy bình thường.</p>
-        <div class="flex items-center gap-3 pt-1">
-          <button id="timeline-play-btn" onclick="TimelineSimulator.togglePlay()" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition active:scale-95 cursor-pointer">
-            <i data-lucide="play" class="w-4 h-4"></i>
-          </button>
-          <input type="range" id="timeline-slider" min="0" max="24" step="1" value="0" list="timeline-ticks" oninput="TimelineSimulator.setHour(this.value)" class="flex-1 accent-blue-600 cursor-pointer">
-          <datalist id="timeline-ticks">
-            <option value="0" label="T+0"></option>
-            <option value="3" label="T+3"></option>
-            <option value="6" label="T+6"></option>
-            <option value="12" label="T+12"></option>
-            <option value="24" label="T+24"></option>
-          </datalist>
-          <div class="flex gap-1 text-[10px] font-bold text-slate-400">
-            <button onclick="TimelineSimulator.setHour(0)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">0h</button>
-            <button onclick="TimelineSimulator.setHour(3)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">3h</button>
-            <button onclick="TimelineSimulator.setHour(6)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">6h</button>
-            <button onclick="TimelineSimulator.setHour(12)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">12h</button>
-            <button onclick="TimelineSimulator.setHour(24)" class="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">24h</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mobile Floating Route Summary Card (sm:hidden) -->
-
-      <div id="mobile-route-floating-card" class="hidden sm:hidden fixed bottom-16 left-3 right-3 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-2xl border border-slate-200 z-[500] transition">
-
-        <div class="flex items-center justify-between">
-
-          <div class="flex-1 pr-2">
-
-            <div class="flex items-center gap-1.5">
-
-              <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
-
-              <span class="text-xs font-bold text-slate-800" id="mobile-card-title">Lộ trình né ngập an toàn</span>
-
-            </div>
-
-            <p class="text-[11px] text-slate-500 mt-0.5 truncate" id="mobile-card-subtitle">Khoảng cách và thời gian</p>
-
-          </div>
-
-          <button type="button" onclick="toggleMobilePanel(true)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1 active:scale-95 transition">
-
-            <i data-lucide="list" class="w-3.5 h-3.5"></i>
-
-            <span>Chi tiết</span>
-
-          </button>
-
         </div>
 
       </div>
-
-
-
-      <!-- Mobile Floating Button to Open Panel (sm:hidden) -->
-
-      <button id="btn-mobile-open-panel" type="button" onclick="toggleMobilePanel(true)" 
-
-              class="hidden sm:hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 z-[500] border border-white/60 active:scale-95 transition">
-
-        <i data-lucide="navigation" class="w-4 h-4 text-cyan-200"></i>
-
-        <span>Bảng tìm đường</span>
-
-      </button>
 
     </main>
 
-
-
   </div>
 
-
-
-  <!-- Modal Dashboard Thống kê Đô thị (Thành viên 3) -->
-
+  <!-- ========================================== -->
+  <!-- 3. PRESERVED MODALS CONTAINER              -->
+  <!-- ========================================== -->
   <div id="dashboard-modal" class="hidden fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target === this) FloodDashboard.closeDashboard()">
 
     <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -1492,11 +1864,6 @@
     </div>
 
   </div>
-
-
-
-  <!-- Modal Hướng Dẫn Sử Dụng Nhanh (FE-05) -->
-
   <div id="onboarding-modal" class="hidden fixed inset-0 z-[9999] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target === this) closeHelpGuide()">
 
     <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-5 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100">
@@ -1631,8 +1998,6 @@
     </div>
 
   </div>
-
-  <!-- Modal Danh Mục Nguồn Dữ Liệu Mở & Pháp Lý Bản Quyền (Open Data Compliance) -->
   <div id="open-data-modal" class="hidden fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target === this) closeOpenDataModal()">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       
@@ -1753,20 +2118,21 @@
 
     </div>
   </div>
-
-  <!-- ========================================================
-       NÚT KỊCH BẢN DEMO NỔI GÓC PHẢI DƯỚI MÀN HÌNH (FLOATING ACTION BUTTON)
-       ======================================================== -->
-  <button id="floating-demo-btn" onclick="NorthStarDemo.toggleDemoModal()" title="Mở bộ Kịch bản Demo Trình diễn Trực tiếp (Phím tắt: D)"
-          class="fixed bottom-6 right-6 z-[1000] flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full shadow-2xl border border-white/40 text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md group">
-    <span class="text-sm">🎯</span>
-    <span class="font-extrabold text-[11px] tracking-wide">Demo</span>
-    <kbd class="hidden sm:inline-block px-1 py-0.2 bg-black/25 text-amber-200 rounded font-mono text-[9px] font-bold border border-white/20">D</kbd>
-  </button>
-
-  <!-- ========================================================
-       MODAL BỘ KỊCH BẢN TRÌNH DIỄN DEMO TRỰC TIẾP (NorthStar Live Demo Suite)
-       ======================================================== -->
+  <div id="sitrep-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[1100] flex items-center justify-center p-3 select-none">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-fade-in">
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="p-2 rounded-xl bg-blue-50 text-blue-600 font-extrabold text-sm">📋</div>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Báo Cáo Tác Chiến Phòng Chống Thiên Tai (SitRep)</h3>
+            <p class="text-[11px] text-slate-500">Quy chuẩn Quyết định số 18/2021/QĐ-TTg của Thủ tướng Chính phủ</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('sitrep-modal').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg text-lg leading-none cursor-pointer">&times;</button>
+      </div>
+      <div id="sitrep-modal-content" class="p-4 overflow-y-auto flex-1 custom-scrollbar"></div>
+    </div>
+  </div>
   <div id="demo-scenarios-modal" class="hidden fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target === this) NorthStarDemo.toggleDemoModal(false)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl space-y-5">
       
@@ -1887,136 +2253,6 @@
 
     </div>
   </div>
-
-
-
-  <!-- ========================================================
-
-       Nhúng các file JS độc lập (Zero-Conflict)
-
-       ======================================================== -->
-
-  <!-- 0. Cấu hình Môi trường & API Endpoint -->
-  <script src="js/config.js"></script>
-
-  <!-- 0b. Bàn Tác Chiến Tiếp Nhận & Điều Phối Thông Tin (NorthStar Command) -->
-  <script src="js/coordinator_command.js?v=1.0"></script>
-
-  <!-- 1. Controller Bản đồ chính (Thành viên 1 & 2) -->
-  <script src="js/map_core.js?v=6.6"></script>
-
-  <!-- 2. Module Cảnh báo Giọng nói Tiếng Việt (Thành viên 3) -->
-  <script src="js/voice_warning.js?v=5.0"></script>
-
-  <!-- 2b. Module Mô phỏng xe di chuyển dọc tuyến (Thành viên 3) -->
-  <script src="js/vehicle_sim.js?v=5.2"></script>
-
-  <!-- 3. Module Giả lập Kịch bản Mưa Bão (Thành viên 3) -->
-  <script src="js/storm_simulator.js?v=5.5"></script>
-
-  <!-- 4. Module Dashboard Thống kê Đô thị (Thành viên 3) -->
-  <script src="js/dashboard.js?v=5.0"></script>
-
-  <!-- 5. Module Quản lý Cứu hộ, Sơ tán & Đa thiên tai (NorthStar) -->
-  <script src="js/rescue_manager.js?v=1.0"></script>
-
-  <!-- 6. Bộ Kịch bản Trình diễn Demo & Toast Notification (NorthStar) -->
-  <script src="js/demo_suite.js?v=1.0"></script>
-
-  <!-- 7. Các Module Nâng cao: SAR, Timeline Simulator, Rescue Dispatch, SitRep (NorthStar) -->
-  <script src="js/advanced_modules.js"></script>
-
-  <!-- 8. Trợ lý AI Trực ban Thiên tai 24/7 (NorthStar) -->
-  <script src="js/ai_assistant.js"></script>
-
-  <!-- 9. Cấp cứu Bằng Giọng nói AI (Voice SOS Whisper) -->
-  <script src="js/voice_sos.js"></script>
-
-  <!-- Floating AI Emergency Dispatcher Button & Panel -->
-  <div id="ai-assistant-widget" class="fixed bottom-20 right-6 z-[1000] select-none">
-    <button onclick="AIAssistant.toggle()" class="relative p-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80" title="Trợ lý AI Trực ban Thiên tai 24/7">
-      <i data-lucide="bot" class="w-6 h-6"></i>
-      <span id="ai-assistant-badge" class="absolute -top-1 -right-1 flex h-4 w-4">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 text-[9px] font-black text-white items-center justify-center">AI</span>
-      </span>
-    </button>
-
-    <!-- AI Assistant Panel -->
-    <div id="ai-assistant-panel" class="hidden absolute bottom-16 right-0 w-80 sm:w-96 h-[480px] bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-indigo-100 dark:border-slate-800 backdrop-blur-md flex flex-col overflow-hidden animate-fade-in">
-      <!-- Header -->
-      <div class="p-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="p-1.5 rounded-lg bg-white/20">
-            <i data-lucide="bot" class="w-4 h-4"></i>
-          </div>
-          <div>
-            <h4 class="font-extrabold text-xs leading-none">Trợ Lý AI Trực Ban NorthStar</h4>
-            <span class="text-[9.5px] text-cyan-200">Hỗ trợ khẩn cấp & Điều phối 24/7</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span id="ai-provider-badge" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white/20 text-cyan-100 flex items-center gap-1">
-            <span id="ai-provider-dot" class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-            <span id="ai-provider-label">AI Ready</span>
-          </span>
-          <button onclick="AIAssistant.toggle()" class="text-white/80 hover:text-white p-1 text-base leading-none cursor-pointer">&times;</button>
-        </div>
-      </div>
-
-      <!-- Quick suggestion chips -->
-      <div class="p-2 bg-indigo-50/60 dark:bg-slate-800/60 border-b border-indigo-100 dark:border-slate-700 flex gap-1.5 overflow-x-auto text-[10px] whitespace-nowrap custom-scrollbar">
-        <button onclick="AIAssistant.send('Cầu Giấy về Láng Hạ có ngập không?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">🛣️ Tuyến Cầu Giấy</button>
-        <button onclick="AIAssistant.send('Kỹ năng an toàn điện khi ngập nhà?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">⚡ An toàn điện</button>
-        <button onclick="AIAssistant.send('Tình hình lũ quét Làng Nủ - Bảo Yên?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">🌊 Lũ quét Làng Nủ</button>
-        <button onclick="AIAssistant.send('Cách lọc nước uống khi bị cô lập?')" class="px-2 py-1 bg-white dark:bg-slate-700 text-indigo-700 dark:text-cyan-300 rounded-lg border border-indigo-200 dark:border-slate-600 shadow-2xs hover:bg-indigo-50 font-semibold cursor-pointer">💧 Nước sạch</button>
-      </div>
-
-      <!-- Message Thread -->
-      <div id="ai-assistant-thread" class="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar text-xs">
-        <div class="flex justify-start">
-          <div class="max-w-[85%] rounded-2xl p-2.5 bg-indigo-50 text-slate-800 border border-indigo-100 text-xs">
-            Xin chào! Tôi là <b>Trợ lý AI Trực ban Thiên tai NorthStar</b>. Hãy hỏi tôi về tình trạng ngập đường phố, hướng dẫn sơ tán hoặc kỹ năng ứng phó khẩn cấp!
-          </div>
-        </div>
-      </div>
-
-      <!-- Input bar -->
-      <div class="p-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-1.5 items-center">
-        <input type="text" id="ai-assistant-input" onkeydown="if(event.key==='Enter') AIAssistant.send()" placeholder="Nhập câu hỏi hoặc tình huống khẩn cấp..." class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500">
-        <button onclick="AIAssistant.send()" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition active:scale-95 flex-shrink-0 cursor-pointer">
-          <i data-lucide="send" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Báo Cáo Tác Chiến SitRep -->
-  <div id="sitrep-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[1100] flex items-center justify-center p-3 select-none">
-    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-fade-in">
-      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="p-2 rounded-xl bg-blue-50 text-blue-600 font-extrabold text-sm">📋</div>
-          <div>
-            <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Báo Cáo Tác Chiến Phòng Chống Thiên Tai (SitRep)</h3>
-            <p class="text-[11px] text-slate-500">Quy chuẩn Quyết định số 18/2021/QĐ-TTg của Thủ tướng Chính phủ</p>
-          </div>
-        </div>
-        <button onclick="document.getElementById('sitrep-modal').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg text-lg leading-none cursor-pointer">&times;</button>
-      </div>
-      <div id="sitrep-modal-content" class="p-4 overflow-y-auto flex-1 custom-scrollbar"></div>
-    </div>
-  </div>
-
-  <!-- Banner hướng dẫn chấm vị trí trên bản đồ cho Voice SOS -->
-  <div id="voice-sos-map-picker-banner" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-[1300] bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-2xl font-bold text-xs flex items-center gap-2 border-2 border-white animate-bounce cursor-pointer">
-    <span>🎯 Hãy nhấp chuột vào vị trí bất kỳ trên bản đồ để ghim điểm cứu hộ!</span>
-    <button type="button" onclick="VoiceSOSManager.cancelMapPick()" class="ml-2 px-2 py-0.5 bg-black/40 hover:bg-black/60 rounded text-[11px] cursor-pointer">Hủy</button>
-  </div>
-
-  <!-- ========================================================
-       MODAL CẤP CỨU BẰNG GIỌNG NÓI (AI VOICE EMERGENCY SOS)
-       ======================================================== -->
   <div id="voice-sos-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1200] flex items-center justify-center p-3 select-none">
     <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-rose-200 dark:border-rose-900/50 flex flex-col overflow-hidden animate-fade-in">
       <!-- Header -->
@@ -2171,8 +2407,6 @@
       </div>
     </div>
   </div>
-
-  <!-- MODAL ĐIỀU PHỐI NHIỆM VỤ CỨU NẠN CHO ĐIỀU PHỐI VIÊN -->
   <div id="command-dispatch-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
     <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full shadow-2xl border border-rose-500/30 overflow-hidden flex flex-col max-h-[90vh]">
       <!-- Header Modal -->
@@ -2240,31 +2474,31 @@
     </div>
   </div>
 
-  <!-- Khởi động khi tải xong trang -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) lucide.createIcons();
-      initMap();
-      if (window.NorthStarRescue && window.map) {
-        NorthStarRescue.initRescueLayers(window.map);
-        NorthStarRescue.loadDisasters();
-        NorthStarRescue.loadShelters();
-        NorthStarRescue.loadSOSBeacons();
-      }
-      if (window.CoordinatorCommand && window.map) {
-        CoordinatorCommand.init(window.map);
-      }
+  <!-- ========================================== -->
+  <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
+  <!-- ========================================== -->
+  <script src="js/config.js"></script>
+  <script src="js/command_ui_controller.js?v=2.0"></script>
+  <script src="js/coordinator_command.js?v=2.0"></script>
+  <script src="js/map_core.js?v=6.6"></script>
+  <script src="js/rescue_manager.js?v=5.0"></script>
+  <script src="js/advanced_modules.js?v=2.0"></script>
+  <script src="js/storm_simulator.js?v=2.0"></script>
+  <script src="js/voice_sos.js?v=2.0"></script>
+  <script src="js/voice_assistant.js?v=2.0"></script>
 
-      // Đăng ký Service Worker cho PWA Offline Caching
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('[NORTHSTAR PWA] Service Worker registered with scope:', reg.scope))
-          .catch((err) => console.warn('[NORTHSTAR PWA] Service Worker registration failed:', err));
+  <!-- Lucide Icon Renderer & Viewport Initialization -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+      // Check if CommandUIController exists
+      if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+        window.CommandUIController.switchView('cmd_dashboard');
       }
     });
   </script>
 
 </body>
-
 </html>
-

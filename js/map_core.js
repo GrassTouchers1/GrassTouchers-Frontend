@@ -162,47 +162,35 @@ function initMap() {
 
 
 
-  // Lớp bản đồ Dark Mode chuyên nghiệp (ESRI World Dark Gray - 100% Free, không cần API key, không dính watermark, Akamai CDN)
-
-  const esriDarkBase = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-
-    maxZoom: 19
-
+  // Lớp bản đồ Dark Mode chuyên nghiệp (CartoDB Dark Matter - High Contrast Labels, Luminous Typography)
+  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 19,
+    subdomains: 'abcd'
   });
-
-  const esriDarkRef = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-
-    attribution: '',
-
-    maxZoom: 19
-
+  cartoDark.on('tileerror', function(error) {
+    if (error.tile && !error.tile.dataset.fallbackTried) {
+      error.tile.dataset.fallbackTried = 'true';
+      const coords = error.coords;
+      if (coords) {
+        error.tile.src = `https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
+      }
+    }
   });
-
-  darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkRef]);
-
-
+  darkBaseLayer = cartoDark;
 
   // Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
-
   const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-
     attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-
     maxZoom: 19,
-
     subdomains: ['a', 'b', 'c']
-
   });
 
-
-
-  // Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng CDN OpenStreetMap chuẩn tốc độ cao, hỗ trợ tự động dự phòng nếu ISP nghẽn)
-  const osmLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+  // Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng CDN OpenStreetMap toàn cầu chuẩn tốc độ cao & Carto Voyager Fallback)
+  const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
-    crossOrigin: true
+    subdomains: ['a', 'b', 'c']
   });
 
   osmLayer.on('tileerror', function(error) {
@@ -210,7 +198,7 @@ function initMap() {
       error.tile.dataset.fallbackTried = 'true';
       const coords = error.coords;
       if (coords) {
-        error.tile.src = `https://a.tile.openstreetmap.fr/hot/${coords.z}/${coords.x}/${coords.y}.png`;
+        error.tile.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${coords.z}/${coords.x}/${coords.y}.png`;
       }
     }
   });
@@ -220,7 +208,7 @@ function initMap() {
       error.tile.dataset.fallbackTried = 'true';
       const coords = error.coords;
       if (coords) {
-        error.tile.src = `https://tile.openstreetmap.de/${coords.z}/${coords.x}/${coords.y}.png`;
+        error.tile.src = `https://a.tile.openstreetmap.fr/hot/${coords.z}/${coords.x}/${coords.y}.png`;
       }
     }
   });
@@ -307,6 +295,10 @@ function initMap() {
 
   if (window.CoordinatorCommand) {
     CoordinatorCommand.init(map);
+  }
+
+  if (window.CommandUIController && typeof window.CommandUIController.init === 'function') {
+    window.CommandUIController.init(map);
   }
 
 
