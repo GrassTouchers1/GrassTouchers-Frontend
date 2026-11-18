@@ -30,6 +30,10 @@ let esriBaseLayer = null;
 
 let darkBaseLayer = null;
 
+let osmFrLayer = null;
+
+let osmLayer = null;
+
 
 
 let coords = {
@@ -180,14 +184,14 @@ function initMap() {
   darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkLabels]);
 
   // 3. Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
-  const osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+  osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
     subdomains: ['a', 'b', 'c']
   });
 
   // 4. Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng Esri World Topo Map - Không giới hạn, Không lỗi DNS)
-  const osmLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  osmLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap contributors',
     maxZoom: 19
   });
@@ -212,18 +216,29 @@ function initMap() {
     }
   });
 
-
+  // Gắn lên window để truy cập toàn cục an toàn
+  window.osmFrLayer = osmFrLayer;
+  window.osmLayer = osmLayer;
+  window.esriBaseLayer = esriBaseLayer;
+  window.darkBaseLayer = darkBaseLayer;
 
   // Mặc định nạp OpenStreetMap (Đồng bộ 100% với mạng lưới giao thông cập nhật mới)
   currentBaseLayer = osmFrLayer;
   currentBaseLayer.addTo(map);
+  window.currentBaseLayer = currentBaseLayer;
 
   // Chuyển đổi lớp bản đồ nền từ Bảng điều khiển Lớp Bản Đồ
   function switchBaseLayer(type) {
     if (!map) return;
-    if (currentBaseLayer) {
-      map.removeLayer(currentBaseLayer);
-    }
+    
+    // Gỡ bỏ triệt để tất cả các base layers khả dĩ để không bao giờ bị đè lớp
+    const allBase = [osmFrLayer, osmLayer, darkBaseLayer, esriBaseLayer];
+    allBase.forEach(layer => {
+      if (layer && map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+
     if (type === 'osm') {
       currentBaseLayer = osmFrLayer;
     } else if (type === 'intl') {
@@ -233,24 +248,36 @@ function initMap() {
     } else if (type === 'esri') {
       currentBaseLayer = esriBaseLayer;
     }
-    currentBaseLayer.addTo(map);
+
+    if (currentBaseLayer) {
+      currentBaseLayer.addTo(map);
+      if (typeof currentBaseLayer.bringToBack === 'function') {
+        currentBaseLayer.bringToBack();
+      } else if (typeof currentBaseLayer.eachLayer === 'function') {
+        currentBaseLayer.eachLayer(l => { if (l.bringToBack) l.bringToBack(); });
+      }
+    }
+    window.currentBaseLayer = currentBaseLayer;
 
     const isDark = (type === 'dark');
     if (isDark) {
-      document.body.classList.add('dark-mode');
+      document.body.classList.add('dark-mode', 'dark');
       document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-      const btn = document.getElementById('dark-mode-icon');
-      if (btn) btn.setAttribute('data-lucide', 'sun');
-      if (window.lucide) lucide.createIcons();
     } else {
-      document.body.classList.remove('dark-mode');
+      document.body.classList.remove('dark-mode', 'dark');
       document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-      const btn = document.getElementById('dark-mode-icon');
-      if (btn) btn.setAttribute('data-lucide', 'moon');
+    }
+
+    // Đồng bộ nút icon trên header
+    const btn = document.getElementById('dark-mode-icon');
+    if (btn) {
+      btn.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
       if (window.lucide) lucide.createIcons();
     }
+
+    // Đồng bộ radio button trong bảng điều khiển lớp bản đồ
+    const radio = document.querySelector(`input[name="base-map-radio"][value="${type}"]`);
+    if (radio) radio.checked = true;
   }
   window.switchBaseLayer = switchBaseLayer;
 
@@ -2554,72 +2581,31 @@ function switchTab(tabId) {
 
 
 
-// 11. Chuyển đổi Dark Mode nâng cao (Esri World Dark Gray Canvas)
-
+// 11. Chuyển đổi Dark Mode nâng cao (Esri World Dark Gray Canvas & OpenStreetMap)
 function toggleDarkMode() {
+  const isCurrentlyDark = document.body.classList.contains('dark-mode') || document.documentElement.classList.contains('dark');
+  const targetType = isCurrentlyDark ? 'osm' : 'dark';
 
-  document.body.classList.toggle('dark-mode');
-
-  const isDark = document.body.classList.contains('dark-mode');
-  if (isDark) {
-    document.documentElement.classList.add('dark');
-    document.body.classList.add('dark');
+  if (typeof window.switchBaseLayer === 'function') {
+    window.switchBaseLayer(targetType);
   } else {
-    document.documentElement.classList.remove('dark');
-    document.body.classList.remove('dark');
-  }
-
-  // Đồng bộ radio button trong bảng điều khiển lớp bản đồ
-  const darkRadio = document.querySelector('input[name="base-map-radio"][value="dark"]');
-  const osmRadio = document.querySelector('input[name="base-map-radio"][value="osm"]');
-  if (isDark && darkRadio) darkRadio.checked = true;
-  if (!isDark && osmRadio) osmRadio.checked = true;
-
-  const btn = document.getElementById('dark-mode-icon');
-
-  if (btn) {
-
-    btn.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
-
-    if (window.lucide) lucide.createIcons();
-
-  }
-
-
-
-  // Chuyển đổi lớp nền bản đồ mượt mà
-
-  if (map) {
-
+    const isDark = (targetType === 'dark');
     if (isDark) {
-
-      if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
-
-        map.removeLayer(currentBaseLayer);
-
-      }
-
-      darkBaseLayer.addTo(map);
-
-      currentBaseLayer = darkBaseLayer;
-
+      document.body.classList.add('dark-mode', 'dark');
+      document.documentElement.classList.add('dark');
     } else {
-
-      if (darkBaseLayer && map.hasLayer(darkBaseLayer)) {
-
-        map.removeLayer(darkBaseLayer);
-
-      }
-
-      osmFrLayer.addTo(map);
-
-      currentBaseLayer = osmFrLayer;
-
+      document.body.classList.remove('dark-mode', 'dark');
+      document.documentElement.classList.remove('dark');
     }
 
+    const btn = document.getElementById('dark-mode-icon');
+    if (btn) {
+      btn.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+      if (window.lucide) lucide.createIcons();
+    }
   }
-
 }
+window.toggleDarkMode = toggleDarkMode;
 
 
 
