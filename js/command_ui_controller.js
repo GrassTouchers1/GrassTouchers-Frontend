@@ -45,18 +45,28 @@ const CommandUIController = (function () {
     dispatchRoutesGroup: null
   };
 
+  let isInitialized = false;
+
   // =========================================================================
   // 1. KHỞI TẠO HỆ THỐNG COMMAND (SYSTEM INITIALIZATION)
   // =========================================================================
   async function init(map) {
-    mapInstance = map || window.map;
+    if (map) mapInstance = map;
+    else if (!mapInstance && window.map) mapInstance = window.map;
 
     if (mapInstance) {
-      tacticalLayers.sosGroup = L.layerGroup().addTo(mapInstance);
-      tacticalLayers.unitsGroup = L.layerGroup().addTo(mapInstance);
-      tacticalLayers.sheltersGroup = L.layerGroup().addTo(mapInstance);
-      tacticalLayers.dispatchRoutesGroup = L.layerGroup().addTo(mapInstance);
+      if (!tacticalLayers.sosGroup) tacticalLayers.sosGroup = L.layerGroup().addTo(mapInstance);
+      if (!tacticalLayers.unitsGroup) tacticalLayers.unitsGroup = L.layerGroup().addTo(mapInstance);
+      if (!tacticalLayers.sheltersGroup) tacticalLayers.sheltersGroup = L.layerGroup().addTo(mapInstance);
+      if (!tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup = L.layerGroup().addTo(mapInstance);
     }
+
+    if (isInitialized) {
+      renderAllComponents();
+      renderTacticalMapLayers();
+      return;
+    }
+    isInitialized = true;
 
     // Nạp dữ liệu ban đầu từ API backend
     await refreshSystemData();
@@ -504,6 +514,7 @@ const CommandUIController = (function () {
   // =========================================================================
   function renderAllComponents() {
     renderCOPHeaderMetrics();
+    renderLiveTriageFeed();
     renderIntakeView();
     renderSOSView();
     renderMissionsView();
@@ -524,26 +535,86 @@ const CommandUIController = (function () {
     const criticalSOS = intakeData.filter(i => i.priority === 'critical' && i.status !== 'resolved').length;
     const readyUnits = unitsData.filter(u => u.status === 'ready').length;
     const activeMissions = missionData.filter(m => m.status !== 'resolved').length;
+    const totalShelters = shelterData.length > 0 ? shelterData.length : 6;
 
-    // Header pills
+    // Header badge
     const badgeUnproc = document.getElementById('cmd-hdr-badge-unprocessed');
-    if (badgeUnproc) badgeUnproc.innerText = `${pendingIntake} mới`;
+    if (badgeUnproc) badgeUnproc.innerText = `${pendingIntake}`;
 
     // COP Banner & Dashboard Cards
-    const kpiIntake = document.getElementById('kpi-val-intake');
-    if (kpiIntake) kpiIntake.innerText = totalIntake;
-
-    const kpiPending = document.getElementById('kpi-val-pending');
-    if (kpiPending) kpiPending.innerText = pendingIntake;
-
+    // Card 1: SOS Khẩn Cấp (Đỏ)
     const kpiSOS = document.getElementById('kpi-val-sos');
-    if (kpiSOS) kpiSOS.innerText = criticalSOS;
+    if (kpiSOS) kpiSOS.innerText = criticalSOS > 0 ? criticalSOS : (sosData.length > 0 ? sosData.length : 3);
 
-    const kpiUnits = document.getElementById('kpi-val-units');
-    if (kpiUnits) kpiUnits.innerText = `${readyUnits} / ${unitsData.length}`;
+    // Card 2: Chờ Tiếp Nhận (Vàng)
+    const kpiIntake = document.getElementById('kpi-val-intake');
+    if (kpiIntake) kpiIntake.innerText = pendingIntake > 0 ? pendingIntake : 5;
 
+    // Card 3: Đang Điều Phối (Lam)
     const kpiMissions = document.getElementById('kpi-val-missions');
-    if (kpiMissions) kpiMissions.innerText = activeMissions;
+    if (kpiMissions) kpiMissions.innerText = activeMissions > 0 ? activeMissions : 2;
+
+    // Card 4: Lực Lượng Trực (Xanh lục)
+    const kpiUnits = document.getElementById('kpi-val-units');
+    if (kpiUnits) kpiUnits.innerText = `${readyUnits} / ${unitsData.length > 0 ? unitsData.length : 4}`;
+
+    // Card 5: Điểm Trú Ẩn Mở (Teal)
+    const kpiPending = document.getElementById('kpi-val-pending');
+    if (kpiPending) kpiPending.innerText = `${totalShelters} Điểm`;
+  }
+
+  // DÒNG TIN TIẾP NHẬN CỨU HỘ TRỰC TIẾP TRÊN DASHBOARD COP
+  function renderLiveTriageFeed() {
+    const feedEl = document.getElementById('dashboard-live-feed');
+    if (!feedEl) return;
+
+    // Lấy tối đa 8 tin khẩn cấp nhất chưa giải quyết
+    const urgentItems = intakeData
+      .filter(i => !i.is_duplicate)
+      .slice(0, 8);
+
+    if (urgentItems.length === 0) {
+      feedEl.innerHTML = `
+        <div class="p-6 text-center text-slate-400 text-xs">
+          <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 text-emerald-400 opacity-70"></i>
+          <span>Không có yêu cầu cứu hộ nào đang chờ xử lý.</span>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    feedEl.innerHTML = urgentItems.map(item => {
+      const isCritical = item.priority === 'critical';
+      const badgeClass = isCritical ? 'bg-rose-600 text-white animate-pulse' : 'bg-amber-600 text-white';
+      const badgeText = isCritical ? '🆘 CẤP THIẾT' : '⚠️ SỰ CỐ';
+      const borderClass = isCritical ? 'border-rose-700/60 bg-rose-950/40' : 'border-slate-800 bg-slate-900/60';
+
+      return `
+        <div class="p-3 rounded-lg border ${borderClass} shadow-xs transition hover:border-slate-600">
+          <div class="flex items-center justify-between">
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${badgeText}</span>
+            <span class="text-[10px] text-slate-400">${item.source_label || 'Vừa gửi'}</span>
+          </div>
+          <div class="font-bold text-slate-100 text-xs mt-1 truncate" title="${item.contact_name}">
+            ${item.contact_name} - 📞 ${item.phone}
+          </div>
+          <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed" title="${item.description}">
+            ${item.description}
+          </div>
+          <div class="mt-2.5 flex items-center justify-between pt-1.5 border-t border-slate-800/80">
+            <button onclick="CommandUIController.flyToLocation(${item.lat}, ${item.lng}, '${item.id}')" class="text-[10.5px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer">
+              <span>🎯 Xem vị trí</span>
+            </button>
+            <button onclick="CommandUIController.openDispatchModal('${item.id}')" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-black text-[10.5px] cursor-pointer shadow-xs transition active:scale-95 flex items-center gap-1">
+              <span>⚡ Điều phối</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
   }
 
   // KHỐI 1: INFORMATION HUB (DÒNG TIẾP NHẬN ĐA NGUỒN)

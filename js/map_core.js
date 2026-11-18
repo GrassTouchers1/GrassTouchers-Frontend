@@ -125,6 +125,7 @@ function syncFloodCirclesWithZoom() {
 }
 
 function initMap() {
+  if (map || window.map) return map || window.map;
 
   // Tâm bản đồ bao quát toàn bộ địa bàn các tỉnh Miền Bắc (NorthStar Northern Vietnam Ecosystem)
 

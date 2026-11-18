@@ -68,6 +68,10 @@
       from { opacity: 0.8; transform: translateY(2px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    /* Map Container Isolation */
+    #map-container {
+      isolation: isolate;
+    }
   </style>
 </head>
 
@@ -76,84 +80,73 @@
   <!-- ========================================== -->
   <!-- 1. TOP COMMAND HEADER                     -->
   <!-- ========================================== -->
-  <header id="command-header" class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 z-50 shrink-0 gap-2 shadow-md">
+  <header id="command-header" class="h-14 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between px-3 z-50 shrink-0 gap-2 shadow-md backdrop-blur">
     
     <!-- Left: Branding & Status Indicator -->
-    <div class="flex items-center gap-3 shrink-0">
+    <div class="flex items-center gap-2.5 shrink-0">
       <button id="btn-toggle-sidebar" onclick="CommandUIController.toggleSidebar()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Thu gọn / Mở rộng Sidebar">
         <i data-lucide="menu" class="w-5 h-5" id="cmd-sidebar-collapse-icon"></i>
       </button>
 
       <div class="flex items-center gap-2 cursor-pointer" onclick="CommandUIController.switchView('cmd_dashboard')">
-        <div class="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-black shadow-inner">
+        <div class="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-black shadow-inner shrink-0">
           🛰️
         </div>
-        <div>
-          <div class="flex items-center gap-2">
+        <div class="hidden sm:block">
+          <div class="flex items-center gap-1.5">
             <span class="font-extrabold text-sm tracking-wider text-white">NORTHSTAR <span class="text-rose-500 font-black">COMMAND</span></span>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              TRỰC CHIẾN 24/7
+              TRỰC CHIẾN
             </span>
           </div>
-          <p class="text-[10px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận & Điều phối Cứu trợ Cứu nạn</p>
+          <p class="text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Điều phối Cứu trợ & Tình báo Thiên tai</p>
         </div>
       </div>
     </div>
 
     <!-- Center: Operational Region & Search -->
-    <div class="flex items-center gap-2 flex-1 max-w-xl mx-2">
+    <div class="flex items-center gap-1.5 flex-1 max-w-md mx-1 sm:mx-2 min-w-0">
       <!-- Region Selector -->
-      <div class="relative shrink-0">
-        <select id="cmd-region-selector" onchange="CommandUIController.switchRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2.5 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer">
-          <option value="all">📍 Toàn Miền Bắc (Tổng quan)</option>
-          <option value="hanoi">🏛️ TP. Hà Nội</option>
-          <option value="quangninh">🌊 Tỉnh Quảng Ninh</option>
-          <option value="laocai">⛰️ Tỉnh Lào Cai</option>
-          <option value="yenbai">🏞️ Tỉnh Yên Bái</option>
-          <option value="caobang">🌲 Tỉnh Cao Bằng</option>
-        </select>
-      </div>
+      <select id="cmd-region-selector" onchange="CommandUIController.switchRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 max-w-[130px] sm:max-w-[155px] truncate">
+        <option value="all">📍 Toàn Miền Bắc</option>
+        <option value="hanoi">🏛️ TP. Hà Nội</option>
+        <option value="quangninh">🌊 Quảng Ninh</option>
+        <option value="laocai">⛰️ Lào Cai</option>
+        <option value="yenbai">🏞️ Yên Bái</option>
+        <option value="caobang">🌲 Cao Bằng</option>
+      </select>
 
       <!-- Quick Search Bar -->
-      <div class="relative flex-1">
-        <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="🔍 Tìm mã SOS, nạn nhân, vị trí, trạm đo, đội xe..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-3 py-1.5 pl-8 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition" />
-        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
-      </div>
-
-      <!-- Sync Status Badge -->
-      <div class="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/60 px-2.5 py-1 rounded-md border border-slate-700/60 shrink-0">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span id="cmd-last-sync-time">Đồng bộ: Vừa xong</span>
+      <div class="relative flex-1 min-w-[100px]">
+        <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="Tìm kiếm SOS, vị trí, nạn nhân..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-2.5 py-1.5 pl-7 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition" />
+        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
       </div>
     </div>
 
     <!-- Right: Role Switcher & Action Tools -->
-    <div class="flex items-center gap-1.5 shrink-0">
+    <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       
-      <!-- Role Switcher -->
-      <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 rounded-lg px-2 py-1">
-        <span class="text-xs">👤</span>
-        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-transparent text-xs font-bold text-amber-300 focus:outline-none cursor-pointer">
-          <option value="director" class="bg-slate-800 text-white">⭐ Command Director (Toàn quyền)</option>
-          <option value="dispatcher" class="bg-slate-800 text-white">🛡️ Dispatcher (Tiếp nhận & Phân công)</option>
-          <option value="verifier" class="bg-slate-800 text-white">🔍 Information Verifier (Thẩm định tin)</option>
-          <option value="analyst" class="bg-slate-800 text-white">📊 Data Analyst (Phân tích dữ liệu)</option>
-          <option value="rescue_coordinator" class="bg-slate-800 text-white">🚒 Rescue Coordinator (Điều phối cứu nạn)</option>
-          <option value="relief_coordinator" class="bg-slate-800 text-white">📦 Relief Coordinator (Điều phối cứu trợ)</option>
-        </select>
-      </div>
+      <!-- Role Switcher (Compact & Clean) -->
+      <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2 py-1.5 cursor-pointer max-w-[130px] sm:max-w-[165px] truncate">
+        <option value="director" class="bg-slate-800 text-white">⭐ Chỉ huy trưởng</option>
+        <option value="dispatcher" class="bg-slate-800 text-white">🛡️ Điều phối viên</option>
+        <option value="verifier" class="bg-slate-800 text-white">🔍 Xác minh viên</option>
+        <option value="analyst" class="bg-slate-800 text-white">📊 Chuyên viên dữ liệu</option>
+        <option value="rescue_coordinator" class="bg-slate-800 text-white">🚒 Đ/p Cứu hộ</option>
+        <option value="relief_coordinator" class="bg-slate-800 text-white">📦 Đ/p Cứu trợ</option>
+      </select>
 
       <!-- Tactical Layers Trigger Button -->
-      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Bật/Tắt Bảng điều khiển Lớp Bản Đồ Tác Chiến">
+      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
         <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Lớp Tác Chiến</span>
+        <span class="hidden xl:inline">Lớp Tác Chiến</span>
       </button>
 
       <!-- SitRep Trigger Button -->
-      <button onclick="CommandUIController.switchView('cmd_sitrep')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Xem Báo cáo Tác chiến SitRep Ban chỉ đạo PCTT">
+      <button onclick="CommandUIController.switchView('cmd_sitrep')" class="px-2 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Báo cáo Tác chiến SitRep">
         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">SitRep</span>
+        <span class="hidden xl:inline">SitRep</span>
       </button>
 
       <!-- Dark / Light Mode -->
@@ -162,21 +155,16 @@
       </button>
 
       <!-- Onboarding Help -->
-      <button onclick="document.getElementById('onboarding-modal').classList.remove('hidden')" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer font-black text-xs" title="Hướng dẫn sử dụng trung tâm điều phối">
+      <button onclick="document.getElementById('onboarding-modal').classList.remove('hidden')" class="w-7 h-7 rounded-lg hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition cursor-pointer font-black text-xs flex items-center justify-center" title="Hướng dẫn sử dụng trung tâm điều phối">
         ?
       </button>
 
-      <!-- Fullscreen -->
-      <button onclick="CommandUIController.toggleFullscreen()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Toàn màn hình">
-        <i data-lucide="maximize" class="w-4 h-4"></i>
-      </button>
-
       <!-- Mode Switch Toggle: COMMAND vs CITIZEN -->
-      <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 ml-1">
-        <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[11px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
+      <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 shrink-0">
+        <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[10.5px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
           🛡️ COMMAND
         </button>
-        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[11px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
+        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[10.5px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
           🌐 DÂN SỰ
         </button>
       </div>
@@ -192,9 +180,9 @@
     <aside id="cmd-tactical-sidebar" class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-40 transition-all duration-200 select-none overflow-y-auto">
       
       <!-- Current Role Indicator Banner -->
-      <div class="p-2.5 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between">
+      <div class="p-2.5 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between">
         <div class="flex items-center gap-1.5 overflow-hidden">
-          <div class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></div>
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
           <span id="cmd-active-role-badge" class="text-[11px] font-black text-amber-300 truncate">⭐ Command Director (Toàn quyền)</span>
         </div>
       </div>
@@ -321,11 +309,11 @@
       <div class="p-2.5 border-t border-slate-800 bg-slate-950/80 text-[10.5px] text-slate-400">
         <div class="flex items-center justify-between">
           <span>Hệ thống:</span>
-          <span class="font-bold text-emerald-400">Sẵn sàng</span>
+          <span class="font-bold text-emerald-400">🟢 Trực ban 24/7</span>
         </div>
         <div class="flex items-center justify-between text-[10px] text-slate-500 mt-0.5">
           <span>Engine:</span>
-          <span>PostGIS + A* Routing</span>
+          <span>PostGIS + A* Dynamic Routing</span>
         </div>
       </div>
     </aside>
@@ -344,7 +332,7 @@
                 <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                 SOS Khẩn Cấp
               </div>
-              <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">0</div>
+              <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">3</div>
             </div>
             <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500/40"></i>
           </div>
@@ -356,7 +344,7 @@
                 <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
                 Chờ Tiếp Nhận
               </div>
-              <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">0</div>
+              <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">5</div>
             </div>
             <i data-lucide="clock" class="w-6 h-6 text-amber-500/40"></i>
           </div>
@@ -368,7 +356,7 @@
                 <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
                 Đang Điều Phối
               </div>
-              <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">0</div>
+              <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">2</div>
             </div>
             <i data-lucide="compass" class="w-6 h-6 text-blue-500/40"></i>
           </div>
@@ -380,7 +368,7 @@
                 <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
                 Lực Lượng Trực
               </div>
-              <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 Đội</div>
+              <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 / 5</div>
             </div>
             <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500/40"></i>
           </div>
@@ -392,7 +380,7 @@
                 <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
                 Điểm Trú Ẩn Mở
               </div>
-              <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">8 Điểm</div>
+              <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">6 Điểm</div>
             </div>
             <i data-lucide="warehouse" class="w-6 h-6 text-teal-500/40"></i>
           </div>
@@ -406,10 +394,10 @@
         <!-- ============================================== -->
         <!-- PANE 1: COP COMMAND DASHBOARD (DEFAULT)        -->
         <!-- ============================================== -->
-        <div id="pane-cmd_dashboard" class="cmd-view-pane w-full h-full relative flex">
+        <div id="pane-cmd_dashboard" class="cmd-view-pane w-full h-full relative flex overflow-hidden">
           
           <!-- Tactical GIS Map Area (Main Canvas) -->
-          <div class="flex-1 h-full relative" id="map-container">
+          <div class="flex-1 h-full relative min-w-0" id="map-container">
             <div id="map" class="w-full h-full z-0"></div>
 
             <!-- Floating Controls Preserved Inside Map -->
@@ -598,75 +586,25 @@
       </div>
     </div>
   </div>
-
-            <!-- Bottom Floating Layers Toggle Button (Zero Header Overlap) -->
-            <button id="btn-toggle-hazard-layers-float" onclick="CommandUIController.toggleTacticalLayers()" class="fixed bottom-6 right-6 z-30 px-3.5 py-2 bg-slate-900/95 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-xl shadow-xl font-extrabold text-xs flex items-center gap-2 backdrop-blur transition cursor-pointer active:scale-95">
-              <i data-lucide="layers" class="w-4 h-4"></i>
-              <span>Lớp bản đồ</span>
-            </button>
           </div>
 
           <!-- Right Tactical Triage Feed (Split Screen) -->
-          <div id="dashboard-triage-panel" class="w-84 xl:w-96 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20 backdrop-blur">
-            <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+          <div id="dashboard-triage-panel" class="w-80 xl:w-92 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20 backdrop-blur h-full overflow-hidden">
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
                 <h3 class="font-extrabold text-xs tracking-wide text-white uppercase">Dòng Tin Cứu Hộ Trực Tiếp</h3>
               </div>
-              <button onclick="CommandUIController.switchView('cmd_intake')" class="text-xs text-blue-400 font-bold hover:underline">Xem tất cả &rarr;</button>
+              <button onclick="CommandUIController.switchView('cmd_intake')" class="text-xs text-blue-400 font-bold hover:underline cursor-pointer">Xem tất cả &rarr;</button>
             </div>
 
             <!-- Triage Feed List -->
-            <div id="dashboard-live-feed" class="flex-1 overflow-y-auto p-2.5 space-y-2.5 text-xs">
-              <!-- Dynamically populated or fallback items -->
-              <div class="p-3 rounded-lg bg-rose-950/40 border border-rose-700/60 shadow-xs">
-                <div class="flex items-center justify-between">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white">🆘 CẤP THIẾT</span>
-                  <span class="text-[10.5px] text-slate-400">Vừa gửi</span>
-                </div>
-                <div class="font-bold text-slate-100 mt-1">Xã Bảo Hà, H. Bảo Yên, Lào Cai</div>
-                <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">4 người mắc kẹt trên nóc nhà, nước lũ dâng ngập 2.5m, có trẻ em 3 tuổi. Cần ca nô cứu hộ gấp.</div>
-                <div class="mt-2 flex items-center justify-between pt-1 border-t border-rose-800/40">
-                  <span class="text-[10px] text-rose-300 font-semibold">📞 0984.123.456</span>
-                  <button onclick="CommandUIController.openDispatchModal('SOS-LC-01')" class="px-2 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-black text-[10.5px] cursor-pointer shadow-xs transition">
-                    ⚡ Phát lệnh điều phối
-                  </button>
-                </div>
-              </div>
-
-              <div class="p-3 rounded-lg bg-amber-950/30 border border-amber-700/50 shadow-xs">
-                <div class="flex items-center justify-between">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-600 text-white">⚠️ SẠT LỞ ĐƯỜNG</span>
-                  <span class="text-[10.5px] text-slate-400">5 phút trước</span>
-                </div>
-                <div class="font-bold text-slate-100 mt-1">Quốc lộ 4D, Đèo Ô Quy Hồ, Lai Châu</div>
-                <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">Đất đá sạt lở dài 40m, chia cắt giao thông hoàn toàn. 2 xe tải kẹt giữa đoạn sạt.</div>
-                <div class="mt-2 flex items-center justify-between pt-1 border-t border-amber-800/40">
-                  <span class="text-[10px] text-amber-300 font-semibold">Nguồn: Báo cáo Dân sự</span>
-                  <button onclick="CommandUIController.switchView('cmd_reports')" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[10.5px] cursor-pointer transition">
-                    Xác minh tin
-                  </button>
-                </div>
-              </div>
-
-              <div class="p-3 rounded-lg bg-blue-950/30 border border-blue-700/50 shadow-xs">
-                <div class="flex items-center justify-between">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-600 text-white">🌊 LŨ DÂNG CAO</span>
-                  <span class="text-[10.5px] text-slate-400">12 phút trước</span>
-                </div>
-                <div class="font-bold text-slate-100 mt-1">Trạm Thủy văn Sông Thao (Yên Bái)</div>
-                <div class="text-[11px] text-slate-300 mt-0.5">Mực nước đạt 32.50m (Vượt Báo Động 3 + 0.5m). Nguy cơ ngập diện rộng phường Hồng Hà.</div>
-                <div class="mt-2 flex items-center justify-between pt-1 border-t border-blue-800/40">
-                  <span class="text-[10px] text-blue-300 font-semibold">IoT Sensor Alert</span>
-                  <button onclick="CommandUIController.switchView('cmd_flood_intel')" class="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-white font-bold text-[10.5px] cursor-pointer transition">
-                    Xem trạm đo
-                  </button>
-                </div>
-              </div>
+            <div id="dashboard-live-feed" class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs">
+              <!-- Dynamically populated by renderLiveTriageFeed() -->
             </div>
 
             <!-- Quick Action Bar on Right Panel -->
-            <div class="p-2.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+            <div class="p-2.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-2 shrink-0">
               <button onclick="document.getElementById('voice-sos-modal').classList.remove('hidden')" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition cursor-pointer">
                 <i data-lucide="mic" class="w-3.5 h-3.5 text-rose-400"></i>
                 Voice SOS
@@ -692,7 +630,7 @@
                   <i data-lucide="inbox" class="w-5 h-5 text-amber-400"></i>
                   TRUNG TÂM TIẾP NHẬN THÔNG TIN ĐA KÊNH
                 </h2>
-                <p class="text-xs text-slate-400 mt-0.5">Tiếp nhận, chuẩn hóa, phát hiện trùng lặp không gian (Deduplication) và chuyển giao điều phối.</p>
+                <p class="text-xs text-slate-400 mt-0.5">Tiếp nhận, chuẩn hóa, phát hiện trùng lặp không gian (Deduplication 50m) và chuyển giao điều phối.</p>
               </div>
 
               <!-- Source Filter Tabs -->
@@ -722,7 +660,6 @@
                     </tr>
                   </thead>
                   <tbody id="cmd-intake-table-body" class="divide-y divide-slate-800/70 font-medium">
-                    <!-- Populated dynamically by command_ui_controller.js -->
                     <tr>
                       <td colspan="8" class="p-8 text-center text-slate-400">Đang đồng bộ dữ liệu tiếp nhận...</td>
                     </tr>
@@ -869,7 +806,6 @@
         <!-- PANE 8: DISASTER MAP (FULLSCREEN GIS)          -->
         <!-- ============================================== -->
         <div id="pane-cmd_disaster_map" class="cmd-view-pane hidden w-full h-full relative">
-          <!-- The map container is moved or sized here when active -->
           <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">
             Bản đồ Tác chiến Toàn màn hình đang mở. (Sử dụng thanh công cụ bên trên hoặc phím tắt ESC để điều hướng).
           </div>
@@ -2478,25 +2414,54 @@
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
   <script src="js/config.js"></script>
-  <script src="js/command_ui_controller.js?v=2.0"></script>
-  <script src="js/coordinator_command.js?v=2.0"></script>
-  <script src="js/map_core.js?v=6.6"></script>
-  <script src="js/rescue_manager.js?v=5.0"></script>
-  <script src="js/advanced_modules.js?v=2.0"></script>
-  <script src="js/storm_simulator.js?v=2.0"></script>
-  <script src="js/voice_sos.js?v=2.0"></script>
-  <script src="js/voice_assistant.js?v=2.0"></script>
+  <script src="js/command_ui_controller.js?v=2.1"></script>
+  <script src="js/coordinator_command.js?v=2.1"></script>
+  <script src="js/map_core.js?v=6.7"></script>
+  <script src="js/rescue_manager.js?v=5.1"></script>
+  <script src="js/advanced_modules.js?v=2.1"></script>
+  <script src="js/storm_simulator.js?v=2.1"></script>
+  <script src="js/voice_sos.js?v=2.1"></script>
+  <script src="js/voice_assistant.js?v=2.1"></script>
 
-  <!-- Lucide Icon Renderer & Viewport Initialization -->
+  <!-- Complete Initialization Lifecycle -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) {
-        lucide.createIcons();
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Khởi tạo Icon Lucide
+      if (window.lucide) lucide.createIcons();
+
+      // 2. Khởi tạo Bản đồ Leaflet trung tâm
+      if (typeof initMap === 'function') {
+        initMap();
       }
-      // Check if CommandUIController exists
-      if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
-        window.CommandUIController.switchView('cmd_dashboard');
+
+      // 3. Khởi tạo các lớp cứu hộ chuyên biệt nếu chưa nạp
+      if (window.NorthStarRescue && window.map) {
+        NorthStarRescue.initRescueLayers(window.map);
+        NorthStarRescue.loadDisasters();
+        NorthStarRescue.loadShelters();
+        NorthStarRescue.loadSOSBeacons();
       }
+
+      // 4. Khởi tạo Trung tâm Điều phối CommandUIController
+      if (window.CommandUIController && typeof window.CommandUIController.init === 'function') {
+        await window.CommandUIController.init(window.map);
+      }
+
+      // 5. Invalidate map size sau khi flex container sẵn sàng
+      setTimeout(() => {
+        if (window.map) {
+          window.map.invalidateSize();
+        }
+      }, 250);
+
+      // Đăng ký Service Worker cho PWA Offline Caching
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('[NORTHSTAR PWA] Service Worker active:', reg.scope))
+          .catch((err) => console.warn('[NORTHSTAR PWA] SW error:', err));
+      }
+
+      if (window.lucide) lucide.createIcons();
     });
   </script>
 
