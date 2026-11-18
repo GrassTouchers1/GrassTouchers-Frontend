@@ -79,10 +79,10 @@
   <!-- ========================================== -->
   <!-- 1. TOP COMMAND HEADER                     -->
   <!-- ========================================== -->
-  <header id="command-header" class="h-14 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between px-3 z-50 shrink-0 gap-2 shadow-md backdrop-blur">
+  <header id="command-header" class="h-14 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between px-3 z-50 shrink-0 gap-2 shadow-md backdrop-blur overflow-hidden">
     
     <!-- Left: Branding & Status Indicator -->
-    <div class="flex items-center gap-2.5 shrink-0">
+    <div class="flex items-center gap-2 shrink-0">
       <button id="btn-toggle-sidebar" onclick="CommandUIController.toggleSidebarCollapse()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer" title="Thu gọn / Mở rộng Sidebar">
         <i data-lucide="menu" class="w-5 h-5" id="cmd-sidebar-collapse-icon"></i>
       </button>
@@ -94,20 +94,20 @@
         <div class="hidden sm:block">
           <div class="flex items-center gap-1.5">
             <span class="font-extrabold text-sm tracking-wider text-white">NORTHSTAR <span class="text-rose-500 font-black">COMMAND</span></span>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               TRỰC CHIẾN
             </span>
           </div>
-          <p class="text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận Dữ liệu & Chuyển giao Thông tin Cứu nạn</p>
+          <p class="hidden lg:block text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận & Chuyển giao Thông tin Cứu nạn</p>
         </div>
       </div>
     </div>
 
     <!-- Center: Operational Region & Search & Sync -->
-    <div class="flex items-center gap-1.5 flex-1 max-w-lg mx-1 sm:mx-2 min-w-0">
-      <!-- Region Selector -->
-      <select id="cmd-region-selector" onchange="CommandUIController.setMonitoringRegion(this.value)" class="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 max-w-[130px] sm:max-w-[155px] truncate">
+    <div class="flex items-center gap-1.5 flex-1 min-w-0 max-w-md lg:max-w-xl mx-1 sm:mx-2">
+      <!-- Region Selector (Hiển thị trên màn hình lớn xl, màn hình nhỏ đã có thanh phân vùng nổi trên bản đồ) -->
+      <select id="cmd-region-selector" onchange="CommandUIController.setMonitoringRegion(this.value)" class="hidden xl:block bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 w-32 truncate">
         <option value="all">📍 Toàn Miền Bắc</option>
         <option value="hanoi">🏛️ TP. Hà Nội</option>
         <option value="quangninh">🌊 Quảng Ninh</option>
@@ -116,14 +116,14 @@
         <option value="caobang">🌲 Cao Bằng</option>
       </select>
 
-      <!-- Quick Search Bar -->
-      <div class="relative flex-1 min-w-[100px]">
-        <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="Tìm kiếm SOS, vị trí, nạn nhân..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-2.5 py-1.5 pl-7 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition" />
+      <!-- Quick Search Bar: Luôn rõ ràng, không bị đè che -->
+      <div class="relative flex-1 min-w-[120px] max-w-sm">
+        <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="Tìm kiếm SOS, vị trí..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-2.5 py-1.5 pl-7 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition truncate" />
         <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
       </div>
 
-      <!-- Realtime Operations Clock (Đồng hồ tác chiến thời gian thực) -->
-      <div class="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-emerald-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 shrink-0 select-none shadow-xs" title="Đồng hồ tác chiến thời gian thực (Giờ Hà Nội - GMT+7)">
+      <!-- Realtime Operations Clock (Hiện trên màn hình lớn 2xl) -->
+      <div class="hidden 2xl:flex items-center gap-1.5 text-[11px] font-mono text-emerald-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 shrink-0 select-none shadow-xs" title="Đồng hồ tác chiến thời gian thực (Giờ Hà Nội - GMT+7)">
         <span class="relative flex h-2 w-2">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -136,8 +136,8 @@
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
       
       <!-- Role Switcher (Compact & High Contrast) -->
-      <div class="relative">
-        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 hover:bg-slate-750 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2.5 py-1.5 cursor-pointer max-w-[140px] sm:max-w-[170px] truncate transition focus:ring-1 focus:ring-amber-400 focus:outline-none">
+      <div class="relative shrink-0">
+        <select id="cmd-role-selector" onchange="CommandUIController.switchUserRole(this.value)" class="bg-slate-800 hover:bg-slate-750 text-xs font-bold text-amber-300 border border-slate-700 rounded-lg px-2 py-1.5 cursor-pointer max-w-[130px] sm:max-w-[160px] truncate transition focus:ring-1 focus:ring-amber-400 focus:outline-none">
           <option value="director">⭐ Chỉ huy trưởng</option>
           <option value="dispatcher">🛡️ Điều phối viên</option>
           <option value="verifier">🔍 Xác minh viên</option>
@@ -148,27 +148,27 @@
       </div>
 
       <!-- Tactical Layers Trigger Button -->
-      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
+      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
         <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-        <span class="hidden xl:inline">Lớp Tác Chiến</span>
+        <span class="hidden 2xl:inline">Lớp Tác Chiến</span>
       </button>
 
       <!-- Toggle Top Stats Button -->
-      <button onclick="CommandUIController.toggleTopStatsCollapse()" id="btn-toggle-top-stats" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Thu gọn / Mở rộng Chỉ số (Phím \)">
+      <button onclick="CommandUIController.toggleTopStatsCollapse()" id="btn-toggle-top-stats" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Thu gọn / Mở rộng Chỉ số (Phím \)">
         <i data-lucide="panel-top-close" class="w-3.5 h-3.5" id="icon-toggle-top-stats"></i>
-        <span class="hidden xl:inline" id="text-toggle-top-stats">Chỉ số</span>
+        <span class="hidden 2xl:inline" id="text-toggle-top-stats">Chỉ số</span>
       </button>
 
       <!-- Zen Map Monitoring Mode Button -->
-      <button onclick="CommandUIController.toggleZenMapMode()" id="btn-zen-map" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Giám sát bản đồ: Thu gọn tất cả thanh panel để quan sát rộng nhất (Phím Z)">
+      <button onclick="CommandUIController.toggleZenMapMode()" id="btn-zen-map" class="p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Giám sát bản đồ: Thu gọn tất cả thanh panel để quan sát rộng nhất (Phím Z)">
         <i data-lucide="maximize" class="w-3.5 h-3.5" id="zen-map-icon"></i>
-        <span class="hidden xl:inline" id="zen-map-label">Giám sát bản đồ</span>
+        <span class="hidden 2xl:inline" id="zen-map-label">Giám sát bản đồ</span>
       </button>
 
       <!-- SitRep Trigger Button -->
-      <button onclick="CommandUIController.switchView('cmd_sitrep')" class="px-2 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Báo cáo Tác chiến SitRep">
+      <button onclick="CommandUIController.switchView('cmd_sitrep')" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Báo cáo Tác chiến SitRep">
         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-        <span class="hidden xl:inline">SitRep</span>
+        <span class="hidden 2xl:inline">SitRep</span>
       </button>
 
       <!-- Dark / Light Mode -->
@@ -183,11 +183,11 @@
 
       <!-- Mode Switch Toggle: COMMAND vs CITIZEN -->
       <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 shrink-0">
-        <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[10.5px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
-          🛡️ COMMAND
+        <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
+          🛡️ <span class="hidden sm:inline">COMMAND</span>
         </button>
-        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[10.5px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
-          🌐 DÂN SỰ
+        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
+          🌐 <span class="hidden sm:inline">DÂN SỰ</span>
         </button>
       </div>
     </div>
