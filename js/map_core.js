@@ -305,6 +305,10 @@ function initMap() {
     NorthStarRescue.loadSOSBeacons();
   }
 
+  if (window.CoordinatorCommand) {
+    CoordinatorCommand.init(map);
+  }
+
 
 
   // Cập nhật cảnh báo điểm ngập theo thời gian thực khi người dùng kéo/thu phóng bản đồ
@@ -2478,7 +2482,7 @@ async function submitReport() {
 
 // 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
 function switchTab(tabId) {
-  ['route', 'points', 'report', 'rescue'].forEach(id => {
+  ['route', 'points', 'report', 'rescue', 'command'].forEach(id => {
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`tab-btn-${id}`);
     const hdrBtn = document.getElementById(`hdr-btn-${id}`);
@@ -2495,9 +2499,19 @@ function switchTab(tabId) {
   const activeHdrBtn = document.getElementById(`hdr-btn-${tabId}`);
 
   if (activeTab) activeTab.classList.remove('hidden');
-  if (activeBtn) activeBtn.className = 'flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold text-xs';
+  if (activeBtn) {
+    if (tabId === 'command') {
+      activeBtn.className = 'flex-1 py-3 px-2 border-b-2 border-rose-600 text-rose-600 dark:text-rose-400 flex items-center justify-center gap-1.5 transition font-extrabold text-xs bg-rose-50/40 dark:bg-rose-950/20';
+    } else {
+      activeBtn.className = 'flex-1 py-3 px-2 border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition font-bold text-xs';
+    }
+  }
   if (activeHdrBtn) {
-    activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/25 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm border border-white/20';
+    if (tabId === 'command') {
+      activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600 text-white font-extrabold text-xs transition flex items-center gap-1.5 shadow-md border border-rose-400';
+    } else {
+      activeHdrBtn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/25 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm border border-white/20';
+    }
   }
 
   // Cập nhật tiêu đề thanh điều khiển trên mobile tương ứng với tab
@@ -2511,6 +2525,8 @@ function switchTab(tabId) {
       mobTitle.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5 text-emerald-500"></i> Báo cáo ngập tại hiện trường';
     } else if (tabId === 'rescue') {
       mobTitle.innerHTML = '<i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-500"></i> Cứu hộ SOS & Điểm sơ tán';
+    } else if (tabId === 'command') {
+      mobTitle.innerHTML = '<i data-lucide="shield-check" class="w-3.5 h-3.5 text-rose-600"></i> Bàn Tác Chiến Điều Phối';
     }
   }
 
@@ -2518,6 +2534,10 @@ function switchTab(tabId) {
     NorthStarRescue.loadShelters();
     NorthStarRescue.loadDisasters();
     NorthStarRescue.loadSOSBeacons();
+  }
+
+  if (tabId === 'command' && window.CoordinatorCommand) {
+    CoordinatorCommand.refreshAllData();
   }
 
   // Tự động mở lại sidebar nếu đang thu gọn trên desktop
