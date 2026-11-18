@@ -344,7 +344,12 @@
     if (!labelMarkersGroup) return;
     labelMarkersGroup.clearLayers();
 
+    const z = targetMap ? targetMap.getZoom() : 8;
+    // Khi zoom xa (zoom <= 8, góc nhìn toàn miền Bắc): Chỉ hiển thị các đô thị & điểm nóng trọng điểm để chống rối bản đồ
+    const PRIORITY_PROVINCES = ['Hà Nội', 'Quảng Ninh', 'Hải Phòng', 'Lào Cai', 'Yên Bái', 'Thái Nguyên', 'Cao Bằng'];
+
     Object.keys(PROVINCE_METADATA).forEach(name => {
+      if (z <= 8 && !PRIORITY_PROVINCES.includes(name)) return;
       const meta = PROVINCE_METADATA[name];
       const data = weatherCache[name] || { temp: 23.5, weatherIcon: '⛅' };
 
@@ -435,6 +440,7 @@
         if (provincesLayerGroup.hasLayer(labelMarkersGroup)) provincesLayerGroup.removeLayer(labelMarkersGroup);
       } else {
         if (!provincesLayerGroup.hasLayer(labelMarkersGroup)) provincesLayerGroup.addLayer(labelMarkersGroup);
+        updateProvinceLabels();
       }
     });
 

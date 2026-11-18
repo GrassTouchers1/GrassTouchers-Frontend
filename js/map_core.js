@@ -1496,21 +1496,24 @@ function updateViewportFloodAlert() {
   const safeInView = inView.filter(fp => fp.status === 'safe');
 
   alertEl.classList.remove('hidden');
-  const baseClass = 'pointer-events-auto max-w-full px-3.5 py-1.5 rounded-2xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 ';
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+  const baseClass = isDark
+    ? 'pointer-events-auto max-w-lg px-3 py-1.5 rounded-xl shadow-2xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 '
+    : 'pointer-events-auto max-w-lg px-3 py-1.5 rounded-xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 ';
 
   if (dangerInView.length > 0) {
     dangerInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
     viewportAlertTargetPoint = dangerInView[0];
-    alertEl.className = baseClass + 'bg-rose-50/95 border-rose-300 text-rose-900 shadow-rose-200/50';
-    alertIcon.className = 'p-1 rounded-full bg-rose-200 text-rose-700 animate-pulse flex-shrink-0';
+    alertEl.className = baseClass + (isDark ? 'bg-rose-950/90 border-rose-700/80 text-rose-200' : 'bg-rose-50/95 border-rose-300 text-rose-900 shadow-rose-200/50');
+    alertIcon.className = 'p-1 rounded-full bg-rose-200 dark:bg-rose-900 text-rose-700 dark:text-rose-300 animate-pulse flex-shrink-0';
     alertIcon.innerHTML = '<i data-lucide="alert-octagon" class="w-4 h-4"></i>';
 
     const spotNames = dangerInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
     const more = dangerInView.length > 2 ? ` và ${dangerInView.length - 2} điểm khác` : '';
-    alertText.innerHTML = `<span class="font-bold text-rose-700">Nguy hiểm:</span> ${dangerInView.length} điểm ngập sâu: <b>${spotNames}</b>${more}`;
+    alertText.innerHTML = `<span class="font-bold text-rose-400">Nguy hiểm:</span> ${dangerInView.length} điểm ngập sâu: <b>${spotNames}</b>${more}`;
 
     alertBtn.classList.remove('hidden');
-    alertBtn.className = 'px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+    alertBtn.className = 'px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow cursor-pointer';
     alertBtn.innerText = 'Xem điểm ngập';
 
     // Cảnh báo bằng giọng nói (chống spam mỗi 15 giây)
@@ -1522,29 +1525,29 @@ function updateViewportFloodAlert() {
   } else if (warningInView.length > 0) {
     warningInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
     viewportAlertTargetPoint = warningInView[0];
-    alertEl.className = baseClass + 'bg-amber-50/95 border-amber-300 text-amber-900 shadow-amber-200/50';
-    alertIcon.className = 'p-1 rounded-full bg-amber-200 text-amber-700 flex-shrink-0';
+    alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-amber-600/70 text-amber-200 shadow-slate-950/60' : 'bg-amber-50/95 border-amber-300 text-amber-900 shadow-amber-200/50');
+    alertIcon.className = 'p-1 rounded-full bg-amber-200 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex-shrink-0';
     alertIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i>';
 
     const spotNames = warningInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
     const more = warningInView.length > 2 ? ` và ${warningInView.length - 2} điểm khác` : '';
-    alertText.innerHTML = `<span class="font-bold text-amber-700">Chú ý:</span> ${warningInView.length} điểm ngập nhẹ: <b>${spotNames}</b>${more}`;
+    alertText.innerHTML = `<span class="font-bold text-amber-400">Chú ý:</span> ${warningInView.length} điểm ngập nhẹ: <b>${spotNames}</b>${more}`;
 
     alertBtn.classList.remove('hidden');
-    alertBtn.className = 'px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+    alertBtn.className = 'px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow cursor-pointer';
     alertBtn.innerText = 'Xem vị trí';
   } else if (inView.length > 0) {
     viewportAlertTargetPoint = null;
     if (offlineOrNoDataInView.length === 0) {
-      alertEl.className = baseClass + 'bg-emerald-50/95 border-emerald-300 text-emerald-900 shadow-emerald-200/50';
-      alertIcon.className = 'p-1 rounded-full bg-emerald-200 text-emerald-700 flex-shrink-0';
+      alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-emerald-700/80 text-emerald-200' : 'bg-emerald-50/95 border-emerald-300 text-emerald-900 shadow-emerald-200/50');
+      alertIcon.className = 'p-1 rounded-full bg-emerald-200 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex-shrink-0';
       alertIcon.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i>';
       alertText.innerHTML = `Khu vực đang xem có <b>${inView.length}</b> trạm quan trắc, tất cả đều an toàn (&lt;5cm)`;
     } else {
-      alertEl.className = baseClass + 'bg-slate-50/95 border-slate-300 text-slate-800 shadow-slate-200/50';
-      alertIcon.className = 'p-1 rounded-full bg-slate-200 text-slate-700 flex-shrink-0';
+      alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-slate-50/95 border-slate-300 text-slate-800 shadow-slate-200/50');
+      alertIcon.className = 'p-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex-shrink-0';
       alertIcon.innerHTML = '<i data-lucide="info" class="w-4 h-4"></i>';
-      alertText.innerHTML = `Khu vực có <b>${safeInView.length}</b> trạm an toàn, <b>${offlineOrNoDataInView.length}</b> trạm mất tín hiệu / dữ liệu cũ / chưa có dữ liệu`;
+      alertText.innerHTML = `Khu vực có <b>${safeInView.length}</b> trạm an toàn, <b>${offlineOrNoDataInView.length}</b> trạm chưa có dữ liệu`;
     }
     alertBtn.classList.add('hidden');
   } else {

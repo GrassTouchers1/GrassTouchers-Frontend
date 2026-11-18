@@ -836,55 +836,9 @@ const CommandUIController = (function () {
   }
 
   function renderRoleScopeBanner(roleCfg) {
-    let bannerEl = document.getElementById('cmd-role-scope-banner');
-    if (!bannerEl) {
-      const parent = document.querySelector('main');
-      if (parent) {
-        bannerEl = document.createElement('div');
-        bannerEl.id = 'cmd-role-scope-banner';
-        parent.insertBefore(bannerEl, parent.firstChild);
-      }
-    }
-    if (!bannerEl) return;
-
-    bannerEl.className = 'px-3 py-2 bg-slate-900/95 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 shadow-md flex-wrap gap-2.5';
-    
-    // 7 capabilities status pills
-    const caps = [
-      { key: 'canDispatch', label: '⚡ Xuất quân', ok: roleCfg.canDispatch },
-      { key: 'canVerify', label: '🔍 Thẩm định tin', ok: roleCfg.canVerify },
-      { key: 'canManageFleet', label: '🚒 Quản lý xe/tàu', ok: roleCfg.canManageFleet },
-      { key: 'canManageShelters', label: '🏕️ Điểm sơ tán', ok: roleCfg.canManageShelters },
-      { key: 'canSimulateStorm', label: '🌧️ Mô phỏng bão', ok: roleCfg.canSimulateStorm },
-      { key: 'canExportSitRep', label: '📋 Báo cáo SitRep', ok: roleCfg.canExportSitRep },
-      { key: 'canAdminSystem', label: '⚙️ Quản trị hệ thống', ok: roleCfg.canAdminSystem }
-    ];
-
-    const capsHtml = caps.map(c => {
-      if (c.ok) {
-        return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1 shadow-2xs"><span>✓</span><span>${c.label}</span></span>`;
-      } else {
-        return `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-950 text-slate-500 border border-slate-800 flex items-center gap-0.5 opacity-60 line-through" title="Bị khóa đối với vai trò ${roleCfg.label}"><span>🔒</span><span>${c.label}</span></span>`;
-      }
-    }).join('');
-
-    bannerEl.innerHTML = `
-      <div class="flex items-center gap-2.5 overflow-hidden flex-wrap">
-        <span class="px-2.5 py-1 rounded-md font-black text-[11px] border ${roleCfg.badgeClass} shrink-0 shadow-xs">
-          ${roleCfg.label}
-        </span>
-        <div class="flex items-center gap-2 overflow-hidden text-xs">
-          <span class="text-white font-bold truncate">${roleCfg.title}</span>
-          <span class="hidden md:inline px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-semibold border border-slate-700 text-[10.5px] truncate">
-            Phạm vi: ${roleCfg.scopeTag}
-          </span>
-        </div>
-      </div>
-      <div class="flex items-center gap-1.5 flex-wrap shrink-0">
-        <span class="text-[10px] text-slate-400 font-bold hidden sm:inline mr-1 uppercase tracking-wider">Thẩm quyền:</span>
-        ${capsHtml}
-      </div>
-    `;
+    // Ẩn dải banner thừa để tối ưu không gian cho bản đồ
+    const bannerEl = document.getElementById('cmd-role-scope-banner');
+    if (bannerEl) bannerEl.classList.add('hidden');
   }
 
   function updateSidebarNavPermissions(roleCfg) {
@@ -1195,37 +1149,27 @@ const CommandUIController = (function () {
 
   // BĂNG CHỈ SỐ TÁC CHIẾN THỜI GIAN THỰC (COP KPI METRICS)
   
-  // KHỐI GÓC NHÌN BAO QUÁT THEO VAI TRÒ TRÊN COP DASHBOARD
+  // KHỐI GÓC NHÌN BAO QUÁT THEO VAI TRÒ TRÊN COP DASHBOARD (Gom gọn các nút hành động cùng hàng KPI)
   function renderRoleFocusCallout(roleCfg) {
     const calloutEl = document.getElementById('cmd-role-focus-callout');
-    if (!calloutEl) return;
+    if (calloutEl) calloutEl.classList.add('hidden');
 
-    const quickBtnsHtml = (roleCfg.quickActions || []).map(btn => `
-      <button onclick="${btn.action}" class="px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 ${btn.class}">
-        ${btn.label}
-      </button>
-    `).join('');
-
-    calloutEl.innerHTML = `
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-        <div class="flex items-center gap-2.5 overflow-hidden flex-wrap">
-          <span class="px-2 py-0.5 rounded text-[10px] font-black border ${roleCfg.badgeClass} shrink-0">
-            GÓC NHÌN BAO QUÁT: ${roleCfg.label.toUpperCase()}
-          </span>
-          <span class="text-xs text-slate-300 truncate font-medium">
-            ${roleCfg.focusPerspective}
-          </span>
-        </div>
-        <div class="flex items-center gap-2 shrink-0 flex-wrap">
-          ${quickBtnsHtml}
-        </div>
-      </div>
-    `;
+    const actionsBar = document.getElementById('cmd-quick-actions-bar');
+    if (actionsBar) {
+      const quickBtnsHtml = (roleCfg.quickActions || []).map(btn => `
+        <button onclick="${btn.action}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 flex items-center gap-1 ${btn.class}">
+          ${btn.label}
+        </button>
+      `).join('');
+      actionsBar.innerHTML = quickBtnsHtml;
+    }
 
     // Invalidate map size after banner changes
     setTimeout(() => {
       if (mapInstance && typeof mapInstance.invalidateSize === 'function') {
         mapInstance.invalidateSize();
+      } else if (window.map) {
+        window.map.invalidateSize();
       }
     }, 100);
   }

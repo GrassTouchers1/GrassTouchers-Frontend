@@ -352,8 +352,8 @@
 
       <!-- TOP STRATEGIC PANELS (COLLAPSIBLE TO MAXIMIZE MAP) -->
       <div id="cmd-top-stats-container" class="shrink-0 transition-all duration-300 overflow-hidden z-20">
-        <!-- ROLE SCOPE & PERMISSIONS DYNAMIC BANNER -->
-        <div id="cmd-role-scope-banner" class="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 flex-wrap gap-2">
+        <!-- ROLE SCOPE & PERMISSIONS DYNAMIC BANNER (Ẩn để tối ưu chiều cao màn hình) -->
+        <div id="cmd-role-scope-banner" class="hidden px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs flex items-center justify-between shrink-0 z-30 flex-wrap gap-2">
           <div class="flex items-center gap-2 overflow-hidden">
             <span class="px-2 py-0.5 rounded font-black text-[10.5px] border bg-amber-500/20 text-amber-300 border-amber-500/40 shrink-0">
               ⭐ Chỉ huy trưởng
@@ -362,88 +362,80 @@
               Toàn quyền điều hành, ban bố tình trạng khẩn cấp, phê duyệt xuất quân và quản trị hệ thống.
             </span>
           </div>
-          <div class="flex items-center gap-1.5 shrink-0 text-[10px]">
-            <span class="px-1.5 py-0.5 rounded font-bold bg-rose-900/40 text-rose-300 border border-rose-800">
-              ✓ Có quyền Xuất quân
-            </span>
-            <span class="px-1.5 py-0.5 rounded font-bold bg-teal-900/40 text-teal-300 border border-teal-800">
-              ✓ Thẩm định tin
-            </span>
-            <span class="px-1.5 py-0.5 rounded font-bold bg-blue-900/40 text-blue-300 border border-blue-800">
-              ✓ Quản lý Đội xe
-            </span>
-          </div>
         </div>
 
-        <!-- TOP COP QUICK METRICS BANNER -->
-        <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 shrink-0 z-20">
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
+        <!-- TOP COP QUICK METRICS & ACTIONS BANNER (Gom gọn 1 hàng duy nhất) -->
+        <div id="command-cop-banner" class="bg-slate-900/90 border-b border-slate-800 px-3 py-1.5 shrink-0 z-20 flex flex-wrap items-center justify-between gap-2.5">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-xs flex-1 min-w-[280px]">
             
             <!-- KPI 1: SOS Yêu cầu khẩn cấp -->
             <div class="bg-rose-950/30 border border-rose-800/40 rounded-lg p-2 flex items-center justify-between">
               <div>
-                <div class="text-[10.5px] font-bold text-rose-400 flex items-center gap-1">
+                <div class="text-[10px] font-bold text-rose-400 flex items-center gap-1">
                   <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                   SOS Khẩn Cấp
                 </div>
-                <div id="kpi-val-sos" class="text-xl font-black text-rose-300 mt-0.5">3</div>
+                <div id="kpi-val-sos" class="text-lg font-black text-rose-300 mt-0.5">3</div>
               </div>
-              <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500/40"></i>
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-500/40"></i>
             </div>
 
             <!-- KPI 2: Tiếp nhận chưa xử lý -->
             <div class="bg-amber-950/30 border border-amber-800/40 rounded-lg p-2 flex items-center justify-between">
               <div>
-                <div class="text-[10.5px] font-bold text-amber-400 flex items-center gap-1">
+                <div class="text-[10px] font-bold text-amber-400 flex items-center gap-1">
                   <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
                   Chờ Tiếp Nhận
                 </div>
-                <div id="kpi-val-intake" class="text-xl font-black text-amber-300 mt-0.5">5</div>
+                <div id="kpi-val-intake" class="text-lg font-black text-amber-300 mt-0.5">5</div>
               </div>
-              <i data-lucide="clock" class="w-6 h-6 text-amber-500/40"></i>
+              <i data-lucide="clock" class="w-5 h-5 text-amber-500/40"></i>
             </div>
 
             <!-- KPI 3: Đang điều phối tác chiến -->
             <div class="bg-blue-950/30 border border-blue-800/40 rounded-lg p-2 flex items-center justify-between">
               <div>
-                <div class="text-[10.5px] font-bold text-blue-400 flex items-center gap-1">
+                <div class="text-[10px] font-bold text-blue-400 flex items-center gap-1">
                   <i data-lucide="navigation" class="w-3 h-3 text-blue-400"></i>
                   Đang Điều Phối
                 </div>
-                <div id="kpi-val-missions" class="text-xl font-black text-blue-300 mt-0.5">2</div>
+                <div id="kpi-val-missions" class="text-lg font-black text-blue-300 mt-0.5">2</div>
               </div>
-              <i data-lucide="compass" class="w-6 h-6 text-blue-500/40"></i>
+              <i data-lucide="compass" class="w-5 h-5 text-blue-500/40"></i>
             </div>
 
             <!-- KPI 4: Đội cứu hộ sẵn sàng -->
             <div class="bg-emerald-950/30 border border-emerald-800/40 rounded-lg p-2 flex items-center justify-between">
               <div>
-                <div class="text-[10.5px] font-bold text-emerald-400 flex items-center gap-1">
+                <div class="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
                   <i data-lucide="truck" class="w-3 h-3 text-emerald-400"></i>
                   Lực Lượng Trực
                 </div>
-                <div id="kpi-val-units" class="text-xl font-black text-emerald-300 mt-0.5">4 / 5</div>
+                <div id="kpi-val-units" class="text-lg font-black text-emerald-300 mt-0.5">4 / 5</div>
               </div>
-              <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500/40"></i>
+              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-500/40"></i>
             </div>
 
             <!-- KPI 5: Điểm sơ tán an toàn -->
             <div class="hidden lg:flex bg-teal-950/30 border border-teal-800/40 rounded-lg p-2 items-center justify-between">
               <div>
-                <div class="text-[10.5px] font-bold text-teal-400 flex items-center gap-1">
+                <div class="text-[10px] font-bold text-teal-400 flex items-center gap-1">
                   <i data-lucide="home" class="w-3 h-3 text-teal-400"></i>
                   Điểm Trú Ẩn Mở
                 </div>
-                <div id="kpi-val-pending" class="text-xl font-black text-teal-300 mt-0.5">6 Điểm</div>
+                <div id="kpi-val-pending" class="text-lg font-black text-teal-300 mt-0.5">6 Điểm</div>
               </div>
-              <i data-lucide="warehouse" class="w-6 h-6 text-teal-500/40"></i>
+              <i data-lucide="warehouse" class="w-5 h-5 text-teal-500/40"></i>
             </div>
 
           </div>
+
+          <!-- Quick Action Buttons: Gọn gàng cùng hàng với KPI, tiết kiệm diện tích tối đa -->
+          <div id="cmd-quick-actions-bar" class="flex items-center gap-1.5 shrink-0 flex-wrap"></div>
         </div>
 
-        <!-- ROLE OPERATIONAL FOCUS & QUICK ACTIONS BANNER -->
-        <div id="cmd-role-focus-callout" class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-3.5 py-2 z-20"></div>
+        <!-- ROLE OPERATIONAL FOCUS CALLOUT (Ẩn khối văn bản dài để nhường chỗ cho bản đồ) -->
+        <div id="cmd-role-focus-callout" class="hidden shrink-0 bg-slate-900/90 border-b border-slate-800 px-3.5 py-2 z-20"></div>
 
         <!-- MINI COLLAPSE STRIP (QUICK ONE-CLICK TO EXPAND MAP) -->
         <div class="flex items-center justify-center bg-slate-900/95 border-b border-slate-800/80 py-0.5 select-none">
@@ -472,13 +464,9 @@
             <!-- ============================================== -->
             <div id="map-top-bar" class="absolute top-3 inset-x-3 z-[990] flex items-start justify-between gap-2 pointer-events-none select-none">
               
-              <!-- Left: Phân Vùng Tác Chiến (Compact & Clean) -->
-              <div id="regional-focus-control" class="pointer-events-auto bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 p-1.5 px-3 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-md text-xs font-semibold flex items-center gap-2 shrink-0">
-                <div class="flex items-center gap-1.5 text-blue-600 dark:text-cyan-400 font-extrabold pr-0.5 select-none pointer-events-none">
-                  <i data-lucide="compass" class="w-4 h-4 text-blue-600 dark:text-cyan-400"></i>
-                  <span class="text-[11px] uppercase tracking-wider hidden lg:inline">Phân vùng:</span>
-                </div>
-                <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-2 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition max-w-[145px] sm:max-w-[175px] truncate">
+              <!-- Left: Phân Vùng Tác Chiến (Ẩn khỏi mặt bản đồ vì đã có trên thanh Header chính, giữ select ngầm để đồng bộ JS) -->
+              <div id="regional-focus-control" class="hidden pointer-events-auto">
+                <select id="region-jump-select" onchange="window.jumpToRegion ? window.jumpToRegion(this.value) : null" class="hidden">
                   <option value="all">🌐 Toàn Miền Bắc</option>
                   <option value="hanoi">📍 Hà Nội & ĐB</option>
                   <option value="taybac">⛰️ Tây Bắc (Lào Cai - YB)</option>
@@ -526,26 +514,26 @@
                 </div>
 
                 <!-- Cảnh báo Điểm ngập Khung nhìn (Viewport Flood Alert) -->
-                <div id="viewport-flood-alert" class="hidden pointer-events-auto max-w-full text-xs font-semibold px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md flex items-center gap-2 border transition-all duration-300">
+                <div id="viewport-flood-alert" class="hidden pointer-events-auto max-w-lg text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-2 border transition-all duration-300">
                   <div id="viewport-alert-icon" class="p-1 rounded-full flex-shrink-0">
                     <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                   </div>
                   <div class="flex-1 truncate" id="viewport-alert-text">
                     Đang quét điểm ngập khu vực...
                   </div>
-                  <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2.5 py-1 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow">
+                  <button id="viewport-alert-btn" onclick="onViewportAlertClick()" class="hidden px-2 py-0.5 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow cursor-pointer">
                     Xem
+                  </button>
+                  <button onclick="document.getElementById('viewport-flood-alert').classList.add('hidden')" class="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer transition shrink-0 text-xs ml-1" title="Đóng thông báo">
+                    ✕
                   </button>
                 </div>
 
               </div>
 
-              <!-- Right: Tối đa hóa bản đồ (Compact Icon Button) -->
-              <div class="pointer-events-auto flex items-center gap-1.5 shrink-0">
-                <button onclick="CommandUIController.toggleZenMapMode()" id="btn-map-zen-mode" class="p-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 hover:text-emerald-400 border border-slate-200/80 dark:border-slate-800 shadow-xl backdrop-blur-md cursor-pointer transition active:scale-95 flex items-center gap-1 text-xs font-bold" title="Chế độ Giám sát Bản đồ: Tối đa hóa 100% diện tích (Phím Z hoặc M)">
-                  <i data-lucide="maximize" class="w-4 h-4" id="btn-map-zen-icon"></i>
-                  <span class="hidden md:inline" id="btn-map-zen-text">Tối đa</span>
-                </button>
+              <!-- Right: Tối đa hóa bản đồ (Ẩn khỏi bản đồ vì đã có nút Giám sát bản đồ trên thanh Header) -->
+              <div class="hidden pointer-events-auto">
+                <button onclick="CommandUIController.toggleZenMapMode()" id="btn-map-zen-mode" class="hidden"></button>
               </div>
 
             </div>
@@ -2473,15 +2461,15 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261118_v15"></script>
-  <script src="js/command_ui_controller.js?v=20261118_v15"></script>
-  <script src="js/coordinator_command.js?v=20261118_v15"></script>
-  <script src="js/map_core.js?v=20261118_v15"></script>
-  <script src="js/provinces_weather_layer.js?v=20261118_v15"></script>
-  <script src="js/rescue_manager.js?v=20261118_v15"></script>
-  <script src="js/advanced_modules.js?v=20261118_v15"></script>
-  <script src="js/storm_simulator.js?v=20261118_v15"></script>
-  <script src="js/voice_sos.js?v=20261118_v15"></script>
+  <script src="js/config.js?v=20261118_v16"></script>
+  <script src="js/command_ui_controller.js?v=20261118_v16"></script>
+  <script src="js/coordinator_command.js?v=20261118_v16"></script>
+  <script src="js/map_core.js?v=20261118_v16"></script>
+  <script src="js/provinces_weather_layer.js?v=20261118_v16"></script>
+  <script src="js/rescue_manager.js?v=20261118_v16"></script>
+  <script src="js/advanced_modules.js?v=20261118_v16"></script>
+  <script src="js/storm_simulator.js?v=20261118_v16"></script>
+  <script src="js/voice_sos.js?v=20261118_v16"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
