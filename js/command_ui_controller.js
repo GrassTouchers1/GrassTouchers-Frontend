@@ -209,6 +209,7 @@ const CommandUIController = (function () {
     initRescueFleet();
     initMissions();
     initFloodStations();
+    startRealtimeClock();
 
     // Nạp dữ liệu từ backend
     await refreshSystemData();
@@ -999,9 +1000,25 @@ const CommandUIController = (function () {
     renderRolesView();
   }
 
+  
+  // ĐỒNG HỒ TÁC CHIẾN THỜI GIAN THỰC (LIVE OPERATIONS CLOCK 24/7)
+  function startRealtimeClock() {
+    const clockEl = document.getElementById('cmd-last-sync-time');
+    const updateTime = () => {
+      if (clockEl) {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const secs = String(now.getSeconds()).padStart(2, '0');
+        clockEl.innerText = `${hours}:${mins}:${secs}`;
+      }
+    };
+    updateTime();
+    setInterval(updateTime, 1000);
+  }
+
   function updateSyncIndicator() {
-    const el = document.getElementById('cmd-last-sync-time');
-    if (el) el.innerText = state.lastSyncTime;
+    // Để đồng hồ chạy thời gian thực liên tục (không bị ghi đè thành giờ tĩnh)
   }
 
   // BĂNG CHỈ SỐ TÁC CHIẾN THỜI GIAN THỰC (COP KPI METRICS)

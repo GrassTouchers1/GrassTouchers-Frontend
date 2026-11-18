@@ -122,10 +122,13 @@
         <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
       </div>
 
-      <!-- Sync Status Badge -->
-      <div class="hidden xl:flex items-center gap-1 text-[10px] text-slate-400 bg-slate-800/80 px-2 py-1 rounded border border-slate-700 shrink-0">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-        <span id="cmd-last-sync-time">Đồng bộ</span>
+      <!-- Realtime Operations Clock (Đồng hồ tác chiến thời gian thực) -->
+      <div class="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-emerald-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 shrink-0 select-none shadow-xs" title="Đồng hồ tác chiến thời gian thực (Giờ Hà Nội - GMT+7)">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span id="cmd-last-sync-time" class="font-bold tracking-wider font-mono">--:--:--</span>
       </div>
     </div>
 
@@ -2423,7 +2426,7 @@
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
   <script src="js/config.js"></script>
-  <script src="js/command_ui_controller.js?v=2.9"></script>
+  <script src="js/command_ui_controller.js?v=3.0"></script>
   <script src="js/coordinator_command.js?v=2.5"></script>
   <script src="js/map_core.js?v=6.8"></script>
   <script src="js/rescue_manager.js?v=5.2"></script>
