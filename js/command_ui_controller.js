@@ -1368,25 +1368,25 @@ const CommandUIController = (function () {
     }
 
     listEl.innerHTML = items.map(item => {
-      let priorityBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-slate-300">⚪ Bình thường</span>';
+      let priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap shadow-xs">⚪ Bình thường</span>';
       if (item.priority === 'critical') {
-        priorityBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-black bg-rose-900/60 text-rose-300 border border-rose-700 animate-pulse">🔴 P1 Khẩn Cấp</span>';
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-black bg-rose-950/90 text-rose-300 border border-rose-700/80 whitespace-nowrap shadow-xs animate-pulse">🔴 P1 Khẩn Cấp</span>';
       } else if (item.priority === 'high') {
-        priorityBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-bold bg-amber-900/60 text-amber-300 border border-amber-700">🟠 P2 Ưu Tiên</span>';
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-amber-950/90 text-amber-300 border border-amber-700/80 whitespace-nowrap shadow-xs">🟠 P2 Ưu Tiên</span>';
       }
 
       const verifyBtnHtml = roleCfg.canVerify ? `
-        <button onclick="CommandUIController.verifyIncident('${item.id}')" title="Xác minh tin chính xác" class="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition">
+        <button onclick="CommandUIController.verifyIncident('${item.id}')" title="Xác minh tin chính xác" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition whitespace-nowrap">
           ✓ Duyệt
         </button>
       ` : '';
 
       const dispatchBtnHtml = roleCfg.canDispatch ? `
-        <button onclick="CommandUIController.openDispatchModal('${item.id}')" title="Lập lệnh điều phối" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10.5px] cursor-pointer shadow-xs transition flex items-center gap-1">
+        <button onclick="CommandUIController.openDispatchModal('${item.id}')" title="Lập lệnh điều phối" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10.5px] cursor-pointer shadow-xs transition flex items-center gap-1 whitespace-nowrap">
           <span>⚡ Lệnh</span>
         </button>
       ` : `
-        <span class="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 bg-slate-800/80 rounded">🔒 Chờ lệnh</span>
+        <span class="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 bg-slate-800/80 rounded whitespace-nowrap">🔒 Chờ lệnh</span>
       `;
 
       const safeLat = Number(item.lat || 21.0285).toFixed(4);
@@ -1394,29 +1394,29 @@ const CommandUIController = (function () {
 
       return `
         <tr class="hover:bg-slate-850 transition">
-          <td class="p-3 font-mono font-bold text-slate-300">${item.id}</td>
-          <td class="p-3 text-slate-400 font-mono text-[11px]">${formatRelativeTime(item.created_at)}</td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
-            ${item.duplicate_count > 0 ? `<span class="block mt-1 text-[9.5px] text-amber-400 font-bold">⚠️ +${item.duplicate_count} tin cùng vị trí (50m)</span>` : ''}
+          <td class="p-3 font-mono font-bold text-slate-300 whitespace-nowrap">${item.id}</td>
+          <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">${formatRelativeTime(item.created_at)}</td>
+          <td class="p-3 whitespace-nowrap">
+            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
+            ${item.duplicate_count > 0 ? `<span class="block mt-1 text-[9.5px] text-amber-400 font-bold whitespace-nowrap">⚠️ +${item.duplicate_count} tin cùng vị trí (50m)</span>` : ''}
           </td>
           <td class="p-3">
             <div class="font-bold text-white">${item.contact_name || 'Người dân'}</div>
             <div class="text-[11px] text-slate-400">${item.phone || 'N/A'}</div>
-            <div class="text-[10px] text-slate-500">[${safeLat}, ${safeLng}]</div>
+            <div class="text-[10px] text-slate-500 font-mono">[${safeLat}, ${safeLng}]</div>
           </td>
           <td class="p-3 max-w-xs">
             <p class="text-[11px] text-slate-300 line-clamp-2">${item.description || 'Không có mô tả chi tiết'}</p>
-            ${item.water_level_cm > 0 ? `<span class="inline-block mt-1 text-[10px] text-cyan-400 font-bold">🌊 Mực nước: ~${item.water_level_cm}cm</span>` : ''}
+            ${item.water_level_cm > 0 ? `<span class="inline-block mt-1 text-[10px] text-cyan-400 font-bold whitespace-nowrap">🌊 Mực nước: ~${item.water_level_cm}cm</span>` : ''}
           </td>
-          <td class="p-3">${priorityBadge}</td>
-          <td class="p-3">
-            ${item.status === 'resolved' ? '<span class="text-emerald-400 font-bold">✅ Đã cứu</span>' :
-              (item.status === 'dispatched' ? '<span class="text-blue-400 font-bold animate-pulse">🚑 Đang ứng cứu</span>' :
-                (item.is_verified ? '<span class="text-teal-400 font-bold">✓ Đã thẩm định</span>' :
-                  '<span class="text-amber-400 font-bold">⏳ Chờ duyệt</span>'))}
+          <td class="p-3 whitespace-nowrap">${priorityBadge}</td>
+          <td class="p-3 whitespace-nowrap">
+            ${item.status === 'resolved' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800 whitespace-nowrap">✅ Đã cứu</span>' :
+              (item.status === 'dispatched' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-blue-950/80 text-blue-300 border border-blue-800 whitespace-nowrap animate-pulse">🚑 Đang ứng cứu</span>' :
+                (item.is_verified ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-teal-950/80 text-teal-300 border border-teal-800 whitespace-nowrap">✓ Đã duyệt</span>' :
+                  '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-amber-950/80 text-amber-300 border border-amber-800 whitespace-nowrap">⏳ Chờ duyệt</span>'))}
           </td>
-          <td class="p-3 text-right">
+          <td class="p-3 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
               ${verifyBtnHtml}
               ${dispatchBtnHtml}
