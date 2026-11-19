@@ -144,14 +144,16 @@ window.NorthStarMapLibre = (function () {
     osm: {
       version: 8,
       sources: {
-        'osm-standard': {
+        'esri-streets': {
           type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+          ],
           tileSize: 256,
-          attribution: '&copy; OpenStreetMap contributors'
+          attribution: '&copy; Esri, DeLorme, NAVTEQ, TomTom, OpenStreetMap contributors'
         }
       },
-      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'osm-standard', minzoom: 0, maxzoom: 19 }]
+      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'esri-streets', minzoom: 0, maxzoom: 19 }]
     }
   };
 
@@ -2134,15 +2136,23 @@ window.NorthStarMapLibre = (function () {
       const btn = document.getElementById(`btn-ml-base-${k}`);
       if (btn) {
         if (k === key) {
-          btn.className = 'px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow';
+          btn.className = 'px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow';
         } else {
-          btn.className = 'px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition';
+          btn.className = 'px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition';
         }
       }
     });
 
+    // Cập nhật Style WebGL MapLibre
     mapInstance.setStyle(BASEMAP_STYLES[key]);
-    mapInstance.once('style.load', () => {
+
+    // Lắng nghe sự kiện idle khi Style mới đã nạp hoàn tất và render sẵn sàng
+    let hasRestored = false;
+    const restoreAllLayers = () => {
+      if (hasRestored) return;
+      hasRestored = true;
+      mapInstance.off('idle', restoreAllLayers);
+
       setupProvincesVectorLayer();
       setupStormSimulationVectorLayer();
       setupTacticalRouteVectorLayer();
@@ -2150,7 +2160,25 @@ window.NorthStarMapLibre = (function () {
       setup3DBuildingsVectorLayer();
       setupRainRadarVectorLayer();
       syncAllLayers();
-    });
+
+      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+        const names = {
+          satellite: '🛰️ Vệ Tinh Recon',
+          dark: '🌑 Nền Tối C2',
+          topo: '⛰️ Địa Hình Lũ Quét',
+          osm: '🗺️ Đô Thị & Giao Thông'
+        };
+        window.CommandUIController.showToast('🗺️ ĐỔI BẢN ĐỒ NỀN', `Đã chuyển sang lớp: ${names[key] || key}`, 'info', 1800);
+      }
+    };
+
+    mapInstance.once('idle', restoreAllLayers);
+    // Timeout an toàn đề phòng mạng chậm hoặc idle đã trôi qua
+    setTimeout(() => {
+      if (!hasRestored && mapInstance && mapInstance.isStyleLoaded()) {
+        restoreAllLayers();
+      }
+    }, 400);
   }
 
   function updatePitchBadge() {
