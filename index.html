@@ -207,7 +207,7 @@
         <div>
           <div class="px-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">I. TỔNG QUAN TÁC CHIẾN</div>
           <div class="space-y-0.5">
-            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-white font-bold bg-rose-600 shadow-sm text-left cursor-pointer" data-view="cmd_dashboard" onclick="CommandUIController.switchView('cmd_dashboard')">
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-gradient-to-r from-blue-600/30 to-indigo-600/30 text-sky-200 border-l-4 border-l-sky-400 font-extrabold shadow-sm text-left cursor-pointer" data-view="cmd_dashboard" onclick="CommandUIController.switchView('cmd_dashboard')">
               <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
               <span class="cmd-nav-label flex-1 truncate">Bảng Điều Hành COP</span>
             </button>
@@ -1734,16 +1734,16 @@
             <div class="space-y-2 text-xs">
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Họ tên người liên hệ:</label>
-                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
+                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-500 font-semibold">
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số điện thoại:</label>
-                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
+                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-500 font-semibold">
                 </div>
                 <div>
                   <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số người mắc kẹt:</label>
-                  <input id="sos-input-people" type="number" min="1" max="100" value="1" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
+                  <input id="sos-input-people" type="number" min="1" max="100" value="1" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-500 font-semibold">
                 </div>
               </div>
 
@@ -1754,7 +1754,7 @@
 
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Ghi chú tình trạng khẩn cấp:</label>
-                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano gấp..." style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium"></textarea>
+                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano gấp..." style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-500 font-semibold"></textarea>
               </div>
 
               <button onclick="NorthStarRescue.submitSOSBeacon()" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5 transition">
@@ -2929,11 +2929,11 @@
   <!-- ========================================== -->
   <script src="js/config.js?v=20261118_v17"></script>
   <script src="js/offline_sync_manager.js?v=20261118_v17"></script>
-  <script src="js/command_ui_controller.js?v=20261119_v20"></script>
+  <script src="js/command_ui_controller.js?v=20261119_v25"></script>
   <script src="js/coordinator_command.js?v=20261118_v17"></script>
-  <script src="js/map_core.js?v=20261118_v17"></script>
+  <script src="js/map_core.js?v=20261119_v25"></script>
   <script src="js/provinces_weather_layer.js?v=20261118_v18"></script>
-  <script src="js/rescue_manager.js?v=20261118_v17"></script>
+  <script src="js/rescue_manager.js?v=20261119_v25"></script>
   <script src="js/advanced_modules.js?v=20261118_v17"></script>
   <script src="js/storm_simulator.js?v=20261118_v17"></script>
   <script src="js/voice_sos.js?v=20261118_v17"></script>

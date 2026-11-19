@@ -955,15 +955,15 @@ const CommandUIController = (function () {
 
     state.currentView = viewId;
 
-    // Cập nhật trạng thái active trên Sidebar
+    // Cập nhật trạng thái active trên Sidebar (Chuẩn Tác Chiến C2: Tactical Indigo & Electric Cyan, giảm mỏi mắt)
     const allNavButtons = document.querySelectorAll('.cmd-nav-item');
     allNavButtons.forEach(btn => {
       const target = btn.getAttribute('data-view');
       if (target === viewId) {
-        btn.classList.add('bg-rose-600', 'text-white', 'font-black', 'shadow-sm');
-        btn.classList.remove('text-slate-300', 'hover:bg-slate-800');
+        btn.classList.add('bg-gradient-to-r', 'from-blue-600/30', 'to-indigo-600/30', 'text-sky-200', 'border-l-4', 'border-l-sky-400', 'font-extrabold', 'shadow-sm');
+        btn.classList.remove('text-slate-300', 'hover:bg-slate-800', 'bg-rose-600', 'text-white', 'font-black');
       } else {
-        btn.classList.remove('bg-rose-600', 'text-white', 'font-black', 'shadow-sm');
+        btn.classList.remove('bg-gradient-to-r', 'from-blue-600/30', 'to-indigo-600/30', 'text-sky-200', 'border-l-4', 'border-l-sky-400', 'font-extrabold', 'bg-rose-600', 'text-white', 'font-black');
         btn.classList.add('text-slate-300', 'hover:bg-slate-800');
       }
     });
@@ -1589,7 +1589,7 @@ const CommandUIController = (function () {
       const safeLng = Number(item.lng || 105.8542).toFixed(4);
 
       return `
-        <tr class="hover:bg-slate-850 transition">
+        <tr class="even:bg-slate-900/40 odd:bg-slate-950/40 hover:bg-slate-800/80 transition border-b border-slate-800/50">
           <td class="p-3 font-mono font-bold text-sky-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Xem hồ sơ nhật ký tác chiến">${item.id} 📋</td>
           <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">${formatRelativeTime(item.created_at)}</td>
           <td class="p-3 whitespace-nowrap">
@@ -3053,7 +3053,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       const safeLng = Number(item.lng || 105.8542).toFixed(4);
 
       return `
-        <tr class="hover:bg-slate-850 transition">
+        <tr class="even:bg-slate-900/40 odd:bg-slate-950/40 hover:bg-slate-800/80 transition border-b border-slate-800/50">
           <td class="p-3 font-mono font-bold text-emerald-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Mở nhật ký tác chiến chi tiết">
             ${item.id} 📋
           </td>

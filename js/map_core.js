@@ -240,8 +240,8 @@ function initMap() {
   window.esriBaseLayer = esriBaseLayer;
   window.darkBaseLayer = darkBaseLayer;
 
-  // Mặc định nạp OpenStreetMap (Đồng bộ 100% với mạng lưới giao thông cập nhật mới)
-  currentBaseLayer = osmFrLayer;
+  // Mặc định nạp Bản đồ Tác chiến Tối (Tactical Dark Canvas C2) đồng bộ 100% giao diện điều hành
+  currentBaseLayer = darkBaseLayer;
   currentBaseLayer.addTo(map);
   window.currentBaseLayer = currentBaseLayer;
 
