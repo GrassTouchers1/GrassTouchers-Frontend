@@ -35,7 +35,7 @@ const CommandUIController = (function () {
       title: 'Chỉ huy trưởng Tác chiến (Command Director)',
       badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
       description: 'Toàn quyền điều hành chiến dịch, ban bố tình trạng khẩn cấp, xuất quân lực lượng và quản trị hệ thống.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_sitrep', 'cmd_roles', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_roles', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: true,
       canManageFleet: true,
@@ -57,7 +57,7 @@ const CommandUIController = (function () {
       title: 'Điều phối viên Tác chiến (Operations Dispatcher)',
       badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
       description: 'Tiếp nhận đa kênh, lập lệnh xuất quân, phân bổ ca-nô/xe 4x4, tính toán lộ trình cứu hộ né ngập TSP.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: true,
       canManageFleet: true,
@@ -79,7 +79,7 @@ const CommandUIController = (function () {
       title: 'Xác minh viên Thông tin (Intelligence Verifier)',
       badgeClass: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
       description: 'Thẩm định tin báo dân sự, kiểm tra ảnh hiện trường, đối soát Hotline 114 và lọc trùng không gian 50m.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_resolved_archive', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: false,
       canVerify: true,
       canManageFleet: false,
@@ -101,7 +101,7 @@ const CommandUIController = (function () {
       title: 'Chuyên viên Dữ liệu & Khí tượng (Hydrological & Weather Analyst)',
       badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
       description: 'Giám sát 130 trạm thủy văn IoT, radar mưa Open-Meteo, viễn thám Sentinel-1 SAR và chạy giả lập bão 0-100mm.',
-      allowedViews: ['cmd_dashboard', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: false,
       canVerify: false,
       canManageFleet: false,
@@ -123,7 +123,7 @@ const CommandUIController = (function () {
       title: 'Điều phối viên Cứu hộ Thực địa (Rescue Coordinator)',
       badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
       description: 'Chỉ huy 5 đơn vị cơ động (Ca-nô 150HP, Xuồng phao, Xe 4x4, Đội lặn, Trực thăng Mi-17); giám sát cứu nạn P1.',
-      allowedViews: ['cmd_dashboard', 'cmd_sos', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_operations', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_sos', 'cmd_disaster_map', 'cmd_rescue_teams', 'cmd_operations', 'cmd_resolved_archive', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: false,
       canManageFleet: true,
@@ -145,7 +145,7 @@ const CommandUIController = (function () {
       title: 'Điều phối viên Cứu trợ & Sơ tán (Relief Coordinator)',
       badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
       description: 'Quản lý 15 điểm sơ tán an toàn (420/600 người), điều phối gạo, nước sạch, thuốc men, áo phao và đoàn thiện nguyện.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_safe_zones', 'cmd_operations', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: false,
       canVerify: false,
       canManageFleet: false,
@@ -174,6 +174,8 @@ const CommandUIController = (function () {
     zenMapMode: false,
     activeIntakeFilter: 'all',
     quickSearchQuery: '',
+    activeIntakeStatusFilter: 'all',
+    archiveSearchQuery: '',
     lastSyncTime: new Date().toLocaleTimeString('vi-VN'),
     selectedIncidentId: null,
     activeMapLayers: {
@@ -258,7 +260,7 @@ const CommandUIController = (function () {
     if (initialRole && ROLES_CONFIG[initialRole]) {
       state.userRole = initialRole;
     }
-    const initialView = urlParams.get('view');
+    const initialView = urlParams.get('view') || (window.location.hash ? window.location.hash.substring(1) : null);
     if (initialView) {
       state.currentView = initialView;
     }
@@ -1317,6 +1319,7 @@ const CommandUIController = (function () {
     renderSitRepView();
     renderRolesView();
     renderLicensesView();
+    renderResolvedArchiveView();
   }
 
   
@@ -1423,9 +1426,9 @@ const CommandUIController = (function () {
 
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
 
-    // Lấy tối đa 8 tin khẩn cấp nhất chưa giải quyết
+    // Lấy tối đa 8 tin khẩn cấp nhất chưa giải quyết (loại bỏ hoàn toàn tin đã cứu hộ/giải quyết xong)
     const urgentItems = intakeData
-      .filter(i => !i.is_duplicate)
+      .filter(i => !i.is_duplicate && i.status !== 'resolved' && i.status !== 'rescued')
       .slice(0, 8);
 
     if (urgentItems.length === 0) {
@@ -1505,12 +1508,21 @@ const CommandUIController = (function () {
       );
     }
 
-    // Lọc theo filter tab
+    // Lọc theo filter nguồn tiếp nhận
     if (state.activeIntakeFilter === 'sos') items = items.filter(i => i.source === 'sos_beacon');
     else if (state.activeIntakeFilter === 'crowd') items = items.filter(i => i.source === 'citizen_report');
     else if (state.activeIntakeFilter === 'hotline') items = items.filter(i => i.source === 'hotline_114');
     else if (state.activeIntakeFilter === 'sensor') items = items.filter(i => i.source === 'iot_sensor');
     else if (state.activeIntakeFilter === 'satellite') items = items.filter(i => i.source === 'satellite_sar');
+
+    // Lọc theo trạng thái xử lý cứu hộ
+    if (state.activeIntakeStatusFilter === 'pending') {
+      items = items.filter(i => i.status === 'pending' || i.status === 'verified');
+    } else if (state.activeIntakeStatusFilter === 'dispatched') {
+      items = items.filter(i => i.status === 'dispatched' || i.status === 'on_scene');
+    } else if (state.activeIntakeStatusFilter === 'resolved') {
+      items = items.filter(i => i.status === 'resolved' || i.status === 'rescued');
+    }
 
     if (items.length === 0) {
       listEl.innerHTML = `
@@ -1544,13 +1556,17 @@ const CommandUIController = (function () {
         </button>
       ` : '';
 
-      const dispatchBtnHtml = roleCfg.canDispatch ? `
+      const dispatchBtnHtml = item.status === 'resolved' ? `
+        <button onclick="CommandUIController.printIncidentHandoverReceipt('${item.id}')" title="In phiếu bàn giao cứu nạn an toàn" class="px-2 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1 whitespace-nowrap">
+          <span>🖨️ Phiếu</span>
+        </button>
+      ` : (roleCfg.canDispatch ? `
         <button onclick="CommandUIController.openDispatchModal('${item.id}')" title="Lập lệnh điều phối" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10.5px] cursor-pointer shadow-xs transition flex items-center gap-1 whitespace-nowrap">
           <span>⚡ Lệnh</span>
         </button>
       ` : `
         <span class="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 bg-slate-800/80 rounded whitespace-nowrap">🔒 Chờ lệnh</span>
-      `;
+      `);
 
       const safeLat = Number(item.lat || 21.0285).toFixed(4);
       const safeLng = Number(item.lng || 105.8542).toFixed(4);
@@ -2835,16 +2851,369 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   }
 
 
+
+  // =========================================================================
+  // BỘ LỌC TRẠNG THÁI TIẾP NHẬN & CHUYỂN NHANH VỀ KHO DỮ LIỆU CŨ
+  // =========================================================================
+  function filterIntakeStatus(status) {
+    state.activeIntakeStatusFilter = status;
+    ['all', 'pending', 'dispatched', 'resolved'].forEach(s => {
+      const btn = document.getElementById(`intake-status-${s}`);
+      if (btn) {
+        if (s === status) {
+          btn.className = 'cmd-status-filter-btn px-2.5 py-1 rounded bg-slate-800 text-white font-bold cursor-pointer transition shadow-xs';
+        } else {
+          btn.className = 'cmd-status-filter-btn px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer font-medium transition';
+        }
+      }
+    });
+    renderIntakeView();
+  }
+
+  // =========================================================================
+  // KHO HỒ SƠ ĐÃ XỬ LÝ THÀNH CÔNG & LỊCH SỬ GIẢI CỨU (RESOLVED ARCHIVE)
+  // =========================================================================
+  function renderResolvedArchiveView() {
+    const listEl = document.getElementById('cmd-resolved-archive-table-body');
+    const badgeEl = document.getElementById('cmd-nav-resolved-count');
+
+    // Lấy toàn bộ hồ sơ đã cứu hộ thành công từ intakeData
+    const resolvedIntake = (intakeData || []).filter(i => i.status === 'resolved' || i.status === 'rescued');
+    
+    // Đếm tổng số người đã giải cứu thành công
+    const totalPeople = resolvedIntake.reduce((acc, cur) => acc + (Number(cur.people_count) || 1), 0);
+    const totalCases = resolvedIntake.length;
+
+    // Cập nhật số đếm trên badge menu và thẻ KPI
+    if (badgeEl) badgeEl.innerText = `${totalCases}`;
+    const kpiCasesEl = document.getElementById('archive-total-resolved');
+    if (kpiCasesEl) kpiCasesEl.innerText = `${totalCases}`;
+    const kpiPeopleEl = document.getElementById('archive-total-people');
+    if (kpiPeopleEl) kpiPeopleEl.innerText = `${totalPeople}`;
+
+    if (!listEl) return;
+
+    let displayItems = [...resolvedIntake];
+
+    // Lọc theo thanh tìm kiếm hồ sơ cũ
+    if (state.archiveSearchQuery) {
+      const q = state.archiveSearchQuery.toLowerCase();
+      displayItems = displayItems.filter(i =>
+        (i.id || '').toLowerCase().includes(q) ||
+        (i.contact_name || '').toLowerCase().includes(q) ||
+        (i.phone || '').toLowerCase().includes(q) ||
+        (i.description || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (displayItems.length === 0) {
+      listEl.innerHTML = `
+        <tr>
+          <td colspan="8" class="p-8 text-center text-slate-400 text-xs">
+            <div class="max-w-md mx-auto space-y-2">
+              <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto text-emerald-400 opacity-80"></i>
+              <div class="font-bold text-slate-200">Chưa có hồ sơ cứu hộ nào được lưu trữ hoặc khớp với từ khóa tìm kiếm.</div>
+              <p class="text-[11px] text-slate-500">Khi một nhiệm vụ giải cứu hoàn tất hoặc được bấm "Đã an toàn", hồ sơ sẽ tự động chuyển vào đây và ẩn khỏi bản đồ.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    listEl.innerHTML = displayItems.map(item => {
+      // Tìm đơn vị và trạm sơ tán liên quan
+      const relatedMission = (missionData || []).find(m => (item.phone && m.victim_phone === item.phone) || m.id === item.id);
+      const unitName = relatedMission ? relatedMission.assigned_unit_name : 'Đội Phản ứng Nhanh';
+      const shelterName = relatedMission ? relatedMission.shelter_name : 'Điểm Sơ tán Tập trung';
+
+      const safeLat = Number(item.lat || 21.0285).toFixed(4);
+      const safeLng = Number(item.lng || 105.8542).toFixed(4);
+
+      return `
+        <tr class="hover:bg-slate-850 transition">
+          <td class="p-3 font-mono font-bold text-emerald-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Mở nhật ký tác chiến chi tiết">
+            ${item.id} 📋
+          </td>
+          <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+            ${formatRelativeTime(item.created_at)}
+          </td>
+          <td class="p-3">
+            <div class="font-bold text-white">${item.contact_name || 'Người dân'}</div>
+            <div class="text-[11px] text-slate-400 font-mono">${item.phone || 'N/A'}</div>
+          </td>
+          <td class="p-3 whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-950/80 text-sky-300 border border-sky-800">
+              👥 ${item.people_count || 1} người
+            </span>
+            ${item.has_vulnerable ? '<span class="block text-[10px] text-amber-400 font-semibold mt-0.5">⚠️ Trẻ nhỏ/người già</span>' : ''}
+          </td>
+          <td class="p-3">
+            <div class="text-[11px] text-slate-300 truncate max-w-xs" title="${item.description || ''}">${item.description || 'Vị trí ngập lụt'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">[${safeLat}, ${safeLng}]</div>
+          </td>
+          <td class="p-3 whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+              🛡️ ${unitName}
+            </span>
+          </td>
+          <td class="p-3 whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800">
+              ⛺ ${shelterName}
+            </span>
+          </td>
+          <td class="p-3 text-right whitespace-nowrap">
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Xem nhật ký hồ sơ" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded font-bold text-[10.5px] cursor-pointer transition">
+                📋 Nhật Ký
+              </button>
+              <button onclick="CommandUIController.printIncidentHandoverReceipt('${item.id}')" title="In phiếu bàn giao cứu nạn an toàn" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1 shadow-xs">
+                <span>🖨️ Phiếu Bàn Giao</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function handleArchiveSearchInput() {
+    const el = document.getElementById('archive-search-input');
+    state.archiveSearchQuery = el ? el.value.trim() : '';
+    renderResolvedArchiveView();
+  }
+
+  // =========================================================================
+  // IN PHIẾU BÀN GIAO CỨU NẠN THÀNH CÔNG (HANDOVER RECEIPT GENERATOR)
+  // =========================================================================
+  function printIncidentHandoverReceipt(incidentId) {
+    const item = (intakeData || []).find(i => i.id === incidentId);
+    if (!item) {
+      showToast('⚠️ LỖI', 'Không tìm thấy hồ sơ cứu nạn cần in phiếu.', 'warning');
+      return;
+    }
+
+    const relatedMission = (missionData || []).find(m => (item.phone && m.victim_phone === item.phone) || m.id === item.id);
+    const unitName = relatedMission ? relatedMission.assigned_unit_name : 'Đội Phản ứng Nhanh Ban Chỉ Huy';
+    const shelterName = relatedMission ? relatedMission.shelter_name : 'Trạm Sơ tán Tiếp nhận Khẩn cấp';
+    const timestampStr = new Date().toLocaleString('vi-VN');
+
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) {
+      alert('Vui lòng cho phép mở cửa sổ popup để in phiếu bàn giao cứu nạn.');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <title>Phiếu Bàn Giao Cứu Nạn - ${item.id}</title>
+        <style>
+          body { font-family: 'Times New Roman', Times, serif; padding: 40px; color: #000; line-height: 1.5; }
+          .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+          .header h3 { margin: 0; font-size: 14pt; text-transform: uppercase; font-weight: bold; }
+          .header h4 { margin: 4px 0 0; font-size: 12pt; text-transform: uppercase; }
+          .header p { margin: 4px 0 0; font-size: 11pt; font-style: italic; }
+          .title { text-align: center; margin: 25px 0 15px; font-size: 16pt; font-weight: bold; text-transform: uppercase; }
+          .code { text-align: center; font-size: 11pt; font-family: monospace; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          th, td { border: 1px solid #333; padding: 8px 12px; font-size: 11pt; text-align: left; }
+          th { background-color: #f2f2f2; width: 30%; }
+          .timeline { margin: 20px 0; border: 1px solid #ddd; padding: 12px; font-size: 10.5pt; }
+          .timeline h5 { margin: 0 0 10px; font-size: 11pt; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+          .timeline-item { margin-bottom: 6px; }
+          .signatures { margin-top: 40px; display: flex; justify-content: space-between; text-align: center; font-size: 11pt; }
+          .sig-box { width: 30%; }
+          .sig-title { font-weight: bold; margin-bottom: 60px; text-transform: uppercase; }
+          .sig-name { font-weight: bold; }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h3>ỦY BAN QUỐC GIA ỨNG PHÓ SỰ CỐ THIÊN TAI VÀ TÌM KIẾM CỨU NẠN</h3>
+          <h4>BAN CHỈ HUY TÁC CHIẾN CỨU HỘ VÀ PHÒNG CHỐNG THIÊN TAI NORTHSTAR</h4>
+          <p>Hệ thống Điều phối Cứu nạn Đa Thiên tai Open-Source Chuẩn Quốc gia</p>
+        </div>
+
+        <div class="title">BIÊN BẢN BÀN GIAO TIẾP NHẬN CỨU NẠN AN TOÀN</div>
+        <div class="code">Mã Hồ Sơ Tác Chiến: <strong>${item.id}</strong> | Thời điểm in: ${timestampStr}</div>
+
+        <table>
+          <tr>
+            <th>Họ và tên nạn nhân:</th>
+            <td><strong>${item.contact_name || 'Người dân kêu cứu'}</strong></td>
+          </tr>
+          <tr>
+            <th>Số điện thoại liên hệ:</th>
+            <td>${item.phone || 'N/A'}</td>
+          </tr>
+          <tr>
+            <th>Số lượng người được cứu:</th>
+            <td><strong>${item.people_count || 1} người</strong> ${item.has_vulnerable ? '(Có trẻ em / người cao tuổi / bệnh nhân)' : ''}</td>
+          </tr>
+          <tr>
+            <th>Tọa độ vị trí cứu nạn:</th>
+            <td>Vĩ độ: ${item.lat} | Kinh độ: ${item.lng}</td>
+          </tr>
+          <tr>
+            <th>Tình trạng ban đầu:</th>
+            <td>${item.description || 'Bị ngập lụt cô lập, thiếu nhu yếu phẩm.'}</td>
+          </tr>
+          <tr>
+            <th>Mực nước ngập ghi nhận:</th>
+            <td>${item.water_level_cm > 0 ? '~' + item.water_level_cm + ' cm' : 'Ngập sâu cô lập diện rộng'}</td>
+          </tr>
+          <tr>
+            <th>Lực lượng thực hiện giải cứu:</th>
+            <td><strong>${unitName}</strong></td>
+          </tr>
+          <tr>
+            <th>Điểm sơ tán tiếp nhận an toàn:</th>
+            <td><strong>${shelterName}</strong></td>
+          </tr>
+          <tr>
+            <th>Trạng thái hiện tại:</th>
+            <td><strong style="color: green;">ĐÃ GIẢI CỨU HOÀN TẤT & AN TOÀN TUYỆT ĐỐI</strong></td>
+          </tr>
+        </table>
+
+        <div class="timeline">
+          <h5>Trích lục Nhật ký Tác chiến & Chuỗi Bằng chứng (Audit Trail):</h5>
+          ${(item.audit_trail || []).map(log => `
+            <div class="timeline-item">
+              <strong>[${log.time || 'Thời điểm'}]</strong> ${log.title || 'Sự kiện'}: ${log.note || ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="signatures">
+          <div class="sig-box">
+            <div class="sig-title">Đại diện Nạn nhân</div>
+            <div class="sig-name">${item.contact_name || 'Người dân'}</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-title">Đội trưởng Đội Cứu hộ</div>
+            <div class="sig-name">${unitName}</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-title">Chỉ huy trưởng Tác chiến</div>
+            <div class="sig-name">Ban Chỉ Huy NorthStar</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;" class="no-print">
+          <button onclick="window.print()" style="padding: 10px 24px; font-size: 13pt; font-weight: bold; background: #059669; color: #fff; border: none; border-radius: 6px; cursor: pointer;">
+            🖨️ In Biên Bản Ngay
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
+
+  // =========================================================================
+  // XUẤT BÁO CÁO GIẢI CỨU TỔNG KẾT (MARKDOWN EXPORT)
+  // =========================================================================
+  function exportResolvedArchiveMarkdown() {
+    const resolvedItems = (intakeData || []).filter(i => i.status === 'resolved' || i.status === 'rescued');
+    const totalPeople = resolvedItems.reduce((acc, cur) => acc + (Number(cur.people_count) || 1), 0);
+    const dateStr = new Date().toLocaleDateString('vi-VN');
+
+    let md = `# BÁO CÁO TỔNG KẾT KẾT QUẢ CỨU NẠN & GIẢI CỨU THÀNH CÔNG\n`;
+    md += `*Hệ thống Điều phối Cứu nạn Đa Thiên tai NorthStar Command*\n`;
+    md += `*Ngày xuất báo cáo: ${dateStr}*\n\n`;
+    md += `## 1. THỐNG KÊ TỔNG QUAN\n`;
+    md += `- **Tổng số hồ sơ đã giải cứu an toàn:** ${resolvedItems.length} hồ sơ\n`;
+    md += `- **Tổng số nạn nhân được đưa về nơi an toàn:** ${totalPeople} người\n`;
+    md += `- **Tỷ lệ an toàn:** 100% không phát sinh thiệt hại nhân mạng\n\n`;
+    md += `## 2. DANH SÁCH CHI TIẾT CÁC VỤ CỨU NẠN HOÀN TẤT\n\n`;
+    md += `| Mã Hồ Sơ | Nạn Nhân | Số Điện Thoại | Số Người | Tọa Độ Ban Đầu | Trạng Thái |\n`;
+    md += `| :--- | :--- | :--- | :---: | :--- | :--- |\n`;
+
+    resolvedItems.forEach(item => {
+      md += `| ${item.id} | ${item.contact_name || 'N/A'} | ${item.phone || 'N/A'} | ${item.people_count || 1} | [${item.lat}, ${item.lng}] | ĐÃ AN TOÀN |\n`;
+    });
+
+    md += `\n---\n*Báo cáo được trích xuất tự động từ Hệ sinh thái Mã nguồn mở NorthStar.*\n`;
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BaoCao_GiaiCuu_NorthStar_${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('📥 ĐÃ XUẤT BÁO CÁO', 'Tải file Báo cáo Giải cứu thành công.', 'success');
+  }
+
+  // GIẢI CỨU TRỰC TIẾP 1 CHẠM
+  function resolveIncidentDirectly(incidentId) {
+    const item = (intakeData || []).find(i => i.id === incidentId);
+    if (!item) return;
+
+    item.status = 'resolved';
+    item.audit_trail = item.audit_trail || [];
+    item.audit_trail.push({
+      time: new Date().toLocaleTimeString('vi-VN'),
+      icon: 'check-circle-2',
+      color: 'emerald',
+      title: 'Xác nhận an toàn trực tiếp',
+      note: 'Chỉ huy xác nhận nạn nhân đã được giải cứu an toàn, đưa vào kho lưu trữ.'
+    });
+
+    const relatedMission = (missionData || []).find(m => (item.phone && m.victim_phone === item.phone) || m.id === item.id);
+    if (relatedMission) relatedMission.status = 'resolved';
+
+    const unit = (unitsData || []).find(u => (relatedMission && u.id === relatedMission.assigned_unit_id) || u.id === item.assigned_unit_id);
+    if (unit) unit.status = 'ready';
+
+    const s = (sosData || []).find(sItem => sItem.id === item.id || sItem.raw_id === item.raw_id || (sItem.phone && sItem.phone === item.phone));
+    if (s) s.status = 'rescued';
+
+    if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+
+    if (item.raw_id) {
+      fetch(getApiUrl(`/api/sos/${item.raw_id}/status`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rescued' })
+      }).catch(e => console.warn(e));
+    }
+
+    if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
+      window.NorthStarRescue.loadSOSBeacons();
+    }
+
+    renderAllComponents();
+    renderTacticalMapLayers();
+    showToast('✅ ĐÃ HOÀN TẤT GIẢI CỨU', `Hồ sơ [${item.id}] đã chuyển vào kho dữ liệu thành công.`, 'success');
+  }
+
   // =========================================================================
   // 5. BẢN ĐỒ TÁC CHIẾN GIS TƯƠNG TÁC (TACTICAL GIS INTEGRATION)
   // =========================================================================
   function renderTacticalMapLayers() {
     if (!mapInstance) return;
 
-    // 1. Vẽ các điểm SOS
+    // 1. Vẽ các điểm SOS - Chỉ hiển thị các tín hiệu chưa điều phối / đang chờ xử lý
+    // Khi đã xuất quân hoặc đã cứu hộ xong, tín hiệu lập tức biến mất khỏi bản đồ để tránh trùng lặp và rối mắt
     if (tacticalLayers.sosGroup) {
       tacticalLayers.sosGroup.clearLayers();
-      const activeSOS = sosData.filter(s => s.status !== 'rescued');
+      const activeSOS = sosData.filter(s => s.status === 'pending' || s.status === 'verified');
 
       activeSOS.forEach(s => {
         const markerHtml = `
@@ -3196,6 +3565,33 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     } else if (newStatus === 'resolved') {
       statusTitle = 'Hoàn tất cứu nạn an toàn';
       statusNote = 'Toàn bộ nạn nhân đã được chuyển về nơi an toàn. Đóng hồ sơ tác chiến.';
+
+      // Hoàn tất nhiệm vụ liên quan
+      const relatedMission = missionData.find(m => (item.phone && m.victim_phone === item.phone) || m.id === item.id);
+      if (relatedMission) relatedMission.status = 'resolved';
+
+      // Giải phóng đội cứu hộ về sẵn sàng chiến đấu
+      const unit = unitsData.find(u => (relatedMission && u.id === relatedMission.assigned_unit_id) || u.id === item.assigned_unit_id);
+      if (unit) unit.status = 'ready';
+
+      // Cập nhật sosData
+      const s = sosData.find(sItem => sItem.id === item.id || sItem.raw_id === item.raw_id || (sItem.phone && sItem.phone === item.phone));
+      if (s) s.status = 'rescued';
+
+      // Xóa route trên bản đồ
+      if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+
+      // Đồng bộ backend
+      if (item.raw_id) {
+        fetch(getApiUrl(`/api/sos/${item.raw_id}/status`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'rescued' })
+        }).catch(e => console.warn(e));
+      }
+      if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
+        window.NorthStarRescue.loadSOSBeacons();
+      }
     }
 
     item.audit_trail.push({
@@ -3411,6 +3807,20 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     // Cập nhật trạng thái sự cố và đội xe
     incident.status = 'dispatched';
     unit.status = 'en_route';
+    
+    // Đồng bộ trạng thái dispatched sang sosData và backend để ẩn beacon khỏi bản đồ
+    const sosBeacon = sosData.find(s => s.id === incident.id || s.raw_id === incident.raw_id || (s.phone && s.phone === incident.phone));
+    if (sosBeacon) sosBeacon.status = 'dispatched';
+    if (incident.raw_id) {
+      fetch(getApiUrl(`/api/sos/${incident.raw_id}/status`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dispatched' })
+      }).catch(e => console.warn(e));
+    }
+    if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
+      window.NorthStarRescue.loadSOSBeacons();
+    }
 
     if (!incident.audit_trail) incident.audit_trail = [];
     incident.audit_trail.push({
@@ -3556,11 +3966,52 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
 
   function updateMissionStatus(missionId, newStatus) {
     const mission = missionData.find(m => m.id === missionId);
-    if (mission) {
-      mission.status = newStatus;
-      renderAllComponents();
-      showToast('📋 CẬP NHẬT TIẾN ĐỘ', `Nhiệm vụ [${missionId}]: ${newStatus.toUpperCase()}`, 'success');
+    if (!mission) return;
+
+    mission.status = newStatus;
+
+    // Tìm hồ sơ sự cố tương ứng trong intakeData
+    const incident = intakeData.find(i => (mission.victim_phone && i.phone === mission.victim_phone) || i.id === mission.incident_id);
+    if (incident) {
+      if (newStatus === 'resolved' || newStatus === 'rescued') {
+        incident.status = 'resolved';
+        incident.audit_trail = incident.audit_trail || [];
+        incident.audit_trail.push({
+          time: new Date().toLocaleTimeString('vi-VN'),
+          icon: 'check-circle-2',
+          color: 'emerald',
+          title: 'Hoàn tất cứu hộ & Đưa về nơi an toàn',
+          note: `Đội [${mission.assigned_unit_name || 'Cứu hộ'}] đã chuyển giao an toàn nạn nhân [${mission.victim_name}] về trạm sơ tán [${mission.shelter_name || 'Trạm sơ tán'}]. Đóng hồ sơ.`
+        });
+        if (incident.raw_id) {
+          fetch(getApiUrl(`/api/sos/${incident.raw_id}/status`), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'rescued' })
+          }).catch(e => console.warn(e));
+        }
+      } else if (newStatus === 'on_scene') {
+        incident.status = 'on_scene';
+      }
     }
+
+    // Nếu đã hoàn tất cứu nạn: giải phóng phương tiện cứu hộ về 'ready', xóa đường vẽ lộ trình và ẩn hẳn tín hiệu
+    if (newStatus === 'resolved' || newStatus === 'rescued') {
+      const unit = unitsData.find(u => u.id === mission.assigned_unit_id);
+      if (unit) unit.status = 'ready';
+
+      const s = sosData.find(item => (incident && item.id === incident.id) || (mission.victim_phone && item.phone === mission.victim_phone));
+      if (s) s.status = 'rescued';
+
+      if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+      if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
+        window.NorthStarRescue.loadSOSBeacons();
+      }
+    }
+
+    renderAllComponents();
+    renderTacticalMapLayers();
+    showToast('📋 CẬP NHẬT TIẾN ĐỘ', `Nhiệm vụ [${missionId}]: ${newStatus.toUpperCase()}`, 'success');
   }
 
   function updateShelterCapacity(shelterId, delta) {
@@ -3821,6 +4272,12 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     registerNewSOS,
     updateSOSStatus,
     startAutoSyncPolling,
+    renderResolvedArchiveView,
+    resolveIncidentDirectly,
+    filterIntakeStatus,
+    printIncidentHandoverReceipt,
+    exportResolvedArchiveMarkdown,
+    handleArchiveSearchInput,
     get state() { return state; },
     get rolesConfig() { return ROLES_CONFIG; }
   };

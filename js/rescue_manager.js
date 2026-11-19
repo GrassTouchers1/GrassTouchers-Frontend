@@ -378,7 +378,8 @@ const NorthStarRescue = (function () {
       const coords = feat.geometry.coordinates;
       const latLng = [coords[1], coords[0]];
 
-      if (p.status === 'rescued' || p.status === 'cancelled') return;
+      // Ẩn tất cả tín hiệu đã được bàn giao đội cứu hộ hoặc đã cứu hộ an toàn (tránh rối mắt và trùng lặp bản đồ)
+      if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
 
       const markerHtml = `
         <div class="relative flex items-center justify-center">
@@ -434,7 +435,7 @@ const NorthStarRescue = (function () {
   function renderSOSSidebar() {
     const listEl = document.getElementById('rescue-sos-list');
     if (!listEl) return;
-    const activeBeacons = allSOSBeacons.filter(b => b.properties.status !== 'rescued' && b.properties.status !== 'cancelled');
+    const activeBeacons = allSOSBeacons.filter(b => !['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(b.properties.status));
     if (!activeBeacons.length) {
       listEl.innerHTML = '<div class="text-xs text-slate-500 py-2">Hiện chưa có tín hiệu kêu cứu SOS chưa xử lý.</div>';
       return;
