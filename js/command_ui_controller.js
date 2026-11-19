@@ -276,6 +276,14 @@ const CommandUIController = (function () {
     if (initialModal) {
       setTimeout(() => openDispatchModal(initialModal), 300);
     }
+    const confirmParam = urlParams.get('confirm_pccc');
+    if (confirmParam) {
+      setTimeout(() => confirmPCCCRescueReport(confirmParam), 300);
+    }
+    const pcccModalParam = urlParams.get('modal_pccc');
+    if (pcccModalParam) {
+      setTimeout(() => openPCCCReportModal(pcccModalParam), 300);
+    }
 
     console.log('[NorthStar Command] Unified Emergency Operations Center đã sẵn sàng trực chiến.');
   }
@@ -701,14 +709,23 @@ const CommandUIController = (function () {
         victim_lat: 20.8920,
         victim_lng: 105.6580,
         assigned_unit_id: 'UNIT-104',
-        assigned_unit_name: 'Tổ Cấp Cứu Y Tế Khẩn Cấp 115 Hà Nội',
+        assigned_unit_name: 'Đội Cảnh sát PCCC & CNCH Khu vực 1 (Hà Nội)',
         shelter_name: 'Trường Tiểu học Nam Phương Tiến A (Chương Mỹ)',
         shelter_lat: 20.8960,
         shelter_lng: 105.6620,
-        status: 'on_scene',
+        status: 'pccc_reported',
         dispatched_at: '13:10',
         eta_minutes: 0,
-        notes: 'Đã tiếp cận hiện trường, đang dùng cáng nổi đưa cụ bà qua vùng ngập 1.8m sang xe cứu thương.'
+        notes: 'Đã tiếp cận hiện trường, dùng xuồng cứu nạn và cáng nổi đưa cụ bà qua vùng ngập 1.8m sang xe cứu thương an toàn.',
+        pccc_report: {
+          reported_at: '13:35',
+          unit_name: 'Đội Cảnh sát PCCC & CNCH Khu vực 1 (Hà Nội)',
+          unit_commander: 'Thiếu tá Trần Văn Bình (Đội trưởng PCCC & CNCH)',
+          rescued_count: 1,
+          health_status: 'Đã sơ cứu tại chỗ, an toàn ổn định',
+          shelter_name: 'Trường Tiểu học Nam Phương Tiến A (Chương Mỹ)',
+          field_notes: 'Đã dùng xuồng chuyên dụng vượt dòng nước xiết 1.8m tiếp cận cụ bà, chuyển cáng nổi đưa lên bờ an toàn và bàn giao Trạm y tế lưu động tiếp nhận.'
+        }
       },
       {
         id: 'CMD-MIS-03',
@@ -1814,39 +1831,142 @@ const CommandUIController = (function () {
     }).join('');
   }
 
-  // KHỐI 7: RESCUE MISSIONS VIEW
+  // KHỐI 7: MISSIONS VIEW (ĐIỀU PHỐI TÁC CHIẾN & TIẾP NHẬN BÁO CÁO PCCC THỰC ĐỊA)
   function renderMissionsView() {
     const listEl = document.getElementById('cmd-missions-container');
+    const alertEl = document.getElementById('cmd-pccc-incoming-alert-container');
     if (!listEl) return;
 
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
 
+    // 1. Kiểm tra và hiển thị Băng cảnh báo tiếp nhận điện báo PCCC đang chờ bạn (Chỉ huy) xác nhận
+    const pendingPCCCReports = missionData.filter(m => m.status === 'pccc_reported');
+    if (alertEl) {
+      if (pendingPCCCReports.length > 0) {
+        alertEl.innerHTML = pendingPCCCReports.map(m => `
+          <div class="p-4 bg-gradient-to-r from-amber-950/95 via-slate-900 to-amber-950/95 border-2 border-amber-500/80 rounded-2xl shadow-xl space-y-3 animate-fade-in">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+                <span class="font-black text-amber-300 text-sm uppercase tracking-wide flex items-center gap-1.5">
+                  <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i>
+                  ĐIỆN BÁO MỚI TỪ ĐỘI CẢNH SÁT PCCC & CNCH (CHỜ BẠN DUYỆT)
+                </span>
+              </div>
+              <span class="text-xs text-amber-300/90 font-mono font-bold bg-amber-950 px-2.5 py-1 rounded border border-amber-700 shadow-xs">
+                ${m.pccc_report?.reported_at || 'Vừa nhận'}
+              </span>
+            </div>
+
+            <div class="text-xs text-slate-200 bg-slate-950/90 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-1 border-b border-slate-800 pb-2">
+                <span>🛡️ <b>Đơn vị báo cáo:</b> <span class="text-amber-300 font-extrabold">${m.assigned_unit_name}</span> (Chỉ huy: ${m.pccc_report?.unit_commander || 'Đội trưởng'})</span>
+                <span class="text-sky-300 font-mono">Nhiệm vụ: [${m.id}]</span>
+              </div>
+              <div>• <b>Nạn nhân:</b> <span class="text-white font-bold">${m.victim_name}</span> (📞 ${m.victim_phone})</div>
+              <div>• <b>Kết quả giải cứu thực tế:</b> <span class="text-emerald-400 font-black text-sm">👥 ${m.pccc_report?.rescued_count || 1} người đã an toàn</span> (Tình trạng: <span class="text-sky-300 font-semibold">${m.pccc_report?.health_status || 'Ổn định'}</span>)</div>
+              <div>• <b>Trạm sơ tán tiếp nhận bàn giao:</b> <span class="text-emerald-300 font-bold">${m.pccc_report?.shelter_name || m.shelter_name}</span></div>
+              ${m.pccc_report?.field_notes ? `<div class="italic text-slate-300 mt-1 bg-slate-900/90 p-2 rounded-lg border border-slate-800">" ${m.pccc_report.field_notes} "</div>` : ''}
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+              <span class="text-[11px] text-amber-200/90 font-medium italic">
+                👉 Với vai trò Trung tâm điều phối, hãy bấm nút dưới đây để xác nhận báo cáo và chuyển vào Kho Hồ Sơ Đã Xử Lý.
+              </span>
+              <div class="flex items-center gap-2">
+                <button onclick="CommandUIController.confirmPCCCRescueReport('${m.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer active:scale-95 transition">
+                  <i data-lucide="check-check" class="w-4 h-4"></i>
+                  <span>Xác Nhận & Chuyển Vào Kho Đã Xử Lý</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        alertEl.innerHTML = '';
+      }
+    }
+
+    // 2. Danh sách nhiệm vụ
     listEl.innerHTML = missionData.map(m => {
       let statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-black bg-blue-900 text-blue-300 border border-blue-700 animate-pulse">🚑 Đang cơ động</span>';
       if (m.status === 'on_scene') {
         statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-black bg-purple-900 text-purple-300 border border-purple-700 animate-pulse">🎯 Đã tới hiện trường</span>';
+      } else if (m.status === 'pccc_reported') {
+        statusBadge = '<span class="text-[10px] px-2.5 py-0.5 rounded font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 animate-pulse flex items-center gap-1"><span>📻 Đội PCCC Báo Cáo Xong</span> <span class="text-white font-bold">(Chờ bạn duyệt)</span></span>';
       } else if (m.status === 'resolved') {
         statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded font-black bg-emerald-900 text-emerald-300 border border-emerald-700">✅ Hoàn thành an toàn</span>';
       }
 
       const canUpdate = roleCfg.canDispatch || roleCfg.canManageFleet;
-      const actionBtns = canUpdate ? `
-        <div class="flex items-center gap-1.5">
-          ${m.status === 'en_route' ? `
-            <button onclick="CommandUIController.updateMissionStatus('${m.id}', 'on_scene')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold text-xs cursor-pointer transition">
-              Đã tới nơi
-            </button>
-          ` : ''}
-          ${m.status === 'on_scene' ? `
-            <button onclick="CommandUIController.updateMissionStatus('${m.id}', 'resolved')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs cursor-pointer transition">
-              Hoàn thành
-            </button>
-          ` : ''}
+      let actionBtns = '';
+
+      if (canUpdate) {
+        if (m.status === 'en_route') {
+          actionBtns = `
+            <div class="flex items-center gap-1.5">
+              <button onclick="CommandUIController.updateMissionStatus('${m.id}', 'on_scene')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold text-xs cursor-pointer transition">
+                Đã tới nơi
+              </button>
+              <button onclick="CommandUIController.openPCCCReportModal('${m.id}')" title="Đội PCCC báo cáo hoàn tất cứu nạn từ thực địa" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold text-xs cursor-pointer transition flex items-center gap-1 shadow-xs">
+                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                <span>Đội PCCC Báo Cáo</span>
+              </button>
+            </div>
+          `;
+        } else if (m.status === 'on_scene') {
+          actionBtns = `
+            <div class="flex items-center gap-1.5">
+              <button onclick="CommandUIController.openPCCCReportModal('${m.id}')" title="Đội PCCC gửi báo cáo giải cứu an toàn" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-black text-xs cursor-pointer transition flex items-center gap-1 shadow-xs animate-pulse">
+                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                <span>📻 Đội PCCC Báo Cáo Cứu Xong</span>
+              </button>
+              <button onclick="CommandUIController.updateMissionStatus('${m.id}', 'resolved')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs cursor-pointer transition">
+                Hoàn thành
+              </button>
+            </div>
+          `;
+        } else if (m.status === 'pccc_reported') {
+          actionBtns = `
+            <div class="flex items-center gap-1.5">
+              <button onclick="CommandUIController.confirmPCCCRescueReport('${m.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs cursor-pointer transition flex items-center gap-1 shadow-md shadow-emerald-600/30 active:scale-95">
+                <i data-lucide="check-check" class="w-4 h-4"></i>
+                <span>Xác Nhận & Đóng Hồ Sơ</span>
+              </button>
+            </div>
+          `;
+        } else if (m.status === 'resolved') {
+          actionBtns = `
+            <div class="flex items-center gap-1.5">
+              <button onclick="CommandUIController.switchView('cmd_resolved_archive')" class="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded font-bold text-xs cursor-pointer transition">
+                📂 Xem Kho Hồ Sơ Đã Xử Lý
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        actionBtns = '<span class="text-xs text-slate-500 font-bold">Chỉ xem tiến độ</span>';
+      }
+
+      const pcccDebriefHtml = m.status === 'pccc_reported' && m.pccc_report ? `
+        <div class="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-2 mt-2">
+          <div class="flex items-center justify-between text-xs font-bold text-amber-300">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i>
+              <span>ĐIỆN BÁO CỨU NẠN TỪ HIỆN TRƯỜNG (${m.assigned_unit_name}):</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono">${m.pccc_report.reported_at || 'Vừa xong'}</span>
+          </div>
+          <div class="text-xs text-slate-200">
+            <div>• <b>Số người đã cứu:</b> <span class="text-emerald-400 font-extrabold">${m.pccc_report.rescued_count || 1} người</span> (Tình trạng: <span class="text-sky-300">${m.pccc_report.health_status || 'Ổn định'}</span>)</div>
+            <div>• <b>Trạm sơ tán bàn giao:</b> <span class="text-amber-200 font-bold">${m.pccc_report.shelter_name || m.shelter_name}</span></div>
+            ${m.pccc_report.field_notes ? `<div class="italic text-slate-300 mt-1 bg-slate-900/80 p-2 rounded border border-slate-800">"${m.pccc_report.field_notes}"</div>` : ''}
+          </div>
         </div>
-      ` : '<span class="text-xs text-slate-500 font-bold">Chỉ xem tiến độ</span>';
+      ` : '';
 
       return `
-        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 shadow-md">
+        <div class="p-4 bg-slate-900 border ${m.status === 'pccc_reported' ? 'border-amber-500/60 shadow-amber-500/10' : 'border-slate-800'} rounded-xl space-y-3 shadow-md transition">
           <div class="flex items-center justify-between">
             <span class="font-mono text-xs font-bold text-amber-400">${m.id}</span>
             ${statusBadge}
@@ -1863,6 +1983,7 @@ const CommandUIController = (function () {
               <span class="text-slate-400">Điểm sơ tán tiếp nhận:</span> <b class="text-emerald-400">${m.shelter_name}</b>
             </div>
           </div>
+          ${pcccDebriefHtml}
           <div class="flex items-center justify-between pt-2 border-t border-slate-800">
             <button onclick="CommandUIController.drawTacticalMissionRoute('${m.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold rounded text-xs flex items-center gap-1 cursor-pointer transition border border-slate-700">
               <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
@@ -3160,6 +3281,199 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     showToast('📥 ĐÃ XUẤT BÁO CÁO', 'Tải file Báo cáo Giải cứu thành công.', 'success');
   }
 
+
+  // =========================================================================
+  // TIẾP NHẬN THÔNG TIN TỪ ĐỘI PCCC & CNCH VỀ TRUNG TÂM ĐIỀU PHỐI (SỞ CHỈ HUY)
+  // =========================================================================
+  function openPCCCReportModal(missionId) {
+    const mission = missionData.find(m => m.id === missionId);
+    if (!mission) return;
+
+    const modal = document.getElementById('command-pccc-report-modal');
+    if (!modal) return;
+
+    document.getElementById('pccc-modal-mission-id').value = mission.id;
+    document.getElementById('pccc-modal-unit-name').innerText = mission.assigned_unit_name;
+    document.getElementById('pccc-modal-mission-title').innerText = mission.title;
+    document.getElementById('pccc-modal-victim-info').innerText = `Nạn nhân: ${mission.victim_name} (SĐT: ${mission.victim_phone})`;
+    
+    const countMatch = (mission.victim_name || '').match(/(\d+)\s*người/i);
+    document.getElementById('pccc-modal-rescued-count').value = countMatch ? countMatch[1] : '1';
+
+    // Đổ danh sách trạm sơ tán
+    const shelterSel = document.getElementById('pccc-modal-shelter-select');
+    if (shelterSel) {
+      shelterSel.innerHTML = (shelterData.length ? shelterData : [
+        { name: mission.shelter_name },
+        { name: 'Trung tâm Chỉ huy Quân sự Huyện Bảo Yên' },
+        { name: 'Trường Tiểu học Nam Phương Tiến A (Chương Mỹ)' },
+        { name: 'Nhà Văn Hóa Thành Phố Thái Nguyên' }
+      ]).map(s => `
+        <option value="${s.name}" ${s.name === mission.shelter_name ? 'selected' : ''}>${s.name}</option>
+      `).join('');
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closePCCCReportModal() {
+    const modal = document.getElementById('command-pccc-report-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function submitPCCCFieldReport() {
+    const missionId = document.getElementById('pccc-modal-mission-id').value;
+    const rescuedCount = parseInt(document.getElementById('pccc-modal-rescued-count').value || '1', 10);
+    const healthStatus = document.getElementById('pccc-modal-health-status').value;
+    const shelterName = document.getElementById('pccc-modal-shelter-select').value;
+    const notes = document.getElementById('pccc-modal-notes').value.trim();
+
+    const mission = missionData.find(m => m.id === missionId);
+    if (!mission) {
+      closePCCCReportModal();
+      return;
+    }
+
+    const unit = unitsData.find(u => u.id === mission.assigned_unit_id);
+    const timeNow = new Date().toLocaleTimeString('vi-VN');
+
+    // Cập nhật trạng thái nhiệm vụ: Đã có báo cáo từ PCCC thực địa, chờ Chỉ huy xác nhận
+    mission.status = 'pccc_reported';
+    mission.pccc_report = {
+      reported_at: timeNow,
+      unit_name: mission.assigned_unit_name,
+      unit_commander: unit ? unit.commander : 'Đội trưởng Đội Cảnh sát PCCC & CNCH',
+      rescued_count: rescuedCount,
+      health_status: healthStatus,
+      shelter_name: shelterName,
+      field_notes: notes || 'Đã đưa toàn bộ người dân vượt lũ lên bờ an toàn và bàn giao trạm sơ tán.'
+    };
+
+    // Tìm và cập nhật incident tương ứng trong intakeData
+    const incident = intakeData.find(i => (mission.victim_phone && i.phone === mission.victim_phone) || i.id === mission.incident_id);
+    if (incident) {
+      incident.status = 'pccc_reported';
+      incident.pccc_report = mission.pccc_report;
+      if (!incident.audit_trail) incident.audit_trail = [];
+      incident.audit_trail.push({
+        time: timeNow,
+        icon: 'radio',
+        color: 'amber',
+        title: 'Đội PCCC & CNCH gửi điện báo hoàn tất cứu nạn',
+        note: `Đơn vị [${mission.assigned_unit_name}] báo cáo đã đưa an toàn [${rescuedCount} người] về [${shelterName}]. Tình trạng: ${healthStatus}. Đang chờ Sở Chỉ Huy thẩm định & xác nhận đóng hồ sơ.`
+      });
+    }
+
+    closePCCCReportModal();
+    renderAllComponents();
+
+    showToast('🚨 ĐÃ NHẬN BÁO CÁO PCCC', `[${mission.assigned_unit_name}] báo cáo đã giải cứu [${rescuedCount} người]. Hãy bấm Xác Nhận để chuyển vào Hồ Sơ Đã Xử Lý!`, 'warning');
+  }
+
+  // HÀM XÁC NHẬN THÔNG TIN TỪ ĐỘI PCCC VÀ CHUYỂN VÀO HỒ SƠ ĐÃ XỬ LÝ (THEO YÊU CẦU NGƯỜI DÙNG)
+  function confirmPCCCRescueReport(missionId) {
+    const mission = missionData.find(m => m.id === missionId);
+    if (!mission) return;
+
+    const timeNow = new Date().toLocaleTimeString('vi-VN');
+    const pcccReport = mission.pccc_report || {
+      reported_at: timeNow,
+      unit_name: mission.assigned_unit_name,
+      unit_commander: 'Đội Cảnh sát PCCC & CNCH',
+      rescued_count: 1,
+      health_status: 'Ổn định, an toàn',
+      shelter_name: mission.shelter_name,
+      field_notes: 'Hoàn thành nhiệm vụ cứu nạn an toàn.'
+    };
+
+    // 1. Cập nhật trạng thái nhiệm vụ: Resolved
+    mission.status = 'resolved';
+    mission.confirmed_by = 'Trung tâm Điều phối Tác chiến (Sở Chỉ Huy)';
+    mission.confirmed_at = timeNow;
+
+    // 2. Tìm và đóng hồ sơ incident trong intakeData
+    let incident = intakeData.find(i => (mission.victim_phone && i.phone === mission.victim_phone) || i.id === mission.incident_id);
+    if (!incident) {
+      incident = {
+        id: `CMD-INT-${mission.id.slice(-3)}`,
+        source: 'sos_beacon',
+        source_label: '🆘 Tín Hiệu SOS',
+        source_badge_color: 'bg-rose-600 text-white',
+        contact_name: mission.victim_name,
+        phone: mission.victim_phone,
+        people_count: pcccReport.rescued_count || 1,
+        lat: mission.victim_lat,
+        lng: mission.victim_lng,
+        description: mission.title,
+        created_at: new Date().toISOString(),
+        status: 'resolved',
+        pccc_report: pcccReport,
+        audit_trail: []
+      };
+      intakeData.unshift(incident);
+    }
+
+    incident.status = 'resolved';
+    incident.people_count = pcccReport.rescued_count || incident.people_count || 1;
+    incident.pccc_report = pcccReport;
+    if (!incident.audit_trail) incident.audit_trail = [];
+
+    incident.audit_trail.push({
+      time: timeNow,
+      icon: 'check-check',
+      color: 'emerald',
+      title: 'Sở Chỉ Huy xác nhận thông tin & Chuyển vào Kho Đã Xử Lý',
+      note: `Chỉ huy trưởng Trung tâm điều phối đã thẩm định kết quả, xác nhận điện báo từ [${pcccReport.unit_name}] và chính thức phê duyệt đóng hồ sơ cứu nạn an toàn.`
+    });
+
+    // 3. Giải phóng đội xe/ca-nô PCCC về trạng thái sẵn sàng chiến đấu
+    const unit = unitsData.find(u => u.id === mission.assigned_unit_id);
+    if (unit) unit.status = 'ready';
+
+    // 4. Xóa tín hiệu SOS khỏi sosData
+    const s = sosData.find(sItem => (sItem.phone && sItem.phone === mission.victim_phone) || sItem.id === incident.id);
+    if (s) s.status = 'rescued';
+
+    // 5. Xóa đường vẽ lộ trình và ẩn marker khỏi bản đồ
+    if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+    if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
+      window.NorthStarRescue.loadSOSBeacons();
+    }
+
+    // 6. Cập nhật backend nếu có raw_id
+    if (incident.raw_id) {
+      fetch(getApiUrl(`/api/sos/${incident.raw_id}/status`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rescued' })
+      }).catch(e => console.warn(e));
+    }
+
+    // 7. Render lại toàn bộ hệ thống
+    renderAllComponents();
+    renderTacticalMapLayers();
+
+    // 8. Tự động chuyển màn hình sang Kho Hồ Sơ Đã Xử Lý Thành Công
+    switchView('cmd_resolved_archive');
+
+    showToast('🎉 ĐÃ XÁC NHẬN THÀNH CÔNG', `Đã xác nhận báo cáo từ [${pcccReport.unit_name}]. Hồ sơ đã chuyển an toàn vào Kho Lưu Trữ Đã Giải Cứu!`, 'success');
+  }
+
+  // MÔ PHỎNG ĐỘI PCCC 114 BÁO CÁO THỰC ĐỊA (1-CLICK DEMO TEST)
+  function simulatePCCCFieldReport() {
+    let mission = missionData.find(m => m.status === 'en_route' || m.status === 'on_scene');
+    if (!mission) {
+      mission = missionData[0];
+      if (mission) mission.status = 'en_route';
+    }
+    if (!mission) return;
+
+    openPCCCReportModal(mission.id);
+    document.getElementById('pccc-modal-notes').value = 'Đã điều động ca-nô 150HP vượt sóng lũ tiếp cận nạn nhân, đưa toàn bộ người và tài sản lên bờ an toàn lúc 21:05. Nạn nhân sức khỏe ổn định.';
+    showToast('📻 MÔ PHỎNG ĐỘI PCCC', 'Form báo cáo từ hiện trường đã mở, bấm "Gửi Báo Cáo" để gửi về Sở Chỉ Huy.', 'info');
+  }
+
   // GIẢI CỨU TRỰC TIẾP 1 CHẠM
   function resolveIncidentDirectly(incidentId) {
     const item = (intakeData || []).find(i => i.id === incidentId);
@@ -4276,6 +4590,11 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     resolveIncidentDirectly,
     filterIntakeStatus,
     printIncidentHandoverReceipt,
+    openPCCCReportModal,
+    closePCCCReportModal,
+    submitPCCCFieldReport,
+    confirmPCCCRescueReport,
+    simulatePCCCFieldReport,
     exportResolvedArchiveMarkdown,
     handleArchiveSearchInput,
     get state() { return state; },

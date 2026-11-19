@@ -955,14 +955,25 @@
         <!-- ============================================== -->
         <div id="pane-cmd_operations" class="cmd-view-pane hidden w-full h-full overflow-y-auto p-4 bg-slate-950 text-slate-100">
           <div class="max-w-7xl mx-auto space-y-4">
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
               <div>
                 <h2 class="text-base font-extrabold text-white flex items-center gap-2">
                   <i data-lucide="navigation-2" class="w-5 h-5 text-amber-400"></i>
-                  QUẢN LÝ NHIỆM VỤ ĐIỀU PHỐI & LỘ TRÌNH CỨU NẠN
+                  QUẢN LÝ NHIỆM VỤ ĐIỀU PHỐI & BÁO CÁO CỨU NẠN THỰC ĐỊA
                 </h2>
-                <p class="text-xs text-slate-400 mt-0.5">Thuật toán định tuyến an toàn né ngập kết hợp luân chuyển nạn nhân đến điểm sơ tán gần nhất.</p>
+                <p class="text-xs text-slate-400 mt-0.5">Định tuyến an toàn, tiếp nhận điện báo hoàn tất từ Đội PCCC & CNCH và phê duyệt chuyển hồ sơ đã xử lý.</p>
               </div>
+              <div class="flex items-center gap-2">
+                <button onclick="CommandUIController.simulatePCCCFieldReport()" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shadow-xs active:scale-95">
+                  <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i>
+                  <span>⚡ Mô Phỏng Đội PCCC Báo Cáo Cứu Nạn</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Incoming PCCC Field Reports Alert Container -->
+            <div id="cmd-pccc-incoming-alert-container" class="space-y-3">
+              <!-- Dynamically populated by JS when PCCC reports completion -->
             </div>
 
             <!-- Active Missions List -->
@@ -2632,6 +2643,104 @@
             <span>📤 Gửi Tin Cho Đội Cứu Hộ</span>
           </button>
         </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: BÁO CÁO HOÀN TẤT GIẢI CỨU TỪ ĐỘI PCCC & CNCH THỰC ĐỊA -->
+  <!-- ======================================================== -->
+  <div id="command-pccc-report-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
+    <div class="bg-slate-900 rounded-2xl max-w-xl w-full shadow-2xl border border-amber-500/40 overflow-hidden flex flex-col max-h-[92vh] text-slate-100">
+      
+      <!-- Modal Header -->
+      <div class="p-3.5 bg-gradient-to-r from-amber-950 via-slate-900 to-amber-900 text-white flex items-center justify-between border-b border-amber-700/50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-600/80 flex items-center justify-center border border-amber-400/40 shadow-xs">
+            <i data-lucide="radio" class="w-4 h-4 text-white"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black uppercase tracking-wide flex items-center gap-1.5">
+              <span>ĐIỆN BÁO CỨU NẠN: ĐỘI PCCC & CNCH BÁO CÁO</span>
+              <span class="px-1.5 py-0.2 rounded text-[9.5px] bg-amber-500 text-slate-950 font-black">THỰC ĐỊA</span>
+            </h3>
+            <p class="text-[11px] text-amber-200">Gửi điện báo kết quả giải cứu từ hiện trường về Trung tâm điều phối</p>
+          </div>
+        </div>
+        <button onclick="CommandUIController.closePCCCReportModal()" class="p-1.5 hover:bg-white/20 rounded-lg transition cursor-pointer text-slate-300 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 space-y-3.5 overflow-y-auto text-xs">
+        <input type="hidden" id="pccc-modal-mission-id" value="">
+
+        <!-- Banner Bên Gửi & Bên Nhận -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px]">
+          <div>
+            <span class="text-slate-400 block font-bold">ĐƠN VỊ BÁO CÁO (THỰC ĐỊA):</span>
+            <span id="pccc-modal-unit-name" class="font-bold text-amber-300 truncate block mt-0.5">
+              Đội Cảnh sát PCCC & CNCH 114
+            </span>
+          </div>
+          <div>
+            <span class="text-slate-400 block font-bold">NƠI TIẾP NHẬN BÁO CÁO:</span>
+            <span class="font-extrabold text-white flex items-center gap-1 mt-0.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              TRUNG TÂM ĐIỀU PHỐI (SỞ CHỈ HUY)
+            </span>
+          </div>
+        </div>
+
+        <!-- Thông tin nhiệm vụ -->
+        <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+          <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Nhiệm vụ đang thực hiện:</div>
+          <div id="pccc-modal-mission-title" class="text-white font-bold text-sm">Cứu hộ khẩn cấp</div>
+          <div id="pccc-modal-victim-info" class="text-slate-300 text-xs">Nạn nhân: ...</div>
+        </div>
+
+        <!-- Các thông tin thực địa -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Số nạn nhân đã giải cứu an toàn:</label>
+            <input type="number" id="pccc-modal-rescued-count" min="1" max="100" value="1" style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-3 py-2 bg-white text-slate-900 rounded-lg border border-slate-700 font-bold text-xs focus:ring-1 focus:ring-amber-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Tình trạng sức khỏe:</label>
+            <select id="pccc-modal-health-status" style="color: #0f172a !important; background-color: #ffffff !important;" class="w-full px-3 py-2 bg-white text-slate-900 rounded-lg border border-slate-700 font-medium text-xs focus:ring-1 focus:ring-amber-500 outline-none">
+              <option value="Ổn định, an toàn tuyệt đối">Ổn định, an toàn tuyệt đối</option>
+              <option value="Đã sơ cứu tại chỗ, không nguy hiểm">Đã sơ cứu tại chỗ, không nguy hiểm</option>
+              <option value="Đã chuyển xe cấp cứu 115 viện gần nhất">Đã chuyển xe cấp cứu 115</option>
+              <option value="Cần bổ sung áo ấm, nước sạch và sữa">Cần bổ sung áo ấm, nước sạch</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Điểm sơ tán đã tiếp nhận bàn giao:</label>
+          <select id="pccc-modal-shelter-select" style="color: #0f172a !important; background-color: #ffffff !important;" class="w-full px-3 py-2 bg-white text-slate-900 rounded-lg border border-slate-700 font-medium text-xs focus:ring-1 focus:ring-amber-500 outline-none">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Điện báo ghi chú từ Chỉ huy Đội PCCC:</label>
+          <textarea id="pccc-modal-notes" rows="3" placeholder="Ví dụ: Đã dùng xuồng cao su vượt qua điểm ngập sâu 1.4m, đưa gia đình lên bờ an toàn và bàn giao cho Ban Chỉ Huy trạm sơ tán..." style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" class="w-full px-3 py-2 bg-white text-slate-900 rounded-lg border border-slate-700 font-medium text-xs focus:ring-1 focus:ring-amber-500 outline-none"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-2">
+        <button onclick="CommandUIController.closePCCCReportModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition cursor-pointer text-xs">
+          Hủy bỏ
+        </button>
+        <button onclick="CommandUIController.submitPCCCFieldReport()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black transition cursor-pointer text-xs flex items-center gap-1.5 shadow-lg shadow-amber-600/30">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Gửi Báo Cáo Về Trung Tâm Điều Phối</span>
+        </button>
       </div>
 
     </div>
