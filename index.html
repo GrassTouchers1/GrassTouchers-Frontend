@@ -948,17 +948,17 @@
               <!-- Basemap Selector -->
               <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs shrink-0">
                 <span class="text-[9.5px] font-bold text-slate-400 px-1 uppercase">Bản đồ:</span>
-                <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Bản đồ tác chiến nền tối C2 - Tối ưu chống mỏi mắt và tương phản SOS cao nhất">🌑 Tối C2</button>
-                <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ không ảnh vệ tinh phân giải cao kèm địa danh trinh sát">🛰️ Vệ Tinh Recon</button>
-                <button id="btn-ml-base-topo" onclick="NorthStarMapLibre.switchStyle('topo')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ địa hình cao độ & thủy văn - Nhận diện thung lũng lũ quét và sạt lở">⛰️ Địa Hình Lũ Quét</button>
+                <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Bản đồ không ảnh vệ tinh phân giải cao kèm địa danh trinh sát - y hệt Leaflet">🛰️ Vệ Tinh Recon</button>
+                <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ tác chiến nền tối C2">🌑 Tối C2</button>
+                <button id="btn-ml-base-topo" onclick="NorthStarMapLibre.switchStyle('topo')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ địa hình cao độ & thủy văn">⛰️ Địa Hình Lũ Quét</button>
                 <button id="btn-ml-base-osm" onclick="NorthStarMapLibre.switchStyle('osm')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ giao thông dân sự OpenStreetMap">🗺️ Đô Thị OSM</button>
               </div>
 
               <!-- Pitch Selector -->
               <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs shrink-0">
-                <span class="text-[10px] font-bold text-slate-400 px-1">Góc: <span id="maplibre-pitch-badge" class="text-cyan-300 font-mono font-bold">45°</span></span>
-                <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Góc nhìn 2D phẳng thẳng đứng">2D (0°)</button>
-                <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Góc nghiêng tác chiến 45 độ">3D (45°)</button>
+                <span class="text-[10px] font-bold text-slate-400 px-1">Góc: <span id="maplibre-pitch-badge" class="text-cyan-300 font-mono font-bold">0°</span></span>
+                <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Góc nhìn 2D phẳng thẳng đứng y hệt Leaflet">2D (0°)</button>
+                <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Góc nghiêng tác chiến 45 độ">3D (45°)</button>
                 <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Góc nghiêng sát mặt đất Flyover">60°</button>
               </div>
 

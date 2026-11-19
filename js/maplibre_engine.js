@@ -40,15 +40,16 @@ window.NorthStarMapLibre = (function () {
   let mapInstance = null;
   let isInitialized = false;
   let isAutoRotating = false;
-  let currentPitch = 45;
-  let currentBearing = -15;
-  let currentBaseKey = 'dark';
+  let currentPitch = 0; // Mặc định góc nhìn 2D phẳng y nguyên Leaflet
+  let currentBearing = 0;
+  let currentBaseKey = 'satellite'; // Mặc định Vệ Tinh Trinh Sát Không Gian y nguyên Leaflet
 
   // Quản lý các nhóm markers động
   const markersRegistry = {
     sos: [],
     shelters: [],
     floodPoints: [],
+    hazards: [],
     units: [],
     waypoints: []
   };
@@ -146,13 +147,13 @@ window.NorthStarMapLibre = (function () {
 
   // Danh sách phân vùng tác chiến nhanh (Regional Jump Targets)
   const REGIONAL_JUMP_TARGETS = {
-    all: { center: [105.8542, 21.0285], zoom: 7.2, pitch: 45, bearing: -15 },
-    hanoi: { center: [105.8542, 21.0285], zoom: 11.5, pitch: 50, bearing: -20 },
-    taybac: { center: [104.0500, 22.3500], zoom: 9.8, pitch: 55, bearing: -25 }, // Lào Cai - Yên Bái
-    vietbac: { center: [105.8000, 21.6000], zoom: 10.2, pitch: 48, bearing: -15 }, // Thái Nguyên - Bắc Giang
-    dongbac: { center: [106.2500, 22.4000], zoom: 9.5, pitch: 50, bearing: -10 }, // Cao Bằng - Lạng Sơn
-    quangninh: { center: [107.1500, 21.0500], zoom: 10.5, pitch: 52, bearing: -30 }, // Quảng Ninh - Hải Phòng
-    songda: { center: [105.3000, 21.0000], zoom: 9.8, pitch: 48, bearing: -15 }   // Phú Thọ - Hòa Bình
+    all: { center: [105.4000, 21.3500], zoom: 7.3, pitch: 0, bearing: 0 },
+    hanoi: { center: [105.8542, 21.0285], zoom: 11.5, pitch: 0, bearing: 0 },
+    taybac: { center: [104.0500, 22.3500], zoom: 9.8, pitch: 0, bearing: 0 }, // Lào Cai - Yên Bái
+    vietbac: { center: [105.8000, 21.6000], zoom: 10.2, pitch: 0, bearing: 0 }, // Thái Nguyên - Bắc Giang
+    dongbac: { center: [106.2500, 22.4000], zoom: 9.5, pitch: 0, bearing: 0 }, // Cao Bằng - Lạng Sơn
+    quangninh: { center: [107.1500, 21.0500], zoom: 10.5, pitch: 0, bearing: 0 }, // Quảng Ninh - Hải Phòng
+    songda: { center: [105.3000, 21.0000], zoom: 9.8, pitch: 0, bearing: 0 }   // Phú Thọ - Hòa Bình
   };
 
   /**
@@ -179,8 +180,8 @@ window.NorthStarMapLibre = (function () {
       mapInstance = new maplibregl.Map({
         container: containerId,
         style: BASEMAP_STYLES[currentBaseKey],
-        center: [105.8542, 21.0285],
-        zoom: 7.4,
+        center: [105.4000, 21.3500],
+        zoom: 7.3,
         pitch: currentPitch,
         bearing: currentBearing,
         antialias: true
@@ -222,6 +223,18 @@ window.NorthStarMapLibre = (function () {
         handleMapLibreClick(e);
       });
 
+      // Tự động gom cụm hoặc mở rộng điểm đo ngập khi phóng to / thu nhỏ hoặc di chuyển bản đồ
+      mapInstance.on('zoomend', () => {
+        if (layerVisibility.floodPoints) {
+          syncFloodPointMarkers();
+        }
+      });
+      mapInstance.on('moveend', () => {
+        if (layerVisibility.floodPoints) {
+          syncFloodPointMarkers();
+        }
+      });
+
     } catch (err) {
       console.error('[NorthStar MapLibre] Lỗi khởi tạo maplibregl:', err);
     }
@@ -245,7 +258,7 @@ window.NorthStarMapLibre = (function () {
         data: geojsonData
       });
 
-      // Lớp tô màu nền tỉnh thành (Fill)
+      // Lớp tô màu nền tỉnh thành (Fill - mờ tinh tế theo nguy cơ)
       mapInstance.addLayer({
         id: 'provinces-fill-layer',
         type: 'fill',
@@ -253,27 +266,50 @@ window.NorthStarMapLibre = (function () {
         paint: {
           'fill-color': [
             'case',
-            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(244, 63, 94, 0.22)',
-            ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.20)',
-            ['==', ['get', 'name'], 'Thái Nguyên'], 'rgba(245, 158, 11, 0.18)',
-            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.18)',
-            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.18)',
-            'rgba(30, 41, 59, 0.15)'
+            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.16)',
+            ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.14)',
+            ['==', ['get', 'name'], 'Thái Nguyên'], 'rgba(245, 158, 11, 0.12)',
+            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.08)',
+            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.08)',
+            'rgba(2, 132, 199, 0.05)'
           ],
           'fill-opacity': layerVisibility.provinces ? 0.9 : 0
         }
       });
 
-      // Lớp đường viền hành chính phát sáng (Line)
+      // Lớp viền phát sáng ngoài cùng bao quanh miền Bắc (Outer White Line - y hệt Leaflet)
+      mapInstance.addLayer({
+        id: 'provinces-glow-layer',
+        type: 'line',
+        source: 'provinces-source',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 2.6,
+          'line-opacity': layerVisibility.provinces ? 0.95 : 0
+        }
+      });
+
+      // Lớp đường viền hành chính ranh giới tỉnh nét đứt Cyan Sky Blue & Alert Red/Amber (y hệt Leaflet)
       mapInstance.addLayer({
         id: 'provinces-line-layer',
         type: 'line',
         source: 'provinces-source',
         paint: {
-          'line-color': '#38bdf8',
-          'line-width': 1.6,
-          'line-dasharray': [3, 1],
-          'line-opacity': layerVisibility.provinces ? 0.85 : 0
+          'line-color': [
+            'case',
+            ['==', ['get', 'name'], 'Lào Cai'], '#f43f5e',
+            ['==', ['get', 'name'], 'Yên Bái'], '#f59e0b',
+            ['==', ['get', 'name'], 'Thái Nguyên'], '#f59e0b',
+            '#38bdf8'
+          ],
+          'line-width': [
+            'case',
+            ['==', ['get', 'name'], 'Lào Cai'], 2.2,
+            ['==', ['get', 'name'], 'Yên Bái'], 2.0,
+            1.6
+          ],
+          'line-dasharray': [4, 4],
+          'line-opacity': layerVisibility.provinces ? 0.9 : 0
         }
       });
 
@@ -467,6 +503,14 @@ window.NorthStarMapLibre = (function () {
     };
   }
 
+  function resolveApi(endpoint) {
+    if (typeof window.getApiUrl === 'function') {
+      return window.getApiUrl(endpoint);
+    }
+    const host = window.location.hostname || 'localhost';
+    return `${window.location.protocol}//${host}:8000${endpoint}`;
+  }
+
   /**
    * 5. ĐỒNG BỘ TOÀN BỘ CÁC LỚP DỮ LIỆU ĐỘNG (SOS, TRẠM THỦY VĂN, ĐIỂM SƠ TÁN, ĐỘI XE)
    */
@@ -476,8 +520,9 @@ window.NorthStarMapLibre = (function () {
     clearAllMarkers();
 
     if (layerVisibility.sos) await syncSOSMarkers();
-    if (layerVisibility.floodPoints) await syncFloodPointMarkers();
     if (layerVisibility.shelters) await syncShelterMarkers();
+    if (layerVisibility.floodPoints) await syncFloodPointMarkers();
+    await syncHazardMarkers();
     if (layerVisibility.units) syncRescueUnitsMarkers();
     if (layerVisibility.route) syncTacticalRoute();
   }
@@ -490,36 +535,51 @@ window.NorthStarMapLibre = (function () {
   }
 
   /**
-   * Đồng bộ SOS Beacons (Radar Ping 3D)
+   * Đồng bộ SOS Beacons (Radar Ping Đỏ Rực - y hệt Leaflet)
    */
   async function syncSOSMarkers() {
     try {
-      const res = await fetch('/api/sos').catch(() => null);
-      if (!res.ok) return;
+      const res = await fetch(resolveApi('/api/sos')).catch(() => null);
+      if (!res || !res.ok) return;
       const data = await res.json();
       const features = data.features || [];
 
+      markersRegistry.sos.forEach(m => m.remove());
+      markersRegistry.sos = [];
+
+      // Lọc các tín hiệu còn hoạt động và khử trùng lặp điểm test
+      const seenCoords = new Set();
+
       features.forEach(feat => {
         const p = feat.properties;
-        if (['rescued', 'resolved', 'cancelled'].includes(p.status)) return;
+        if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
         const coords = feat.geometry.coordinates; // [Lng, Lat]
+        if (!coords || !coords[0] || !coords[1]) return;
+
+        // Khử trùng lặp các điểm test sinh ra cùng một vị trí
+        const coordKey = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;
+        if (seenCoords.has(coordKey)) return;
+        seenCoords.add(coordKey);
 
         const el = document.createElement('div');
-        el.className = 'relative flex items-center justify-center cursor-pointer';
+        el.className = 'relative flex items-center justify-center cursor-pointer select-none';
+        el.style.zIndex = '15';
         el.innerHTML = `
-          <span class="absolute w-8 h-8 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
-          <div class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center shadow-2xl border-2 border-white">
+          <span class="absolute w-14 h-14 rounded-full bg-rose-500/40 animate-ping"></span>
+          <span class="absolute w-16 h-16 rounded-full bg-rose-500/20"></span>
+          <span class="absolute w-11 h-11 rounded-full bg-rose-600/35"></span>
+          <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white relative z-10">
             SOS
           </div>
         `;
 
         const popupHtml = `
           <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-800">
-            <div class="font-extrabold text-rose-600 flex items-center gap-1">
+            <div class="font-extrabold text-rose-600 flex items-center gap-1 border-b border-rose-200 pb-1">
               <span>🚨</span> YÊU CẦU CỨU HỘ KHẨN CẤP
             </div>
             <div class="font-bold text-slate-900">${p.contact_name || 'Nạn nhân'} - ${p.phone}</div>
-            <div>Số người mắc kẹt: <b>${p.people_count} người</b> ${p.has_elderly_or_children ? '<span class="text-amber-700">(Có trẻ/người già)</span>' : ''}</div>
+            <div>Số người mắc kẹt: <b>${p.people_count} người</b> ${p.has_elderly_or_children ? '<span class="text-amber-700 font-semibold">(Có trẻ/người già)</span>' : ''}</div>
             ${p.notes ? `<div class="italic text-[11px] text-slate-600 border-t pt-1">"${p.notes}"</div>` : ''}
             <div class="pt-1.5 border-t border-slate-200 flex justify-between items-center gap-2">
               <a href="tel:${p.phone}" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold no-underline">📞 Gọi nạn nhân</a>
@@ -542,79 +602,271 @@ window.NorthStarMapLibre = (function () {
   }
 
   /**
-   * Đồng bộ Điểm Ngập Lụt & Trạm Đo Thủy Văn
+   * Đồng bộ Điểm Ngập Lụt & Trạm Đo Thủy Văn (Có gom cụm 2, 3 và nhãn 24cm, 18cm, 27cm - y hệt Leaflet)
    */
   async function syncFloodPointMarkers() {
     try {
-      const res = await fetch('/api/flood-points').catch(() => null);
+      const res = await fetch(resolveApi('/api/flood-points')).catch(() => null);
       let points = [];
       if (res && res.ok) {
-        points = await res.json();
+        const raw = await res.json();
+        points = Array.isArray(raw) ? raw : (raw.features || []);
       } else if (window.floodPoints && Array.isArray(window.floodPoints)) {
         points = window.floodPoints;
       }
 
+      const validPoints = [];
       points.forEach(pt => {
-        const lat = Number(pt.lat || (pt.geometry && pt.geometry.coordinates[1]));
-        const lng = Number(pt.lng || (pt.geometry && pt.geometry.coordinates[0]));
+        const p = pt.properties || pt;
+        const coords = (pt.geometry && pt.geometry.coordinates) ? pt.geometry.coordinates : null;
+        const lat = Number(pt.lat || (coords ? coords[1] : 0));
+        const lng = Number(pt.lng || (coords ? coords[0] : 0));
         if (!lat || !lng) return;
-
-        const depth = pt.depth_cm || pt.depth || 25;
-        const isDeep = depth > 50;
-
-        const el = document.createElement('div');
-        el.className = 'cursor-pointer flex items-center justify-center';
-        el.innerHTML = `
-          <div class="w-6 h-6 rounded-full ${isDeep ? 'bg-amber-600' : 'bg-sky-600'} text-white text-[10px] font-black flex items-center justify-center shadow-lg border border-white hover:scale-125 transition">
-            ${depth}
-          </div>
-        `;
-
-        const popupHtml = `
-          <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-            <div class="font-bold text-slate-900">${pt.location || pt.name || 'Điểm ngập lụt'}</div>
-            <div class="text-[11px] text-slate-600">Mực nước ngập: <b class="${isDeep ? 'text-rose-600' : 'text-sky-600'}">~${depth} cm</b></div>
-            <div class="text-[10.5px] text-slate-500 font-mono">[${lat.toFixed(4)}, ${lng.toFixed(4)}]</div>
-            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${lng}, ${lat}, '${(pt.location || 'Điểm ngập').replace(/'/g, "\\'")}')" class="mt-1 w-full py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded border border-slate-300">
-              📍 Chọn làm điểm đến
-            </button>
-          </div>
-        `;
-
-        const popup = new maplibregl.Popup({ offset: 15, maxWidth: '240px' }).setHTML(popupHtml);
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat([lng, lat])
-          .setPopup(popup)
-          .addTo(mapInstance);
-
-        markersRegistry.floodPoints.push(marker);
+        const depth = Number(p.depth_cm !== undefined && p.depth_cm !== null ? p.depth_cm : (p.depth || 20));
+        validPoints.push({
+          lat,
+          lng,
+          depth,
+          location: p.name || p.location || 'Điểm quan trắc ngập',
+          id: p.id || Math.random()
+        });
       });
+
+      // Xóa các marker cũ của floodPoints
+      markersRegistry.floodPoints.forEach(m => m.remove());
+      markersRegistry.floodPoints = [];
+
+      const currentZoom = mapInstance ? mapInstance.getZoom() : 7.3;
+
+      // Gom cụm thông minh ở mức zoom bao quát (zoom < 12.5) theo tọa độ pixel màn hình
+      if (currentZoom < 12.5) {
+        const clusterPixelRadius = 45; // 45px bán kính gom cụm - chuẩn khớp Leaflet maxClusterRadius: 40
+        const clusters = [];
+        const visited = new Set();
+
+        // Chuyển đổi tọa độ địa lý sang pixel màn hình hiện tại
+        const projectedPoints = validPoints.map((pt, idx) => {
+          const pixel = mapInstance.project([pt.lng, pt.lat]);
+          return { ...pt, px: pixel.x, py: pixel.y, idx };
+        });
+
+        for (let i = 0; i < projectedPoints.length; i++) {
+          if (visited.has(i)) continue;
+          visited.add(i);
+          const p1 = projectedPoints[i];
+          const group = [p1];
+
+          for (let j = i + 1; j < projectedPoints.length; j++) {
+            if (visited.has(j)) continue;
+            const p2 = projectedPoints[j];
+            const dist = Math.hypot(p1.px - p2.px, p1.py - p2.py);
+            if (dist < clusterPixelRadius) {
+              visited.add(j);
+              group.push(p2);
+            }
+          }
+          clusters.push(group);
+        }
+
+        clusters.forEach(group => {
+          const count = group.length;
+          const avgLat = group.reduce((sum, g) => sum + g.lat, 0) / count;
+          const avgLng = group.reduce((sum, g) => sum + g.lng, 0) / count;
+
+          if (count >= 2) {
+            createClusterMarker(group, avgLng, avgLat);
+          } else {
+            createIndividualFloodMarker(group[0]);
+          }
+        });
+      } else {
+        // Zoom gần: bung toàn bộ chi tiết
+        validPoints.forEach(pt => {
+          createIndividualFloodMarker(pt);
+        });
+      }
     } catch (e) {
       console.warn('[MapLibre] Lỗi đồng bộ Flood Points:', e);
     }
   }
 
+  function createClusterMarker(group, avgLng, avgLat) {
+    const count = group.length;
+    let hasDanger = false;
+    let hasWarning = false;
+    let hasSafe = false;
+
+    for (let i = 0; i < group.length; i++) {
+      const d = group[i].depth;
+      if (d >= 20) {
+        hasDanger = true;
+      } else if (d >= 5) {
+        hasWarning = true;
+      } else {
+        hasSafe = true;
+      }
+    }
+
+    let size = 36;
+    let clusterLevel = 'safe';
+    if (hasDanger) {
+      clusterLevel = 'danger';
+    } else if (hasWarning) {
+      clusterLevel = 'warning';
+    } else if (!hasSafe) {
+      clusterLevel = 'offline';
+    }
+
+    if (count >= 25) {
+      size = 46;
+    } else if (count >= 10) {
+      size = 40;
+    }
+
+    const badgeHtml = hasDanger ? '<span class="cluster-danger-dot" title="Có điểm ngập sâu trong cụm"></span>' : '';
+
+    const el = document.createElement('div');
+    el.className = 'flood-cluster-container relative flex items-center justify-center cursor-pointer select-none';
+    el.style.zIndex = '30';
+    el.innerHTML = `
+      <span class="absolute rounded-full ${hasDanger ? 'bg-rose-500/35' : 'bg-blue-500/35'}" style="width: ${size + 14}px; height: ${size + 14}px;"></span>
+      <div class="flood-cluster-badge flood-cluster-${clusterLevel}" style="width: ${size}px; height: ${size}px;" title="Cụm ${count} điểm quan trắc (nhấp để phóng to)">
+        <span class="cluster-num">${count}</span>
+        ${badgeHtml}
+      </div>
+    `;
+
+    el.addEventListener('click', () => {
+      mapInstance.flyTo({ center: [avgLng, avgLat], zoom: mapInstance.getZoom() + 2, duration: 800 });
+    });
+
+    const marker = new maplibregl.Marker({ element: el })
+      .setLngLat([avgLng, avgLat])
+      .addTo(mapInstance);
+    markersRegistry.floodPoints.push(marker);
+  }
+
+  function createIndividualFloodMarker(pt) {
+    const lat = pt.lat;
+    const lng = pt.lng;
+    const depth = pt.depth;
+    const isDeep = depth >= 20;
+
+    const el = document.createElement('div');
+    el.className = 'custom-flood-pin cursor-pointer select-none flex items-center justify-center';
+    el.style.zIndex = '25';
+
+    // Điểm hiển thị số cm ngập y hệt Leaflet (.custom-marker: 24cm, 18cm, 27cm, 19cm...)
+    const bgColor = isDeep ? '#d97706' : (depth >= 5 ? '#f59e0b' : '#10b981');
+    el.innerHTML = `
+      <div class="custom-marker" style="width: 32px; height: 32px; background-color: ${bgColor};" title="${pt.location}: ${depth}cm">
+        <span>${Math.round(depth)}cm</span>
+      </div>
+    `;
+
+    const popupHtml = `
+      <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
+        <div class="font-bold text-slate-900">${pt.location}</div>
+        <div class="text-[11px] text-slate-600">Mực nước ngập: <b class="${isDeep ? 'text-amber-700 font-extrabold' : 'text-emerald-700 font-bold'}">${depth} cm</b></div>
+        <div class="text-[10px] text-slate-500 font-mono">[${lat.toFixed(4)}, ${lng.toFixed(4)}]</div>
+        <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${lng}, ${lat}, '${pt.location.replace(/'/g, "\\'")}')" class="mt-1 w-full py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded border border-slate-300">
+          📍 Chọn làm điểm đến
+        </button>
+      </div>
+    `;
+
+    const popup = new maplibregl.Popup({ offset: 15, maxWidth: '240px' }).setHTML(popupHtml);
+    const marker = new maplibregl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .setPopup(popup)
+      .addTo(mapInstance);
+
+    markersRegistry.floodPoints.push(marker);
+  }
+
   /**
-   * Đồng bộ Điểm Sơ Tán An Toàn
+   * Đồng bộ Điểm Cảnh Báo Thiên Tai & Hiểm Họa (⚠️ - y hệt Leaflet)
+   */
+  async function syncHazardMarkers() {
+    try {
+      const res = await fetch(resolveApi('/api/disasters')).catch(() => null);
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      const features = data.features || [];
+
+      markersRegistry.hazards.forEach(m => m.remove());
+      markersRegistry.hazards = [];
+
+      features.forEach(feat => {
+        const p = feat.properties;
+        const coords = feat.geometry.coordinates; // [Lng, Lat]
+
+        const el = document.createElement('div');
+        el.className = 'relative flex items-center justify-center cursor-pointer select-none';
+        el.style.zIndex = '23';
+        el.innerHTML = `
+          <span class="absolute w-9 h-9 rounded-full bg-amber-500/50 animate-ping"></span>
+          <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xl border-2 border-white text-xs font-black relative z-10" title="${p.title}">
+            ⚠️
+          </div>
+        `;
+
+        const popupHtml = `
+          <div class="p-2.5 max-w-[280px] font-sans text-xs text-slate-800">
+            <div class="font-extrabold text-amber-600 flex items-center gap-1 border-b border-amber-200 pb-1">
+              <span>⚠️</span> CẢNH BÁO THIÊN TAI NGUY HIỂM
+            </div>
+            <div class="font-bold text-slate-900 mt-1">${p.title}</div>
+            <div class="text-[11px] text-slate-600 mt-1">${p.description || ''}</div>
+            <div class="text-[10px] text-slate-500 mt-1">Bán kính ảnh hưởng: <b>~${p.radius_m || 500}m</b></div>
+          </div>
+        `;
+
+        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '280px' }).setHTML(popupHtml);
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([coords[0], coords[1]])
+          .setPopup(popup)
+          .addTo(mapInstance);
+
+        markersRegistry.hazards.push(marker);
+      });
+    } catch (e) {
+      console.warn('[MapLibre] Lỗi đồng bộ Hazards:', e);
+    }
+  }
+
+  /**
+   * Đồng bộ Điểm Sơ Tán An Toàn (🛡️ - y hệt Leaflet)
    */
   async function syncShelterMarkers() {
     try {
-      const res = await fetch('/api/shelters').catch(() => null);
-      if (!res.ok) return;
+      const res = await fetch(resolveApi('/api/shelters')).catch(() => null);
+      if (!res || !res.ok) return;
       const data = await res.json();
       const features = data.features || [];
+
+      markersRegistry.shelters.forEach(m => m.remove());
+      markersRegistry.shelters = [];
 
       features.forEach(feat => {
         const p = feat.properties;
         const coords = feat.geometry.coordinates;
 
         const el = document.createElement('div');
-        el.className = 'w-7 h-7 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xl border-2 border-white text-xs cursor-pointer hover:scale-115 transition';
-        el.innerHTML = '⛺';
+        el.className = 'relative flex items-center justify-center cursor-pointer select-none';
+        el.style.zIndex = '23';
+        el.innerHTML = `
+          <span class="absolute w-10 h-10 rounded-full bg-emerald-500/25"></span>
+          <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10" title="${p.name}">
+            <span class="text-xs font-bold leading-none">🛡️</span>
+          </div>
+        `;
 
         const popupHtml = `
           <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-            <div class="font-bold text-emerald-700 flex items-center gap-1 text-sm">⛺ ${p.name}</div>
+            <div class="font-bold text-emerald-700 flex items-center gap-1 text-sm border-b border-emerald-100 pb-1">
+              <span>🛡️</span> ${p.name}
+            </div>
             <div class="text-[11px] text-slate-600">${p.address || ''}</div>
             <div class="text-[11px]">Sức chứa: <b>${p.capacity || 500} người</b> (${p.available_slots || 300} còn trống)</div>
             <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
