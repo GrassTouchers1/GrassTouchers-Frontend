@@ -58,6 +58,23 @@ window.NorthStarMapLibre = (function () {
     rainRadar: false
   };
 
+  // PHẠM VI KHÔNG GIAN TÁC CHIẾN 26 TỈNH MIỀN BẮC VIỆT NAM (SPATIAL BOUNDING BOX)
+  // Khóa chặt tuyệt đối: Mọi tín hiệu SOS, Trạm ngập, Điểm trú ẩn ngoài miền Bắc (Lào, Thái Lan...) đều tự động bị loại bỏ
+  const NORTHERN_VIETNAM_BOUNDS = {
+    minLng: 102.10,
+    maxLng: 108.50,
+    minLat: 19.80,
+    maxLat: 23.60
+  };
+
+  function isWithinNorthernVietnam(lng, lat) {
+    if (typeof lng !== 'number' || typeof lat !== 'number' || isNaN(lng) || isNaN(lat)) return false;
+    return lng >= NORTHERN_VIETNAM_BOUNDS.minLng &&
+           lng <= NORTHERN_VIETNAM_BOUNDS.maxLng &&
+           lat >= NORTHERN_VIETNAM_BOUNDS.minLat &&
+           lat <= NORTHERN_VIETNAM_BOUNDS.maxLat;
+  }
+
   // Cấu hình 4 lớp bản đồ nền chuyên dụng tác chiến C2 (Zero API Key, 100% Chuẩn Mở)
   const BASEMAP_STYLES = {
     dark: {
@@ -140,7 +157,7 @@ window.NorthStarMapLibre = (function () {
 
   // Danh sách phân vùng tác chiến nhanh (Regional Jump Targets)
   const REGIONAL_JUMP_TARGETS = {
-    all: { center: [105.4000, 21.3500], zoom: 7.3, pitch: 0, bearing: 0 },
+    all: { center: [105.4000, 21.3500], zoom: 7.4, pitch: 0, bearing: 0 },
     hanoi: { center: [105.8542, 21.0285], zoom: 11.5, pitch: 0, bearing: 0 },
     taybac: { center: [104.0500, 22.3500], zoom: 9.8, pitch: 0, bearing: 0 }, // Lào Cai - Yên Bái
     vietbac: { center: [105.8000, 21.6000], zoom: 10.2, pitch: 0, bearing: 0 }, // Thái Nguyên - Bắc Giang
@@ -262,7 +279,13 @@ window.NorthStarMapLibre = (function () {
         container: containerId,
         style: BASEMAP_STYLES[currentBaseKey],
         center: [105.4000, 21.3500],
-        zoom: 7.3,
+        zoom: 7.4,
+        minZoom: 6.8, // Khóa zoom tối thiểu: Giữ góc nhìn luôn bao trọn 26 tỉnh miền Bắc, không trôi sang Thái Lan / Nam Lào
+        maxZoom: 18.0,
+        maxBounds: [
+          [100.8, 18.8], // Góc Tây Nam: Giới hạn camera không trôi sang Thái Lan / Vientiane
+          [109.8, 24.2]  // Góc Đông Bắc: Giới hạn camera không trôi quá xa sang Trung Quốc
+        ],
         pitch: currentPitch,
         bearing: currentBearing,
         antialias: true
@@ -846,6 +869,7 @@ window.NorthStarMapLibre = (function () {
         if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
         const coords = feat.geometry.coordinates; // [Lng, Lat]
         if (!coords || !coords[0] || !coords[1]) return;
+        if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm ngoài Miền Bắc (Lào, Thái Lan)
 
         const coordKey = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;
         if (seenCoords.has(coordKey)) return;
@@ -919,7 +943,9 @@ window.NorthStarMapLibre = (function () {
         const location = pt.location || p.location || p.name || 'Điểm ngập';
 
         if (!isNaN(lat) && !isNaN(lng)) {
-          validPoints.push({ lat, lng, depth, location, raw: pt });
+          if (isWithinNorthernVietnam(lng, lat)) {
+            validPoints.push({ lat, lng, depth, location, raw: pt });
+          }
         }
       });
 
@@ -1119,6 +1145,8 @@ window.NorthStarMapLibre = (function () {
       features.forEach(feat => {
         const p = feat.properties;
         const coords = feat.geometry.coordinates;
+        if (!coords || !coords[0] || !coords[1]) return;
+        if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm sơ tán ngoài Miền Bắc
 
         shelterList.push({ ...p, coords });
 
