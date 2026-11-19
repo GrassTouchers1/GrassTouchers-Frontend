@@ -602,6 +602,9 @@
     updatePaneCards: updateWeatherPaneCards,
     refreshData: fetchLiveOpenMeteo,
     getCache: () => weatherCache,
+    get cache() { return weatherCache; },
+    provincesGeoJSON: NORTHERN_PROVINCES_GEOJSON,
+    metadata: PROVINCE_METADATA,
     getLayerGroup: () => provincesLayerGroup,
     zoomToProvince: zoomToProvince,
     focusProvinceRegion: focusProvinceRegion

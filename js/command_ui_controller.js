@@ -1014,6 +1014,9 @@ const CommandUIController = (function () {
       setTimeout(() => {
         window.NorthStarMapLibre.init('maplibre-container');
         window.NorthStarMapLibre.resize();
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+          lucide.createIcons();
+        }
       }, 100);
     }
 
