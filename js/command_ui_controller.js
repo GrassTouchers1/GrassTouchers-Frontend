@@ -1031,6 +1031,16 @@ const CommandUIController = (function () {
       window.ProvinceWeatherLayer.updatePaneCards();
     }
 
+    if (viewId === 'cmd_maplibre_3d' || viewId === 'cmd_disaster_map') {
+      // Tự động thu gọn bảng chỉ số KPI và sidebar để nhường 100% không gian khoáng đạt cho bản đồ
+      toggleTopStatsCollapse(true);
+      toggleSidebarCollapse(true);
+    } else if (viewId === 'cmd_dashboard') {
+      // Khôi phục lại trạng thái đầy đủ khi quay lại Dashboard điều hành
+      toggleTopStatsCollapse(false);
+      toggleSidebarCollapse(false);
+    }
+
     if (viewId === 'cmd_maplibre_3d' && window.NorthStarMapLibre) {
       setTimeout(() => {
         window.NorthStarMapLibre.init('maplibre-container');

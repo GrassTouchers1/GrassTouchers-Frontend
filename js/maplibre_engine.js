@@ -881,12 +881,11 @@ window.NorthStarMapLibre = (function () {
 
         const el = document.createElement('div');
         el.className = 'flex items-center justify-center cursor-pointer select-none';
-        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 15;';
+        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 15;';
         el.innerHTML = `
-          <span class="absolute w-14 h-14 rounded-full bg-rose-500/40 animate-ping pointer-events-none"></span>
-          <span class="absolute w-16 h-16 rounded-full bg-rose-500/20 pointer-events-none"></span>
-          <span class="absolute w-11 h-11 rounded-full bg-rose-600/35 pointer-events-none"></span>
-          <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white relative z-10 pointer-events-auto">
+          <span class="absolute w-7 h-7 rounded-full bg-rose-500/35 animate-ping pointer-events-none"></span>
+          <span class="absolute w-8 h-8 rounded-full bg-rose-500/15 pointer-events-none"></span>
+          <div class="w-6 h-6 rounded-full bg-rose-600 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-white relative z-10 pointer-events-auto">
             SOS
           </div>
         `;
@@ -958,11 +957,17 @@ window.NorthStarMapLibre = (function () {
       markersRegistry.floodPoints = [];
 
       const currentZoom = mapInstance ? mapInstance.getZoom() : 7.5;
-      const CLUSTER_THRESHOLD_ZOOM = 11.5;
+      const CLUSTER_THRESHOLD_ZOOM = 11.2;
 
       if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
-        // Gom cụm không gian theo bán kính tác chiến
-        const CLUSTER_DIST = 0.35;
+        // Gom cụm thông minh động theo cấp độ zoom để chống đè chữ và giữ bản đồ thoáng đãng
+        let clusterDist = 0.85; // Toàn cảnh miền Bắc: gom cụm thoáng rộng
+        if (currentZoom >= 9.8) {
+          clusterDist = 0.35;   // Cận cảnh cấp huyện / lưu vực
+        } else if (currentZoom >= 8.5) {
+          clusterDist = 0.55;   // Cấp tỉnh
+        }
+
         const clusters = [];
         const visited = new Set();
 
@@ -977,7 +982,7 @@ window.NorthStarMapLibre = (function () {
             const dLng = validPoints[i].lng - validPoints[j].lng;
             const dist = Math.sqrt(dLat * dLat + dLng * dLng);
 
-            if (dist < CLUSTER_DIST) {
+            if (dist < clusterDist) {
               group.push(validPoints[j]);
               visited.add(j);
             }
@@ -1002,7 +1007,7 @@ window.NorthStarMapLibre = (function () {
           }
         });
       } else {
-        // Phóng to chi tiết: Hiển thị từng điểm riêng biệt với số đo cm
+        // Phóng to chi tiết (zoom >= 11.2): Hiển thị từng điểm đo thực tế với số đo cm
         validPoints.forEach(pt => createIndividualFloodMarker(pt));
       }
 
@@ -1014,11 +1019,10 @@ window.NorthStarMapLibre = (function () {
   function createClusterMarker(group, avgLng, avgLat) {
     const el = document.createElement('div');
     el.className = 'flex items-center justify-center cursor-pointer select-none';
-    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 30;';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 30;';
     el.innerHTML = `
-      <span class="absolute w-12 h-12 rounded-full bg-rose-500/20 pointer-events-none"></span>
-      <span class="absolute w-10 h-10 rounded-full bg-indigo-500/35 pointer-events-none"></span>
-      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 text-white font-extrabold text-sm flex items-center justify-center shadow-2xl border-2 border-white relative z-10 hover:scale-110 transition pointer-events-auto">
+      <span class="absolute w-7 h-7 rounded-full bg-indigo-500/25 pointer-events-none"></span>
+      <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 text-white font-extrabold text-[10.5px] flex items-center justify-center shadow-lg border border-white relative z-10 hover:scale-115 transition pointer-events-auto">
         ${group.length}
       </div>
     `;
@@ -1042,23 +1046,18 @@ window.NorthStarMapLibre = (function () {
     const depthVal = Math.round(pt.depth);
     const depthText = `${depthVal}cm`;
 
-    let ringColor = 'rgba(217, 119, 6, 0.45)';
     let badgeBg = '#d97706';
-
     if (depthVal >= 50) {
-      ringColor = 'rgba(225, 29, 72, 0.55)';
       badgeBg = '#e11d48';
     } else if (depthVal < 20) {
-      ringColor = 'rgba(14, 165, 233, 0.45)';
       badgeBg = '#0284c7';
     }
 
     const el = document.createElement('div');
     el.className = 'flex items-center justify-center cursor-pointer select-none group';
-    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; height: 32px; pointer-events: auto !important; z-index: 25;';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; height: 22px; pointer-events: auto !important; z-index: 25;';
     el.innerHTML = `
-      <span class="absolute w-12 h-12 rounded-full pointer-events-none" style="background: ${ringColor}"></span>
-      <div class="px-2 py-1 rounded-full text-white text-[10.5px] font-black shadow-2xl border-2 border-white relative z-10 flex items-center gap-0.5 transition-transform duration-200 group-hover:scale-110 pointer-events-auto" style="background: ${badgeBg}">
+      <div class="px-1.5 py-0.5 rounded-full text-white text-[9px] font-black shadow-md border border-white relative z-10 flex items-center gap-0.5 transition-transform duration-200 group-hover:scale-110 pointer-events-auto" style="background: ${badgeBg}">
         ${depthText}
       </div>
     `;
@@ -1154,11 +1153,10 @@ window.NorthStarMapLibre = (function () {
 
         const el = document.createElement('div');
         el.className = 'flex items-center justify-center cursor-pointer select-none';
-        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 23;';
+        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 24px; height: 24px; pointer-events: auto !important; z-index: 23;';
         el.innerHTML = `
-          <span class="absolute w-10 h-10 rounded-full bg-emerald-500/25 pointer-events-none"></span>
-          <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10 pointer-events-auto" title="${p.name}">
-            <span class="text-xs font-bold leading-none">🛡️</span>
+          <div class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border border-white hover:scale-120 transition relative z-10 pointer-events-auto" title="${p.name}">
+            <span class="text-[9.5px] font-bold leading-none">🛡️</span>
           </div>
         `;
 
@@ -1212,11 +1210,11 @@ window.NorthStarMapLibre = (function () {
 
       const el = document.createElement('div');
       el.className = 'flex items-center justify-center cursor-pointer';
-      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 24;';
+      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 26px; height: 26px; pointer-events: auto !important; z-index: 24;';
       el.innerHTML = `
-        <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : (isHeli ? 'bg-purple-600' : 'bg-blue-600')} text-white shadow-lg border-2 border-white flex items-center justify-center text-xs font-black relative pointer-events-auto">
+        <div class="w-6 h-6 rounded-full ${isBoat ? 'bg-cyan-600' : (isHeli ? 'bg-purple-600' : 'bg-blue-600')} text-white shadow-md border border-white flex items-center justify-center text-[10px] font-black relative pointer-events-auto">
           ${icon}
-          <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
+          <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
         </div>
       `;
 
@@ -2194,6 +2192,21 @@ window.NorthStarMapLibre = (function () {
     }
   }
 
+  function toggleLayersDrawer() {
+    const panel = document.getElementById('ml-layers-dock-panel');
+    const chevron = document.getElementById('ml-layers-chevron');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      if (chevron) chevron.setAttribute('data-lucide', 'chevron-down');
+    } else {
+      panel.classList.add('hidden');
+      if (chevron) chevron.setAttribute('data-lucide', 'chevron-up');
+    }
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
+
   return {
     init,
     setPitch,
@@ -2201,6 +2214,7 @@ window.NorthStarMapLibre = (function () {
     switchStyle,
     toggleLayer,
     toggleLayerUI,
+    toggleLayersDrawer,
     jumpToRegion,
     setRouteOriginDestination,
     syncAllLayers,
