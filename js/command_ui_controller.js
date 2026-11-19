@@ -235,6 +235,20 @@ const CommandUIController = (function () {
     // Nạp dữ liệu từ backend
     await refreshSystemData();
 
+    // Khởi động đồng bộ nền thời gian thực (Background Real-Time Polling 7s)
+    startAutoSyncPolling(7000);
+
+    // Lắng nghe sự kiện phát tín hiệu SOS hoặc cứu hộ an toàn
+    window.addEventListener('northstar:sos_beacon_created', (e) => {
+      if (e.detail) registerNewSOS(e.detail);
+    });
+    window.addEventListener('northstar:sos_resolved', (e) => {
+      if (e.detail && e.detail.id) updateSOSStatus(e.detail.id, 'rescued');
+    });
+    window.addEventListener('northstar:new_citizen_report', () => {
+      refreshSystemData();
+    });
+
     // Khởi tạo các listener sự kiện
     setupGlobalEventListeners();
 
@@ -468,6 +482,119 @@ const CommandUIController = (function () {
     } catch (err) {
       console.warn('[NorthStar Command] Lỗi đồng bộ dữ liệu hệ thống:', err);
     }
+  }
+
+  // TIẾP NHẬN TỨC THÌ TÍN HIỆU SOS MỚI VÀO TRUNG TÂM TIẾP NHẬN & COP
+  function registerNewSOS(feature) {
+    if (!feature || !feature.properties) return;
+    const p = feature.properties;
+    const c = (feature.geometry && feature.geometry.coordinates) || [105.8542, 21.0285];
+    const lng = Number(c[0]);
+    const lat = Number(c[1]);
+
+    const sosItem = {
+      id: `SOS-${p.id}`,
+      raw_id: p.id,
+      contact_name: p.contact_name || 'Người dân kêu cứu',
+      phone: String(p.phone || '098xxxxxxx'),
+      people_count: Number(p.people_count || 1),
+      has_vulnerable: !!p.has_elderly_or_children,
+      water_level_cm: Number(p.water_level_cm || 0),
+      priority: p.priority || 'critical',
+      status: p.status || 'pending',
+      lat: lat,
+      lng: lng,
+      notes: p.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
+      created_at: p.created_at || new Date().toISOString()
+    };
+
+    // 1. Cập nhật sosData
+    sosData = sosData.filter(s => s.raw_id !== p.id);
+    sosData.unshift(sosItem);
+
+    // 2. Thêm vào intakeData ở vị trí đầu tiên
+    const intakeItem = {
+      id: `SOS-${p.id}`,
+      raw_id: p.id,
+      source: 'sos_beacon',
+      source_label: '🆘 Tín Hiệu SOS',
+      source_badge_color: 'bg-rose-600 text-white',
+      contact_name: p.contact_name || 'Người dân kêu cứu',
+      phone: String(p.phone || '098xxxxxxx'),
+      people_count: Number(p.people_count || 1),
+      has_vulnerable: !!p.has_elderly_or_children,
+      water_level_cm: Number(p.water_level_cm || 0),
+      priority: p.priority || 'critical',
+      status: p.status || 'pending',
+      lat: lat,
+      lng: lng,
+      description: p.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
+      created_at: p.created_at || new Date().toISOString(),
+      is_verified: p.priority === 'critical' || p.status !== 'pending',
+      duplicate_count: 0,
+      audit_trail: [
+        {
+          time: new Date().toLocaleTimeString('vi-VN'),
+          icon: 'phone-incoming',
+          color: 'sky',
+          title: 'Tiếp nhận thông tin ban đầu',
+          note: `Tín hiệu SOS vừa phát từ hiện trường: ${p.contact_name} (${p.phone}).`
+        },
+        {
+          time: new Date().toLocaleTimeString('vi-VN'),
+          icon: 'bot',
+          color: 'indigo',
+          title: 'Phân loại AI Triage',
+          note: `AI định danh độ ưu tiên: ${p.priority === 'critical' ? 'P1 - Khẩn cấp' : 'P2 - Ưu tiên'}. Người mắc kẹt: ${p.people_count}.`
+        }
+      ]
+    };
+
+    intakeData = intakeData.filter(i => !(i.source === 'sos_beacon' && i.raw_id === p.id));
+    intakeData.unshift(intakeItem);
+
+    // 3. Khử trùng lặp tự động spatiotemporal (50m)
+    runSpatiotemporalDeduplication();
+
+    // 4. Cập nhật toàn bộ COP
+    renderAllComponents();
+    renderTacticalMapLayers();
+
+    // 5. Bật cảnh báo Toast màu đỏ
+    showToast('🚨 TÍN HIỆU SOS MỚI', `Đã tiếp nhận yêu cầu từ [${intakeItem.contact_name} - ${intakeItem.phone}] vào Trung tâm tiếp nhận!`, 'error');
+  }
+
+  // CẬP NHẬT TRẠNG THÁI SOS KHI NẠN NHÂN ĐÃ ĐƯỢC GIẢI CỨU HOẶC ĐIỀU PHỐI
+  function updateSOSStatus(rawId, newStatus) {
+    const s = sosData.find(item => item.raw_id == rawId);
+    if (s) s.status = newStatus;
+
+    const intakeItem = intakeData.find(item => item.source === 'sos_beacon' && item.raw_id == rawId);
+    if (intakeItem) {
+      intakeItem.status = newStatus === 'rescued' ? 'resolved' : newStatus;
+      if (!intakeItem.audit_trail) intakeItem.audit_trail = [];
+      intakeItem.audit_trail.push({
+        time: new Date().toLocaleTimeString('vi-VN'),
+        icon: 'check-circle-2',
+        color: 'emerald',
+        title: 'Cập nhật trạng thái cứu hộ',
+        note: `Nạn nhân được cập nhật: [${newStatus === 'rescued' ? 'ĐÃ CỨU HỘ AN TOÀN' : newStatus}].`
+      });
+    }
+
+    renderAllComponents();
+    renderTacticalMapLayers();
+  }
+
+  // ĐỒNG BỘ NỀN THỜI GIAN THỰC (REAL-TIME POLLING CHỐNG BỎ SÓT TIN)
+  let syncTimer = null;
+  function startAutoSyncPolling(intervalMs = 7000) {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(async () => {
+      if (document.visibilityState === 'visible') {
+        await refreshSystemData();
+      }
+    }, intervalMs);
   }
 
   function initRescueFleet() {
@@ -721,6 +848,13 @@ const CommandUIController = (function () {
         is_verified: true
       }
     );
+
+    // Sắp xếp các sự cố mới nhất lên trên đầu (Newest first)
+    intakeData.sort((a, b) => {
+      const timeA = new Date(a.created_at || 0).getTime();
+      const timeB = new Date(b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
 
     // Khử trùng lặp tự động spatiotemporal (50m) an toàn
     runSpatiotemporalDeduplication();
@@ -3680,8 +3814,13 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     verifyLiveLicenses,
     exportLicensesReport,
     toggleTacticalLayers,
+    init,
     toggleFullscreen,
     showToast,
+    refreshSystemData,
+    registerNewSOS,
+    updateSOSStatus,
+    startAutoSyncPolling,
     get state() { return state; },
     get rolesConfig() { return ROLES_CONFIG; }
   };

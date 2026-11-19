@@ -608,10 +608,27 @@ const NorthStarRescue = (function () {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+      const savedBeacon = await res.json();
+
       alert('✅ ĐÃ PHÁT TÍN HIỆU CỨU HỘ KHẨN CẤP THÀNH CÔNG!\nLực lượng cứu hộ và chính quyền địa phương đã nhận được toạ độ của bạn.');
       // Xoá trắng form
       if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
+      
+      // 1. Cập nhật marker cứu hộ trên bản đồ
       await loadSOSBeacons();
+
+      // 2. Đồng bộ lập tức sang Trung Tâm Tiếp Nhận & COP Command Center
+      if (window.CommandUIController) {
+        if (typeof window.CommandUIController.registerNewSOS === 'function') {
+          window.CommandUIController.registerNewSOS(savedBeacon);
+        } else if (typeof window.CommandUIController.refreshSystemData === 'function') {
+          window.CommandUIController.refreshSystemData();
+        }
+      }
+
+      // 3. Bắn event đồng bộ toàn cục
+      window.dispatchEvent(new CustomEvent('northstar:sos_beacon_created', { detail: savedBeacon }));
+
     } catch (err) {
       alert(`Không thể gửi tín hiệu SOS: ${err.message}. Vui lòng gọi trực tiếp hotline 114 hoặc 112.`);
     }
@@ -625,7 +642,21 @@ const NorthStarRescue = (function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rescued' })
       });
+      
+      // 1. Cập nhật marker trên bản đồ
       await loadSOSBeacons();
+
+      // 2. Đồng bộ trạng thái đã an toàn sang Trung Tâm Tiếp Nhận & COP
+      if (window.CommandUIController) {
+        if (typeof window.CommandUIController.updateSOSStatus === 'function') {
+          window.CommandUIController.updateSOSStatus(sosId, 'rescued');
+        } else if (typeof window.CommandUIController.refreshSystemData === 'function') {
+          window.CommandUIController.refreshSystemData();
+        }
+      }
+
+      // 3. Bắn event toàn cục
+      window.dispatchEvent(new CustomEvent('northstar:sos_resolved', { detail: { id: sosId } }));
     } catch (err) {
       console.error(err);
     }

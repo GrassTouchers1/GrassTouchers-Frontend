@@ -2526,6 +2526,11 @@ async function submitReport() {
 
       loadFloodPoints();
 
+      if (window.CommandUIController && typeof window.CommandUIController.refreshSystemData === 'function') {
+        window.CommandUIController.refreshSystemData();
+      }
+      window.dispatchEvent(new CustomEvent('northstar:new_citizen_report'));
+
     }
 
   } catch (err) {
