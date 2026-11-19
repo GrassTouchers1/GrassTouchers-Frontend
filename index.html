@@ -52,7 +52,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=20261118_v18" />
+  <link rel="stylesheet" href="css/style.css?v=20261119_v19" />
   <style>
     /* Command Interface Specific Overrides */
     .cmd-nav-item {
@@ -1123,7 +1123,7 @@
 
                 <input type="text" id="origin-text" placeholder="Nhập địa chỉ (VD: Xuân Thủy, Cầu Giấy...)" 
 
-                       class="w-full pl-8 pr-7 py-2 bg-white text-xs border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                       class="w-full pl-8 pr-7 py-2 bg-white text-slate-900 placeholder:text-slate-400 font-medium text-xs border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
 
                        autocomplete="off"
 
@@ -1173,7 +1173,7 @@
 
                 <input type="text" id="dest-text" placeholder="Nhập địa chỉ (VD: Láng Hạ, Chùa Bộc...)" 
 
-                       class="w-full pl-8 pr-7 py-2 bg-white text-xs border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                       class="w-full pl-8 pr-7 py-2 bg-white text-slate-900 placeholder:text-slate-400 font-medium text-xs border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
 
                        autocomplete="off"
 
@@ -1616,16 +1616,16 @@
             <div class="space-y-2 text-xs">
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Họ tên người liên hệ:</label>
-                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số điện thoại:</label>
-                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
                 </div>
                 <div>
                   <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Số người mắc kẹt:</label>
-                  <input id="sos-input-people" type="number" min="1" max="100" value="1" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                  <input id="sos-input-people" type="number" min="1" max="100" value="1" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium">
                 </div>
               </div>
 
@@ -1636,7 +1636,7 @@
 
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Ghi chú tình trạng khẩn cấp:</label>
-                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano gấp..." class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"></textarea>
+                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano gấp..." class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-medium"></textarea>
               </div>
 
               <button onclick="NorthStarRescue.submitSOSBeacon()" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-1.5 transition">
