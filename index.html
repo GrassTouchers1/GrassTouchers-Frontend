@@ -74,6 +74,17 @@
     #map-container {
       isolation: isolate;
     }
+    /* Khóa chặt định vị MapLibre Markers chống xung đột với Tailwind .relative */
+    .maplibregl-marker {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      will-change: transform !important;
+      pointer-events: auto !important;
+      user-select: none;
+    }
   </style>
 </head>
 
@@ -3203,7 +3214,7 @@
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261120_c2_v1"></script>
+  <script src="js/maplibre_engine.js?v=20261120_c2_v2_fixed_marker_coords"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>

@@ -880,13 +880,13 @@ window.NorthStarMapLibre = (function () {
         validSosList.push({ ...p, coords });
 
         const el = document.createElement('div');
-        el.className = 'relative flex items-center justify-center cursor-pointer select-none';
-        el.style.zIndex = '15';
+        el.className = 'flex items-center justify-center cursor-pointer select-none';
+        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 15;';
         el.innerHTML = `
-          <span class="absolute w-14 h-14 rounded-full bg-rose-500/40 animate-ping"></span>
-          <span class="absolute w-16 h-16 rounded-full bg-rose-500/20"></span>
-          <span class="absolute w-11 h-11 rounded-full bg-rose-600/35"></span>
-          <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white relative z-10">
+          <span class="absolute w-14 h-14 rounded-full bg-rose-500/40 animate-ping pointer-events-none"></span>
+          <span class="absolute w-16 h-16 rounded-full bg-rose-500/20 pointer-events-none"></span>
+          <span class="absolute w-11 h-11 rounded-full bg-rose-600/35 pointer-events-none"></span>
+          <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white relative z-10 pointer-events-auto">
             SOS
           </div>
         `;
@@ -907,7 +907,7 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' }).setHTML(popupHtml);
-        const marker = new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([coords[0], coords[1]])
           .setPopup(popup)
           .addTo(mapInstance);
@@ -1013,12 +1013,12 @@ window.NorthStarMapLibre = (function () {
 
   function createClusterMarker(group, avgLng, avgLat) {
     const el = document.createElement('div');
-    el.className = 'relative flex items-center justify-center cursor-pointer select-none';
-    el.style.zIndex = '30';
+    el.className = 'flex items-center justify-center cursor-pointer select-none';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 30;';
     el.innerHTML = `
-      <span class="absolute w-12 h-12 rounded-full bg-rose-500/20"></span>
-      <span class="absolute w-10 h-10 rounded-full bg-indigo-500/35"></span>
-      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 text-white font-extrabold text-sm flex items-center justify-center shadow-2xl border-2 border-white relative z-10 hover:scale-110 transition">
+      <span class="absolute w-12 h-12 rounded-full bg-rose-500/20 pointer-events-none"></span>
+      <span class="absolute w-10 h-10 rounded-full bg-indigo-500/35 pointer-events-none"></span>
+      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 text-white font-extrabold text-sm flex items-center justify-center shadow-2xl border-2 border-white relative z-10 hover:scale-110 transition pointer-events-auto">
         ${group.length}
       </div>
     `;
@@ -1031,7 +1031,7 @@ window.NorthStarMapLibre = (function () {
       });
     };
 
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
       .setLngLat([avgLng, avgLat])
       .addTo(mapInstance);
 
@@ -1054,11 +1054,11 @@ window.NorthStarMapLibre = (function () {
     }
 
     const el = document.createElement('div');
-    el.className = 'relative flex items-center justify-center cursor-pointer select-none group';
-    el.style.zIndex = '25';
+    el.className = 'flex items-center justify-center cursor-pointer select-none group';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; height: 32px; pointer-events: auto !important; z-index: 25;';
     el.innerHTML = `
-      <span class="absolute w-12 h-12 rounded-full" style="background: ${ringColor}"></span>
-      <div class="px-2 py-1 rounded-full text-white text-[10.5px] font-black shadow-2xl border-2 border-white relative z-10 flex items-center gap-0.5 transition-transform duration-200 group-hover:scale-110" style="background: ${badgeBg}">
+      <span class="absolute w-12 h-12 rounded-full pointer-events-none" style="background: ${ringColor}"></span>
+      <div class="px-2 py-1 rounded-full text-white text-[10.5px] font-black shadow-2xl border-2 border-white relative z-10 flex items-center gap-0.5 transition-transform duration-200 group-hover:scale-110 pointer-events-auto" style="background: ${badgeBg}">
         ${depthText}
       </div>
     `;
@@ -1077,7 +1077,7 @@ window.NorthStarMapLibre = (function () {
     `;
 
     const popup = new maplibregl.Popup({ offset: 18, maxWidth: '240px' }).setHTML(popupHtml);
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
       .setLngLat([pt.lng, pt.lat])
       .setPopup(popup)
       .addTo(mapInstance);
@@ -1100,11 +1100,11 @@ window.NorthStarMapLibre = (function () {
 
     hazards.forEach(h => {
       const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center cursor-pointer select-none';
-      el.style.zIndex = '23';
+      el.className = 'flex items-center justify-center cursor-pointer select-none';
+      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 23;';
       el.innerHTML = `
-        <span class="absolute w-10 h-10 rounded-full bg-amber-500/30"></span>
-        <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10" title="${h.name}">
+        <span class="absolute w-10 h-10 rounded-full bg-amber-500/30 pointer-events-none"></span>
+        <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10 pointer-events-auto" title="${h.name}">
           <span class="text-xs font-bold leading-none">⚠️</span>
         </div>
       `;
@@ -1120,7 +1120,7 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popup = new maplibregl.Popup({ offset: 18, maxWidth: '240px' }).setHTML(popupHtml);
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([h.lng, h.lat])
         .setPopup(popup)
         .addTo(mapInstance);
@@ -1153,11 +1153,11 @@ window.NorthStarMapLibre = (function () {
         shelterList.push({ ...p, coords });
 
         const el = document.createElement('div');
-        el.className = 'relative flex items-center justify-center cursor-pointer select-none';
-        el.style.zIndex = '23';
+        el.className = 'flex items-center justify-center cursor-pointer select-none';
+        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 23;';
         el.innerHTML = `
-          <span class="absolute w-10 h-10 rounded-full bg-emerald-500/25"></span>
-          <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10" title="${p.name}">
+          <span class="absolute w-10 h-10 rounded-full bg-emerald-500/25 pointer-events-none"></span>
+          <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl border-2 border-white hover:scale-125 transition relative z-10 pointer-events-auto" title="${p.name}">
             <span class="text-xs font-bold leading-none">🛡️</span>
           </div>
         `;
@@ -1176,7 +1176,7 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popup = new maplibregl.Popup({ offset: 18, maxWidth: '250px' }).setHTML(popupHtml);
-        const marker = new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([coords[0], coords[1]])
           .setPopup(popup)
           .addTo(mapInstance);
@@ -1211,12 +1211,13 @@ window.NorthStarMapLibre = (function () {
       const icon = isHeli ? '🚁' : (isBoat ? '🚤' : '🚛');
 
       const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center cursor-pointer';
+      el.className = 'flex items-center justify-center cursor-pointer';
+      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 24;';
       el.innerHTML = `
-        <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : (isHeli ? 'bg-purple-600' : 'bg-blue-600')} text-white shadow-lg border-2 border-white flex items-center justify-center text-xs font-black">
+        <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : (isHeli ? 'bg-purple-600' : 'bg-blue-600')} text-white shadow-lg border-2 border-white flex items-center justify-center text-xs font-black relative pointer-events-auto">
           ${icon}
+          <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
         </div>
-        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
       `;
 
       const popupHtml = `
@@ -1229,7 +1230,7 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popup = new maplibregl.Popup({ offset: 15, maxWidth: '220px' }).setHTML(popupHtml);
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([u.lng, u.lat])
         .setPopup(popup)
         .addTo(mapInstance);
@@ -1285,16 +1286,16 @@ window.NorthStarMapLibre = (function () {
 
     if (!animatedVehicleMarker) {
       const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center cursor-pointer select-none';
-      el.style.zIndex = '35';
+      el.className = 'flex items-center justify-center cursor-pointer select-none';
+      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 36px; height: 36px; pointer-events: auto !important; z-index: 35;';
       el.innerHTML = `
-        <span class="absolute w-10 h-10 rounded-full bg-cyan-400/30 animate-ping"></span>
-        <div id="ml-animated-vehicle-badge" class="w-9 h-9 rounded-full bg-cyan-600 text-white shadow-2xl border-2 border-white flex items-center justify-center text-sm font-black transition-transform duration-300">
+        <span class="absolute w-10 h-10 rounded-full bg-cyan-400/30 animate-ping pointer-events-none"></span>
+        <div id="ml-animated-vehicle-badge" class="w-9 h-9 rounded-full bg-cyan-600 text-white shadow-2xl border-2 border-white flex items-center justify-center text-sm font-black transition-transform duration-300 pointer-events-auto">
           🚤
         </div>
       `;
 
-      animatedVehicleMarker = new maplibregl.Marker({ element: el })
+      animatedVehicleMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat(routeCoords[0])
         .addTo(mapInstance);
     }
@@ -1468,10 +1469,11 @@ window.NorthStarMapLibre = (function () {
     // Tạo pin đánh số 1, 2, 3...
     const idx = measurePoints.length;
     const el = document.createElement('div');
-    el.className = 'w-6 h-6 rounded-full bg-cyan-500 border-2 border-white text-black font-black text-xs flex items-center justify-center shadow-lg select-none';
-    el.innerText = idx;
+    el.className = 'flex items-center justify-center cursor-pointer select-none';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 24px; height: 24px; pointer-events: auto !important; z-index: 28;';
+    el.innerHTML = `<div class="w-6 h-6 rounded-full bg-cyan-500 border-2 border-white text-black font-black text-xs flex items-center justify-center shadow-lg select-none">${idx}</div>`;
 
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
       .setLngLat(pt)
       .addTo(mapInstance);
 
@@ -1975,11 +1977,11 @@ window.NorthStarMapLibre = (function () {
     if (!mapInstance) return;
 
     const el = document.createElement('div');
-    el.className = 'w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-2xl border-2 border-white ' +
-      (type === 'origin' ? 'bg-emerald-600' : 'bg-rose-600');
-    el.innerHTML = type === 'origin' ? '🟢' : '🏁';
+    el.className = 'flex items-center justify-center cursor-pointer select-none';
+    el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 29;';
+    el.innerHTML = `<div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-2xl border-2 border-white ${type === 'origin' ? 'bg-emerald-600' : 'bg-rose-600'}">${type === 'origin' ? '🟢' : '🏁'}</div>`;
 
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
       .setLngLat([lng, lat])
       .addTo(mapInstance);
 
