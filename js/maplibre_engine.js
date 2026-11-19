@@ -64,7 +64,7 @@ window.NorthStarMapLibre = (function () {
     storm: true
   };
 
-  // Cấu hình 3 lớp bản đồ nền (100% Chuẩn Mở, Không Cần API Key)
+  // Cấu hình 4 lớp bản đồ nền chuyên dụng tác chiến C2 & cứu hộ (100% Chuẩn Mở, Zero API Key)
   const BASEMAP_STYLES = {
     dark: {
       version: 8,
@@ -76,9 +76,59 @@ window.NorthStarMapLibre = (function () {
           ],
           tileSize: 256,
           attribution: '&copy; Esri &copy; OpenStreetMap contributors'
+        },
+        'esri-dark-ref': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256
         }
       },
-      layers: [{ id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 19 }]
+      layers: [
+        { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 19 },
+        { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 19 }
+      ]
+    },
+    satellite: {
+      version: 8,
+      sources: {
+        'esri-satellite': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256,
+          attribution: '&copy; Esri, Maxar, Earthstar Geographics'
+        },
+        'esri-sat-labels': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256
+        }
+      },
+      layers: [
+        { id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 19 },
+        { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 19 }
+      ]
+    },
+    topo: {
+      version: 8,
+      sources: {
+        'esri-topo': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256,
+          attribution: '&copy; Esri, USGS, METI/NASA, OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 19 }
+      ]
     },
     osm: {
       version: 8,
@@ -91,20 +141,6 @@ window.NorthStarMapLibre = (function () {
         }
       },
       layers: [{ id: 'base-osm-layer', type: 'raster', source: 'osm-standard', minzoom: 0, maxzoom: 19 }]
-    },
-    satellite: {
-      version: 8,
-      sources: {
-        'esri-satellite': {
-          type: 'raster',
-          tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-          ],
-          tileSize: 256,
-          attribution: '&copy; Esri, Maxar, Earthstar Geographics'
-        }
-      },
-      layers: [{ id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 19 }]
     }
   };
 
@@ -823,7 +859,7 @@ window.NorthStarMapLibre = (function () {
     if (!mapInstance || !BASEMAP_STYLES[key]) return;
     currentBaseKey = key;
 
-    ['dark', 'osm', 'satellite'].forEach(k => {
+    ['dark', 'satellite', 'topo', 'osm'].forEach(k => {
       const btn = document.getElementById(`btn-ml-base-${k}`);
       if (btn) {
         if (k === key) {

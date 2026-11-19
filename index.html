@@ -927,52 +927,50 @@
           <div id="maplibre-container" class="w-full h-full"></div>
 
           <!-- Top HUD Overlay Controls -->
-          <div class="absolute top-3 inset-x-3 z-10 flex items-start justify-between gap-2 pointer-events-none select-none">
+          <div class="absolute top-3 inset-x-3 z-10 flex items-center justify-between gap-2 pointer-events-none select-none">
             
             <!-- Left Info Tag -->
-            <div class="pointer-events-auto bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl shadow-2xl backdrop-blur flex items-center gap-3">
-              <span class="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                <i data-lucide="box" class="w-5 h-5"></i>
+            <div class="pointer-events-auto bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-xl shadow-2xl backdrop-blur flex items-center gap-2.5 shrink-0">
+              <span class="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                <i data-lucide="box" class="w-4 h-4"></i>
               </span>
               <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="text-xs font-black text-white uppercase tracking-wide">BẢN ĐỒ VECTOR 3D (MAPLIBRE GL JS)</h3>
-                  <span class="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">BSD-3-Clause (OSI)</span>
+                <div class="flex items-center gap-1.5">
+                  <h3 class="text-xs font-black text-white uppercase tracking-wide">VECTOR 3D (MAPLIBRE GL JS)</h3>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">BSD-3-Clause</span>
                 </div>
-                <p class="text-[10.5px] text-slate-400 mt-0.5">Engine WebGL 3D Vector GPU song song với Leaflet 2D • Hỗ trợ nghiêng 3D & xoay 360°</p>
+                <p class="text-[10px] text-slate-400">WebGL 3D GPU Engine • Nghiêng 3D & Xoay 360°</p>
               </div>
             </div>
 
             <!-- Right Tactical Controls -->
-            <div class="pointer-events-auto flex items-center gap-2 flex-wrap justify-end">
+            <div class="pointer-events-auto flex items-center gap-1.5 flex-nowrap overflow-x-auto">
               <!-- Basemap Selector -->
-              <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs">
-                <span class="text-[10px] font-bold text-slate-400 px-1.5 uppercase">Bản đồ:</span>
-                <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2.5 py-1 bg-cyan-600 text-white rounded-lg text-[11px] font-bold cursor-pointer transition shadow" title="Bản đồ tác chiến nền tối C2">🌑 Tối C2</button>
-                <button id="btn-ml-base-osm" onclick="NorthStarMapLibre.switchStyle('osm')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Bản đồ giao thông OpenStreetMap">🗺️ OSM</button>
-                <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Bản đồ không ảnh vệ tinh độ phân giải cao">🛰️ Vệ Tinh</button>
+              <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs shrink-0">
+                <span class="text-[9.5px] font-bold text-slate-400 px-1 uppercase">Bản đồ:</span>
+                <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Bản đồ tác chiến nền tối C2 - Tối ưu chống mỏi mắt và tương phản SOS cao nhất">🌑 Tối C2</button>
+                <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ không ảnh vệ tinh phân giải cao kèm địa danh trinh sát">🛰️ Vệ Tinh Recon</button>
+                <button id="btn-ml-base-topo" onclick="NorthStarMapLibre.switchStyle('topo')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ địa hình cao độ & thủy văn - Nhận diện thung lũng lũ quét và sạt lở">⛰️ Địa Hình Lũ Quét</button>
+                <button id="btn-ml-base-osm" onclick="NorthStarMapLibre.switchStyle('osm')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Bản đồ giao thông dân sự OpenStreetMap">🗺️ Đô Thị OSM</button>
               </div>
 
               <!-- Pitch Selector -->
-              <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs">
-                <span class="text-[10.5px] font-bold text-slate-400 px-1.5 flex items-center gap-1">
-                  <span>Góc:</span>
-                  <span id="maplibre-pitch-badge" class="text-cyan-300 font-mono font-bold">45°</span>
-                </span>
-                <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Góc nhìn 2D thẳng đứng">2D (0°)</button>
-                <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[11px] font-bold cursor-pointer transition shadow" title="Góc nghiêng tác chiến 45 độ">3D (45°)</button>
-                <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Góc nghiêng sát mặt đất Flyover">60°</button>
+              <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs shrink-0">
+                <span class="text-[10px] font-bold text-slate-400 px-1">Góc: <span id="maplibre-pitch-badge" class="text-cyan-300 font-mono font-bold">45°</span></span>
+                <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Góc nhìn 2D phẳng thẳng đứng">2D (0°)</button>
+                <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow" title="Góc nghiêng tác chiến 45 độ">3D (45°)</button>
+                <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition" title="Góc nghiêng sát mặt đất Flyover">60°</button>
               </div>
 
               <!-- Rotate 360 Toggle -->
-              <button id="maplibre-btn-rotate" onclick="NorthStarMapLibre.toggleAutoRotate()" class="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-bold shadow-2xl backdrop-blur flex items-center gap-1.5 cursor-pointer transition active:scale-95">
-                <span>🔄 Tự động xoay 360°</span>
+              <button id="maplibre-btn-rotate" onclick="NorthStarMapLibre.toggleAutoRotate()" class="px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-[11px] font-bold shadow-2xl backdrop-blur flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0" title="Tự động xoay quanh tâm tác chiến">
+                <span>🔄 Xoay 360°</span>
               </button>
 
               <!-- Return to Leaflet -->
-              <button onclick="CommandUIController.switchView('cmd_dashboard')" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-2xl flex items-center gap-1.5 cursor-pointer transition active:scale-95">
+              <button onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold shadow-2xl flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0" title="Trở về trung tâm chỉ huy 2D">
                 <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-                <span>Quay Về Leaflet 2D</span>
+                <span>Leaflet 2D</span>
               </button>
             </div>
           </div>
