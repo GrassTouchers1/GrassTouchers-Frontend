@@ -40,6 +40,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- MapLibre GL JS (BSD-3-Clause - OSI Approved Open-Source 3D Vector Map Engine) -->
+  <link rel="stylesheet" href="css/maplibre-gl.css" />
+
   <!-- Leaflet MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -139,6 +142,12 @@
       <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
         <i data-lucide="layers" class="w-3.5 h-3.5"></i>
         <span class="hidden 2xl:inline">Lớp Tác Chiến</span>
+      </button>
+
+      <!-- Vector 3D MapLibre Trigger Button -->
+      <button onclick="CommandUIController.switchView('cmd_maplibre_3d')" id="btn-header-maplibre-3d" class="p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Chuyển sang Bản Đồ Vector 3D (MapLibre GL JS)">
+        <i data-lucide="box" class="w-3.5 h-3.5"></i>
+        <span class="hidden 2xl:inline">Vector 3D (MapLibre)</span>
       </button>
 
       <!-- Toggle Top Stats Button -->
@@ -260,6 +269,11 @@
             <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_disaster_map" onclick="CommandUIController.switchView('cmd_disaster_map')">
               <i data-lucide="map" class="w-4 h-4 shrink-0 text-indigo-400"></i>
               <span class="cmd-nav-label flex-1 truncate">Bản Đồ Tác Chiến Fullscreen</span>
+            </button>
+            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_maplibre_3d" onclick="CommandUIController.switchView('cmd_maplibre_3d')">
+              <i data-lucide="box" class="w-4 h-4 shrink-0 text-cyan-400"></i>
+              <span class="cmd-nav-label flex-1 truncate">Bản Đồ Vector 3D (MapLibre)</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-cyan-950/80 text-cyan-300 border border-cyan-800 shrink-0">GL 3D</span>
             </button>
             <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_safe_zones" onclick="CommandUIController.switchView('cmd_safe_zones')">
               <i data-lucide="shield" class="w-4 h-4 shrink-0 text-emerald-400"></i>
@@ -903,6 +917,56 @@
         <div id="pane-cmd_disaster_map" class="cmd-view-pane hidden w-full h-full relative">
           <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">
             Bản đồ Tác chiến Toàn màn hình đang mở. (Sử dụng thanh công cụ bên trên hoặc phím tắt ESC để điều hướng).
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANE: MAPLIBRE GL JS 3D VECTOR MAP             -->
+        <!-- ============================================== -->
+        <div id="pane-cmd_maplibre_3d" class="cmd-view-pane hidden w-full h-full relative overflow-hidden bg-slate-950">
+          <div id="maplibre-container" class="w-full h-full"></div>
+
+          <!-- Top HUD Overlay Controls -->
+          <div class="absolute top-3 inset-x-3 z-10 flex items-start justify-between gap-2 pointer-events-none select-none">
+            
+            <!-- Left Info Tag -->
+            <div class="pointer-events-auto bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl shadow-2xl backdrop-blur flex items-center gap-3">
+              <span class="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                <i data-lucide="box" class="w-5 h-5"></i>
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-xs font-black text-white uppercase tracking-wide">BẢN ĐỒ VECTOR 3D (MAPLIBRE GL JS)</h3>
+                  <span class="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">BSD-3-Clause (OSI)</span>
+                </div>
+                <p class="text-[10.5px] text-slate-400 mt-0.5">Engine WebGL 3D Vector GPU song song với Leaflet 2D • Hỗ trợ nghiêng 3D & xoay 360°</p>
+              </div>
+            </div>
+
+            <!-- Right Tactical Controls -->
+            <div class="pointer-events-auto flex items-center gap-2 flex-wrap justify-end">
+              <!-- Pitch Selector -->
+              <div class="bg-slate-900/90 border border-slate-700/80 p-1 rounded-xl shadow-2xl backdrop-blur flex items-center gap-1 text-xs">
+                <span class="text-[10.5px] font-bold text-slate-400 px-2 flex items-center gap-1">
+                  <span>Góc nghiêng:</span>
+                  <span id="maplibre-pitch-badge" class="text-cyan-300 font-mono font-bold">45°</span>
+                </span>
+                <button onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Góc nhìn 2D thẳng đứng">2D (0°)</button>
+                <button onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Góc nghiêng tác chiến 45 độ">3D (45°)</button>
+                <button onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[11px] font-bold cursor-pointer transition" title="Góc nghiêng sát mặt đất Flyover">Flyover (60°)</button>
+              </div>
+
+              <!-- Rotate 360 Toggle -->
+              <button id="maplibre-btn-rotate" onclick="NorthStarMapLibre.toggleAutoRotate()" class="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-bold shadow-2xl backdrop-blur flex items-center gap-1.5 cursor-pointer transition active:scale-95">
+                <span>🔄 Tự động xoay 360°</span>
+              </button>
+
+              <!-- Return to Leaflet -->
+              <button onclick="CommandUIController.switchView('cmd_dashboard')" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-2xl flex items-center gap-1.5 cursor-pointer transition active:scale-95">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Quay Về Leaflet 2D</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2937,6 +3001,10 @@
   <script src="js/advanced_modules.js?v=20261118_v17"></script>
   <script src="js/storm_simulator.js?v=20261118_v17"></script>
   <script src="js/voice_sos.js?v=20261118_v17"></script>
+
+  <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
+  <script src="js/vendor/maplibre-gl.js"></script>
+  <script src="js/maplibre_engine.js?v=20261119_v26"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>

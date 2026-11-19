@@ -71,10 +71,18 @@ graph TD
 ### 3.2. Phụ thuộc Frontend (Web & PWA)
 | Thư viện | Phiên bản | Giấy phép | Tình trạng OSI | Mục đích sử dụng |
 | :--- | :--- | :--- | :---: | :--- |
-| **Leaflet.js** | `1.9.4` | BSD 2-Clause | ✅ OSI Approved | Hiển thị bản đồ số tương tác |
+| **Leaflet.js** | `1.9.4` | BSD 2-Clause | ✅ OSI Approved | Engine bản đồ tương tác 2D C2 siêu nhẹ, tối ưu mọi thiết bị |
+| **MapLibre GL JS** | `4.7.1` | BSD 3-Clause | ✅ OSI Approved | Engine bản đồ 3D Vector WebGL (Dual-Engine song song) |
 | **Tailwind CSS**| `3.x` | MIT License | ✅ OSI Approved | Khung giao diện responsive và dark-mode |
 | **Lucide Icons**| `Latest` | ISC License | ✅ OSI Approved | Hệ thống biểu tượng giao diện người dùng |
 | **Chart.js** | `4.4.1` | MIT License | ✅ OSI Approved | Biểu đồ trực quan hóa dữ liệu lượng mưa |
+
+### 3.3. Chuyên đề Thẩm tra Bản quyền Bản đồ: Leaflet vs MapLibre vs Mapbox
+Nhằm giải quyết dứt điểm các hiểu nhầm phổ biến trong thẩm định phần mềm nguồn mở:
+- **Leaflet.js:** 100% mã nguồn mở tự do (BSD 2-Clause, [OSI Approved](https://opensource.org/license/bsd-2-clause)). Cung cấp giải pháp bản đồ nhẹ, tương thích mọi thiết bị di động yếu.
+- **MapLibre GL JS:** 100% mã nguồn mở tự do (BSD 3-Clause, [OSI Approved](https://opensource.org/license/bsd-3-clause), bảo trợ bởi Linux Foundation). Được cộng đồng fork từ Mapbox GL JS v1 khi Mapbox chuyển sang nguồn đóng.
+- **Mapbox GL JS (v2.0+):** **MÃ NGUỒN ĐÓNG (Proprietary)**. Hệ sinh thái NORTHSTAR **tuyệt đối không sử dụng** Mapbox để đảm bảo 100% tiêu chí PoF của Hội thi OLP PMNM.
+- **Kiến trúc Dual-Engine của NorthStar:** Cho phép chỉ huy tác chiến chuyển đổi mượt mà giữa **Leaflet (2D C2)** và **MapLibre (3D Vector WebGL)** chỉ với 1 chạm, chứng minh năng lực làm chủ kỹ thuật toàn diện.
 
 ---
 
