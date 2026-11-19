@@ -2,6 +2,10 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OSI Approved](https://img.shields.io/badge/OSI-Approved%20Open%20Source-brightgreen.svg)](https://opensource.org/licenses)
+[![Changelog](https://img.shields.io/badge/Changelog-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
+[![Building from Source](https://img.shields.io/badge/Build-From%20Source-blue.svg)](INSTALL.md)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-green.svg)](https://github.com/GrassTouchers1/GrassTouchers-Frontend/releases)
+[![Bug Tracker](https://img.shields.io/badge/Bug%20Tracker-GitHub%20Issues-red.svg)](https://github.com/GrassTouchers1/GrassTouchers-Frontend/issues)
 [![Leaflet](https://img.shields.io/badge/Map-Leaflet.js%201.9.4-green.svg?logo=leaflet)](https://leafletjs.com/)
 [![Esri](https://img.shields.io/badge/Basemap-Esri%20Dark%20Canvas-blue.svg)](https://server.arcgisonline.com)
 [![PWA Ready](https://img.shields.io/badge/PWA-Offline%20First%20Cache-purple.svg)](https://web.dev/progressive-web-apps/)
@@ -198,11 +202,15 @@ Mở trình duyệt tại: **`http://localhost:3000`**
 
 ---
 
-## 🌍 7. Tuyên Bố Giấy Phép & Bản Quyền (License & OSI Compliance)
+## 🌍 7. Tuyên Bố Giấy Phép & Tuân Thủ Chuẩn Mã Nguồn Mở (OSI & PoF Compliance)
 
-Dự án được phát triển nhằm phục vụ cộng đồng và dự thi Olympic Tin học Sinh viên Việt Nam (OLP 2026 PMNM). Toàn bộ mã nguồn tuân thủ 100% nguyên tắc Phần mềm Nguồn Mở:
+Dự án được phát triển nhằm phục vụ cộng đồng và tham gia Hội thi Olympic Tin học Sinh viên Việt Nam (Khối Phần mềm Nguồn Mở - OLP PMNM). Toàn bộ hệ thống tuân thủ 100% các tiêu chí đánh giá chuẩn **Packaging/Open-source Friendliness (PoF)**:
 
-* **Giấy phép phần mềm:** [Apache License 2.0](LICENSE) (OSI-Approved).
-* **Bản đồ nền GIS:** Esri World Dark Gray Canvas (Sử dụng hợp pháp qua ArcGIS Online Services).
-* **Dữ liệu địa lý giao thông:** OpenStreetMap (Bản quyền ODbL 1.0).
-* **Dữ liệu thời tiết & viễn thám:** Open-Meteo API (CC-BY 4.0) & Copernicus Sentinel-1 SAR (EU Open Access Regulation No 377/2014).
+* ⚖️ **Giấy phép phần mềm:** [Apache License 2.0](LICENSE) (OSI-Approved, `SPDX-License-Identifier: Apache-2.0` gắn trên từng tệp mã nguồn).
+* 📋 **Báo cáo kiểm định bản quyền chi tiết:** [docs/LICENSE_AUDIT.md](docs/LICENSE_AUDIT.md).
+* 📦 **Hướng dẫn dịch & cài đặt từ mã nguồn sạch:** [INSTALL.md](INSTALL.md).
+* 📝 **Lịch sử phiên bản phát hành:** [CHANGELOG.md](CHANGELOG.md) (Chuẩn Keep a Changelog v1.1.0 & Semantic Versioning v2.0.0).
+* 🤝 **Quy định đóng góp cộng đồng:** [CONTRIBUTING.md](CONTRIBUTING.md).
+* 🐛 **Hệ thống Quản lý Lỗi Phần mềm (Bug Tracker):** Tiếp nhận tại [GitHub Issues](https://github.com/GrassTouchers1/GrassTouchers-Frontend/issues) với Issue Templates chuẩn trong `.github/ISSUE_TEMPLATE/`.
+* 🏷️ **Bản phát hành chính thức dự thi:** [Release v1.0.0](https://github.com/GrassTouchers1/GrassTouchers-Frontend/releases/tag/v1.0.0).
+* **Dữ liệu mở:** OpenStreetMap (ODbL 1.0) & Open-Meteo API (CC-BY 4.0).
