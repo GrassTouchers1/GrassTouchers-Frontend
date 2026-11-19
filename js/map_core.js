@@ -2522,7 +2522,7 @@ async function submitReport() {
 
 // 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
 function switchTab(tabId) {
-  ['route', 'points', 'report', 'rescue', 'command', 'tracking'].forEach(id => {
+  ['route', 'points', 'report', 'rescue', 'command', 'tracking', 'weather'].forEach(id => {
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`tab-btn-${id}`);
     const hdrBtn = document.getElementById(`hdr-btn-${id}`);

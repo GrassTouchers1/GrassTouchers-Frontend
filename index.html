@@ -1021,7 +1021,8 @@
 
             <!-- Citizen Tabs Navigation -->
             <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 text-xs font-bold overflow-x-auto">
-              <button onclick="switchTab('route')" id="citizen-tab-btn-route" class="flex-1 min-w-[130px] py-2 rounded-lg bg-blue-600 text-white text-center cursor-pointer transition">🚗 Tìm Lộ Trình</button>
+              <button onclick="switchTab('weather')" id="citizen-tab-btn-weather" class="flex-1 min-w-[155px] py-2 rounded-lg bg-emerald-600 text-white text-center cursor-pointer transition font-black shadow-xs">⛅ Thời Tiết & Cảnh Báo</button>
+              <button onclick="switchTab('route')" id="citizen-tab-btn-route" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">🚗 Tìm Lộ Trình</button>
               <button onclick="switchTab('points')" id="citizen-tab-btn-points" class="flex-1 min-w-[120px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">⚠️ Điểm Ngập (130)</button>
               <button onclick="switchTab('report')" id="citizen-tab-btn-report" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">📸 Báo Ngập</button>
               <button onclick="switchTab('rescue')" id="citizen-tab-btn-rescue" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">🆘 Gửi Cứu Hộ</button>
@@ -1030,7 +1031,17 @@
 
             <!-- Citizen Tab Contents Container -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div id="tab-route" class="space-y-4">
+              <!-- 0. TAB WEATHER & MULTI-HAZARD ALERTS (VIC-02, VIC-03, V-01) -->
+              <div id="tab-weather" class="space-y-4">
+                <div id="citizen-weather-container">
+                  <!-- Được nạp tự động bởi CitizenPortal.loadWeatherAndAlerts() -->
+                </div>
+                <div id="citizen-alerts-container">
+                  <!-- Được nạp tự động bởi CitizenPortal.loadDisasterAlerts() -->
+                </div>
+              </div>
+
+              <div id="tab-route" class="hidden space-y-4">
           <div id="algo-info-card" class="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-800 flex items-start gap-2 relative transition-all">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600"></i>
             <div class="leading-relaxed flex-1 text-[11px]">
@@ -2721,6 +2732,7 @@
   <script src="js/advanced_modules.js?v=20261118_v17"></script>
   <script src="js/storm_simulator.js?v=20261118_v17"></script>
   <script src="js/voice_sos.js?v=20261118_v17"></script>
+  <script src="js/citizen_portal.js?v=20261120_v1"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
