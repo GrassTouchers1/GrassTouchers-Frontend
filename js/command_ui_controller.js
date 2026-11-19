@@ -285,6 +285,27 @@ const CommandUIController = (function () {
       setTimeout(() => openPCCCReportModal(pcccModalParam), 300);
     }
 
+    const mlAction = urlParams.get('ml_action');
+    if (mlAction) {
+      setTimeout(() => {
+        if (!window.NorthStarMapLibre) return;
+        if (mlAction === 'patrol') {
+          window.NorthStarMapLibre.toggleFlyoverPatrol();
+        } else if (mlAction === 'drawer') {
+          window.NorthStarMapLibre.toggleTacticalDrawer('sos');
+        } else if (mlAction === 'measure') {
+          window.NorthStarMapLibre.toggleMeasureTool();
+          if (typeof window.NorthStarMapLibre.addMeasurePoint === 'function') {
+            window.NorthStarMapLibre.addMeasurePoint({ lng: 105.8542, lat: 21.0285 });
+            window.NorthStarMapLibre.addMeasurePoint({ lng: 105.8450, lat: 21.5940 });
+          }
+        } else if (mlAction === '3d') {
+          window.NorthStarMapLibre.setPitch(45);
+          window.NorthStarMapLibre.toggle3DBuildings();
+        }
+      }, 700);
+    }
+
     console.log('[NorthStar Command] Unified Emergency Operations Center đã sẵn sàng trực chiến.');
   }
 
