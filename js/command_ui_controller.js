@@ -302,6 +302,11 @@ const CommandUIController = (function () {
         } else if (mlAction === '3d') {
           window.NorthStarMapLibre.setPitch(45);
           window.NorthStarMapLibre.toggle3DBuildings();
+        } else if (mlAction === 'rotate_test') {
+          if (window.NorthStarMapLibre.map) {
+            window.NorthStarMapLibre.map.setBearing(52);
+            window.NorthStarMapLibre.setPitch(45);
+          }
         }
       }, 700);
     }

@@ -906,7 +906,7 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' }).setHTML(popupHtml);
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
           .setLngLat([coords[0], coords[1]])
           .setPopup(popup)
           .addTo(mapInstance);
@@ -1035,7 +1035,7 @@ window.NorthStarMapLibre = (function () {
       });
     };
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
       .setLngLat([avgLng, avgLat])
       .addTo(mapInstance);
 
@@ -1076,7 +1076,7 @@ window.NorthStarMapLibre = (function () {
     `;
 
     const popup = new maplibregl.Popup({ offset: 18, maxWidth: '240px' }).setHTML(popupHtml);
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
       .setLngLat([pt.lng, pt.lat])
       .setPopup(popup)
       .addTo(mapInstance);
@@ -1119,7 +1119,7 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popup = new maplibregl.Popup({ offset: 18, maxWidth: '240px' }).setHTML(popupHtml);
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
         .setLngLat([h.lng, h.lat])
         .setPopup(popup)
         .addTo(mapInstance);
@@ -1174,7 +1174,7 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popup = new maplibregl.Popup({ offset: 18, maxWidth: '250px' }).setHTML(popupHtml);
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
           .setLngLat([coords[0], coords[1]])
           .setPopup(popup)
           .addTo(mapInstance);
@@ -1228,7 +1228,7 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popup = new maplibregl.Popup({ offset: 15, maxWidth: '220px' }).setHTML(popupHtml);
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
         .setLngLat([u.lng, u.lat])
         .setPopup(popup)
         .addTo(mapInstance);
@@ -1293,7 +1293,7 @@ window.NorthStarMapLibre = (function () {
         </div>
       `;
 
-      animatedVehicleMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      animatedVehicleMarker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
         .setLngLat(routeCoords[0])
         .addTo(mapInstance);
     }
@@ -1471,7 +1471,7 @@ window.NorthStarMapLibre = (function () {
     el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 24px; height: 24px; pointer-events: auto !important; z-index: 28;';
     el.innerHTML = `<div class="w-6 h-6 rounded-full bg-cyan-500 border-2 border-white text-black font-black text-xs flex items-center justify-center shadow-lg select-none">${idx}</div>`;
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
       .setLngLat(pt)
       .addTo(mapInstance);
 
@@ -1979,7 +1979,7 @@ window.NorthStarMapLibre = (function () {
     el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 29;';
     el.innerHTML = `<div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-2xl border-2 border-white ${type === 'origin' ? 'bg-emerald-600' : 'bg-rose-600'}">${type === 'origin' ? '🟢' : '🏁'}</div>`;
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
       .setLngLat([lng, lat])
       .addTo(mapInstance);
 
