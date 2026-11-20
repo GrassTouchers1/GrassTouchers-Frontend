@@ -172,33 +172,33 @@
           <p class="hidden lg:block text-[9.5px] text-slate-400 font-medium leading-none">Trung tâm Tiếp nhận & Chuyển giao Thông tin Cứu nạn</p>
         </div>
       </div>
+
+      <!-- Realtime Operations Clock (Đồng hồ tác chiến thời gian thực GMT+7) -->
+      <div class="hidden 2xl:flex items-center gap-1.5 text-[11px] font-mono text-emerald-300 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-700/80 shrink-0 select-none shadow-xs ml-1" title="Đồng hồ tác chiến thời gian thực (Giờ Hà Nội - GMT+7)">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span id="cmd-last-sync-time" class="font-bold tracking-wider font-mono">--:--:--</span>
+      </div>
     </div>
 
-    <!-- Center: Operational Region & Search & Sync -->
-    <div class="flex items-center gap-1.5 flex-1 min-w-0 max-w-md lg:max-w-xl mx-1 sm:mx-2">
+    <!-- Center: Operational Region & Search -->
+    <div class="flex items-center gap-1.5 flex-1 min-w-0 max-w-xs md:max-w-sm lg:max-w-md mx-1 sm:mx-2">
       <!-- Region Selector (Hiển thị trên màn hình lớn xl, màn hình nhỏ đã có thanh phân vùng nổi trên bản đồ) -->
-      <select id="cmd-region-selector" onchange="CommandUIController.setMonitoringRegion(this.value)" class="hidden xl:block bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 w-32 truncate">
-        <option value="all">📍 Toàn Miền Bắc</option>
-        <option value="hanoi">🏛️ TP. Hà Nội</option>
+      <select id="cmd-region-selector" onchange="CommandUIController.setMonitoringRegion(this.value)" class="hidden xl:block bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 px-2 py-1.5 focus:outline-none focus:border-blue-500 transition cursor-pointer shrink-0 w-28 truncate">
+        <option value="all">📍 Toàn Miền</option>
+        <option value="hanoi">🏛️ Hà Nội</option>
         <option value="quangninh">🌊 Quảng Ninh</option>
         <option value="laocai">⛰️ Lào Cai</option>
         <option value="yenbai">🏞️ Yên Bái</option>
         <option value="caobang">🌲 Cao Bằng</option>
       </select>
 
-      <!-- Quick Search Bar: Luôn rõ ràng, không bị đè che -->
-      <div class="relative flex-1 min-w-[120px] max-w-sm">
+      <!-- Quick Search Bar: Luôn rõ ràng, co giãn tự do, không bị đè che -->
+      <div class="relative flex-1 min-w-0">
         <input type="text" id="cmd-search-input" oninput="CommandUIController.handleSearchInput(this.value)" placeholder="Tìm kiếm SOS, vị trí..." class="w-full bg-slate-800/90 text-slate-100 text-xs rounded-lg border border-slate-700/80 px-2.5 py-1.5 pl-7 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-slate-400 transition truncate" />
         <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
-      </div>
-
-      <!-- Realtime Operations Clock (Hiện trên màn hình lớn 2xl) -->
-      <div class="hidden 2xl:flex items-center gap-1.5 text-[11px] font-mono text-emerald-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 shrink-0 select-none shadow-xs" title="Đồng hồ tác chiến thời gian thực (Giờ Hà Nội - GMT+7)">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span id="cmd-last-sync-time" class="font-bold tracking-wider font-mono">--:--:--</span>
       </div>
     </div>
 
@@ -208,25 +208,25 @@
       <!-- Tactical Layers Trigger Button -->
       <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
         <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-        <span class="hidden 2xl:inline">Lớp Tác Chiến</span>
+        <span class="hidden 3xl:inline">Lớp Tác Chiến</span>
       </button>
 
       <!-- Vector 3D MapLibre Trigger Button -->
       <button onclick="CommandUIController.switchView('cmd_maplibre_3d')" id="btn-header-maplibre-3d" class="p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Chuyển sang Bản Đồ Vector 3D (MapLibre GL JS)">
         <i data-lucide="box" class="w-3.5 h-3.5"></i>
-        <span class="hidden 2xl:inline">Vector 3D (MapLibre)</span>
+        <span class="hidden 2xl:inline">Vector 3D</span>
       </button>
 
       <!-- Toggle Top Stats Button -->
       <button onclick="CommandUIController.toggleTopStatsCollapse()" id="btn-toggle-top-stats" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Thu gọn / Mở rộng Chỉ số (Phím \)">
         <i data-lucide="panel-top-close" class="w-3.5 h-3.5" id="icon-toggle-top-stats"></i>
-        <span class="hidden 2xl:inline" id="text-toggle-top-stats">Chỉ số</span>
+        <span class="hidden 3xl:inline" id="text-toggle-top-stats">Chỉ số</span>
       </button>
 
       <!-- Zen Map Monitoring Mode Button -->
       <button onclick="CommandUIController.toggleZenMapMode()" id="btn-zen-map" class="p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Giám sát bản đồ: Thu gọn tất cả thanh panel để quan sát rộng nhất (Phím Z)">
         <i data-lucide="maximize" class="w-3.5 h-3.5" id="zen-map-icon"></i>
-        <span class="hidden 2xl:inline" id="zen-map-label">Giám sát bản đồ</span>
+        <span class="hidden 3xl:inline" id="zen-map-label">Giám sát</span>
       </button>
 
       <!-- SitRep Trigger Button -->
