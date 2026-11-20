@@ -85,6 +85,62 @@
       pointer-events: auto !important;
       user-select: none;
     }
+    /* Giao diện Popup MapLibre GL Tác Chiến (Chuẩn C2 Dark Glass - Đồng bộ 100% với Leaflet) */
+    .maplibregl-popup {
+      z-index: 1000 !important;
+      max-width: 360px !important;
+    }
+    .maplibregl-popup-content {
+      background: rgba(15, 23, 42, 0.96) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      border: 1px solid rgba(51, 65, 85, 0.9) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+      color: #f1f5f9 !important;
+      padding: 12px 14px !important;
+      font-family: inherit !important;
+    }
+    .maplibregl-popup-tip {
+      border-top-color: rgba(15, 23, 42, 0.96) !important;
+      border-bottom-color: rgba(15, 23, 42, 0.96) !important;
+    }
+    .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+      border-bottom-color: rgba(15, 23, 42, 0.96) !important;
+    }
+    .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+      border-top-color: rgba(15, 23, 42, 0.96) !important;
+    }
+    .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+      border-right-color: rgba(15, 23, 42, 0.96) !important;
+    }
+    .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+      border-left-color: rgba(15, 23, 42, 0.96) !important;
+    }
+    .maplibregl-popup-close-button {
+      color: #94a3b8 !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      padding: 4px 8px !important;
+      right: 6px !important;
+      top: 6px !important;
+      border-radius: 8px !important;
+      transition: all 0.2s ease !important;
+      line-height: 1 !important;
+      outline: none !important;
+    }
+    .maplibregl-popup-close-button:hover {
+      color: #ffffff !important;
+      background: rgba(239, 68, 68, 0.3) !important;
+    }
+    .animated-marker-pulse {
+      animation: markerPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes markerPulseRing {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.3; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
   </style>
 </head>
 
@@ -936,6 +992,17 @@
         <!-- ============================================== -->
         <div id="pane-cmd_maplibre_3d" class="cmd-view-pane hidden w-full h-full relative overflow-hidden bg-slate-950">
           <div id="maplibre-container" class="w-full h-full"></div>
+
+          <!-- Floating Viewport Situation Alert Banner (Đồng bộ 100% với Leaflet) -->
+          <div id="maplibre-viewport-alert" class="hidden absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-xl text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-slate-700/80 bg-slate-900/90 text-slate-200 transition-all duration-300">
+            <div id="maplibre-alert-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 flex-shrink-0 animate-pulse"></div>
+            <div class="flex-1 truncate text-[11px]" id="maplibre-viewport-alert-text">
+              Đang phân tích dữ liệu quan trắc trong khung nhìn...
+            </div>
+            <button onclick="document.getElementById('maplibre-viewport-alert').classList.add('hidden')" class="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer transition shrink-0 text-xs ml-1" title="Đóng thông báo">
+              ✕
+            </button>
+          </div>
 
           <!-- Top HUD Overlay Controls (Single Unified Floating Tactical Command Bar) -->
           <div class="absolute top-2 inset-x-2 z-20 flex items-center justify-between gap-1.5 pointer-events-none select-none flex-nowrap overflow-x-auto pb-1">
