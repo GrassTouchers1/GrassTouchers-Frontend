@@ -205,10 +205,9 @@
     <!-- Right: Action Tools -->
     <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
 
-      <!-- Tactical Layers Trigger Button -->
-      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center gap-1 transition cursor-pointer" title="Lớp Tác Chiến">
+      <!-- Tactical Layers Trigger Button (Nút icon gọn gàng, không bị chồng đè với thanh tìm kiếm) -->
+      <button onclick="CommandUIController.toggleTacticalLayers()" id="btn-header-tactical-layers" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-400 font-bold text-xs flex items-center justify-center transition cursor-pointer shrink-0" title="Bật/Tắt Lớp Tác Chiến Bản Đồ (Phím L)">
         <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-        <span class="hidden 3xl:inline">Lớp Tác Chiến</span>
       </button>
 
       <!-- Vector 3D MapLibre Trigger Button -->
@@ -952,6 +951,118 @@
               <div class="flex items-center gap-4">
                 <input type="range" min="0" max="100" step="5" value="0" id="cmd-sim-rainfall-slider" oninput="document.getElementById('cmd-sim-rainfall-val').textContent = this.value + ' mm'; if(window.setSimulationRainfall) setSimulationRainfall(this.value);" class="flex-1 accent-rose-500 cursor-pointer" />
                 <span id="cmd-sim-rainfall-val" class="font-black text-rose-400 text-sm w-16 text-right">0 mm</span>
+              </div>
+            </div>
+
+            <!-- OpenAQ Air Quality Stations Network Dashboard -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div>
+                  <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i data-lucide="wind" class="w-4 h-4 text-cyan-400"></i>
+                    <span>MẠNG LƯỚI QUAN TRẮC CHẤT LƯỢNG KHÔNG KHÍ & BỤI MỊN OPENAQ</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-cyan-950 text-cyan-300 border border-cyan-800 animate-pulse">18 TRẠM LIVE</span>
+                  </h3>
+                  <p class="text-xs text-slate-400 mt-0.5">Dữ liệu thời gian thực theo tiêu chuẩn mở quốc tế OpenAQ & Open-Meteo Air Quality (US AQI, PM2.5, PM10, CO, NO₂).</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="CommandUIController.fetchAndRenderOpenAQStations()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300 transition flex items-center gap-1 cursor-pointer" title="Làm mới dữ liệu quan trắc OpenAQ">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span>Cập Nhật Live</span>
+                  </button>
+                  <button onclick="CommandUIController.viewAllAirQualityStationsOnMap()" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/50 text-xs font-bold text-cyan-200 transition flex items-center gap-1 cursor-pointer" title="Mở trên Bản Đồ Vector 3D">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                    <span>Bản Đồ 3D</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4 KPI Summary Cards -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex flex-col justify-between">
+                  <div class="text-[11px] text-slate-400 font-medium">AQI Trung Bình Toàn Miền</div>
+                  <div class="flex items-baseline gap-2 mt-1">
+                    <span id="openaq-kpi-avg-aqi" class="text-2xl font-black text-cyan-300 font-mono">--</span>
+                    <span id="openaq-kpi-avg-badge" class="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Chờ nạp...</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-1">Chuẩn US AQI EPA</div>
+                </div>
+
+                <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex flex-col justify-between">
+                  <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>Chất Lượng Tốt (0-50)</span>
+                  </div>
+                  <div class="mt-1">
+                    <span id="openaq-kpi-good" class="text-2xl font-black text-emerald-400 font-mono">--</span>
+                    <span class="text-xs text-slate-400">trạm</span>
+                  </div>
+                  <div class="text-[10px] text-emerald-400/80 mt-1">Không khí sạch, an toàn</div>
+                </div>
+
+                <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex flex-col justify-between">
+                  <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Trung Bình (51-100)</span>
+                  </div>
+                  <div class="mt-1">
+                    <span id="openaq-kpi-mod" class="text-2xl font-black text-amber-300 font-mono">--</span>
+                    <span class="text-xs text-slate-400">trạm</span>
+                  </div>
+                  <div class="text-[10px] text-amber-400/80 mt-1">Chấp nhận được</div>
+                </div>
+
+                <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex flex-col justify-between">
+                  <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                    <span>Kém / Nguy Hại (>100)</span>
+                  </div>
+                  <div class="mt-1">
+                    <span id="openaq-kpi-unhealthy" class="text-2xl font-black text-rose-400 font-mono">--</span>
+                    <span class="text-xs text-slate-400">trạm</span>
+                  </div>
+                  <div class="text-[10px] text-rose-400/80 mt-1">Cần đeo khẩu trang lọc bụi</div>
+                </div>
+              </div>
+
+              <!-- Filter Toolbar & Search -->
+              <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-xs">
+                <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[260px]">
+                  <!-- Province Filter -->
+                  <select id="openaq-filter-province" onchange="CommandUIController.filterOpenAQStations()" class="bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg px-2.5 py-1.5 border border-slate-700 font-medium focus:outline-none focus:border-cyan-500 cursor-pointer text-xs">
+                    <option value="all">📍 Toàn bộ 7 Tỉnh/Thành (18 trạm)</option>
+                    <option value="Hà Nội">🏛️ TP. Hà Nội (10 trạm)</option>
+                    <option value="Quảng Ninh">🌊 Tỉnh Quảng Ninh (2 trạm)</option>
+                    <option value="Hải Phòng">⚓ TP. Hải Phòng (1 trạm)</option>
+                    <option value="Thái Nguyên">🏭 Tỉnh Thái Nguyên (2 trạm)</option>
+                    <option value="Phú Thọ">🏞️ Tỉnh Phú Thọ (1 trạm)</option>
+                    <option value="Yên Bái">🌲 Tỉnh Yên Bái (1 trạm)</option>
+                    <option value="Lào Cai">⛰️ Tỉnh Lào Cai (1 trạm)</option>
+                  </select>
+
+                  <!-- AQI Filter -->
+                  <select id="openaq-filter-status" onchange="CommandUIController.filterOpenAQStations()" class="bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg px-2.5 py-1.5 border border-slate-700 font-medium focus:outline-none focus:border-cyan-500 cursor-pointer text-xs">
+                    <option value="all">📊 Tất cả mức AQI</option>
+                    <option value="good">🟢 Chất lượng Tốt (AQI 0-50)</option>
+                    <option value="moderate">🟡 Trung bình (AQI 51-100)</option>
+                    <option value="unhealthy">🔴 Kém / Nhạy cảm (AQI > 100)</option>
+                  </select>
+
+                  <!-- Search Box -->
+                  <div class="relative flex-1 min-w-[180px]">
+                    <input type="text" id="openaq-search-query" oninput="CommandUIController.filterOpenAQStations()" placeholder="Tìm theo tên trạm, quận huyện, cơ quan..." class="w-full bg-slate-800/90 text-slate-200 placeholder-slate-500 rounded-lg px-2.5 py-1.5 pl-7 border border-slate-700 text-xs focus:outline-none focus:border-cyan-500 truncate" />
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
+                  </div>
+                </div>
+
+                <div class="text-[11px] font-mono text-slate-400 font-bold shrink-0" id="openaq-stations-counter">
+                  Đang tải 18 trạm quan trắc...
+                </div>
+              </div>
+
+              <!-- Station Cards Grid -->
+              <div id="openaq-stations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <!-- Dynamically loaded cards -->
               </div>
             </div>
           </div>

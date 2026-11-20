@@ -2461,6 +2461,24 @@ window.NorthStarMapLibre = (function () {
       }
     });
 
+    // 5. Trạm quan trắc chất lượng không khí OpenAQ
+    const openAQList = (window.CommandUIController && typeof window.CommandUIController.getOpenAQStationsData === 'function')
+      ? window.CommandUIController.getOpenAQStationsData()
+      : [];
+    openAQList.forEach(st => {
+      if ((st.name || '').toLowerCase().includes(q) ||
+          (st.city || '').toLowerCase().includes(q) ||
+          (st.district || '').toLowerCase().includes(q) ||
+          q.includes('aqi') || q.includes('bụi') || q.includes('không khí') || q.includes('openaq')) {
+        results.push({
+          type: 'openaq',
+          title: `🍃 ${st.name}`,
+          subtitle: `AQI: ${st.aqi} (${st.status_label}) • PM2.5: ${st.pm25} µg/m³ • ${st.city}`,
+          coords: [st.lng, st.lat]
+        });
+      }
+    });
+
     return results.slice(0, 8);
   }
 
@@ -2480,6 +2498,7 @@ window.NorthStarMapLibre = (function () {
       if (res.type === 'sos') badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-rose-950 text-rose-300 border border-rose-800 shrink-0">🚨 SOS</span>';
       else if (res.type === 'flood') badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-cyan-950 text-cyan-300 border border-cyan-800 shrink-0">🌊 Ngập</span>';
       else if (res.type === 'shelter') badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-emerald-950 text-emerald-300 border border-emerald-800 shrink-0">🛡️ Nơi Trú</span>';
+      else if (res.type === 'openaq') badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-teal-950 text-teal-300 border border-teal-800 shrink-0">🍃 OpenAQ</span>';
       else badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-slate-800 text-slate-300 border border-slate-700 shrink-0">🏛️ Tỉnh</span>';
 
       const item = document.createElement('div');
