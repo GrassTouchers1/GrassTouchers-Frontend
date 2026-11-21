@@ -613,17 +613,44 @@
         }, 3500);
       }
 
-      function trackTicket(ticketCode) {
+      async function trackTicket(ticketCode) {
         switchTab('tracking');
         const input = document.getElementById('tracking-ticket-input');
         const displayId = document.getElementById('tracking-display-id');
-        if (ticketCode) {
-          if (input) input.value = ticketCode;
-          if (displayId) displayId.textContent = ticketCode;
-        } else if (input && input.value) {
-          if (displayId) displayId.textContent = input.value.trim().toUpperCase();
+        const displayStatus = document.getElementById('tracking-display-status');
+
+        let code = ticketCode || input?.value?.trim().toUpperCase();
+        if (!code) {
+          try {
+            code = localStorage.getItem('northstar_last_sos_ticket') || '#SOS-2026-0001';
+          } catch (e) {
+            code = '#SOS-2026-0001';
+          }
         }
-        showToast('🛰️ Đã cập nhật tiến độ cứu nạn mới nhất từ máy chủ!', 'success');
+
+        if (input) input.value = code;
+        if (displayId) displayId.textContent = code;
+
+        // Phân biệt trạng thái Online vs Offline (Tiêu chí V-03)
+        if (code.startsWith('SOS-DRAFT-') || code.startsWith('LOCAL-')) {
+          if (displayStatus) {
+            displayStatus.textContent = 'LƯU TRÊN MÁY (CHỜ MẠNG)';
+            displayStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse';
+          }
+          showToast('📦 Đang hiển thị bản nháp ngoại tuyến lưu tại máy!', 'warning');
+        } else {
+          if (displayStatus) {
+            displayStatus.textContent = 'ĐANG ĐIỀU PHỐI ĐỘI CỨU HỘ';
+            displayStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          }
+          showToast('🛰️ Đã cập nhật tiến độ cứu nạn mới nhất từ máy chủ!', 'success');
+        }
+
+        // Di chuyển bản đồ tới tọa độ cứu hộ nếu đã ghim
+        if (window.CitizenPortal && window.CitizenPortal.state.selectedCoords && window.map) {
+          const c = window.CitizenPortal.state.selectedCoords;
+          window.map.panTo([c.lat, c.lng]);
+        }
       }
 
       function findRoute() {
