@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
  * =========================================================================
  * NorthStar Command - Offline-First Mode & Local Sync Engine
  * Giữ vững năng lực tác chiến khi đứt cáp quang, mất sóng hoặc cô lập lũ lụt.

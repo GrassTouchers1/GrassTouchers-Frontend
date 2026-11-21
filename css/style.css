@@ -202,7 +202,46 @@ body.dark-mode .text-slate-700,
 body.dark-mode .text-slate-600 {
   color: #94a3b8 !important;
 }
-body.dark-mode input[type="text"] {
+
+/* ========================================================
+   Cố định màu chữ & độ tương phản cho Form Input / Textarea / Select
+   Khắc phục triệt để lỗi gõ không hiện chữ do chữ trắng trên nền trắng
+   ======================================================== */
+input, textarea, select {
+  color: #0f172a;
+}
+
+/* Các trường input/textarea/select có nền trắng/sáng */
+input.bg-white,
+textarea.bg-white,
+select.bg-white,
+#sos-input-name,
+#sos-input-phone,
+#sos-input-people,
+#sos-input-notes,
+#origin-text,
+#dest-text {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
+
+/* Placeholder sắc nét, độ tương phản cao */
+input::placeholder,
+textarea::placeholder,
+#sos-input-name::placeholder,
+#sos-input-phone::placeholder,
+#sos-input-people::placeholder,
+#sos-input-notes::placeholder,
+#origin-text::placeholder,
+#dest-text::placeholder {
+  color: #64748b !important; /* Slate 500 */
+  opacity: 1 !important;
+}
+
+body.dark-mode input:not(.bg-white):not(#sos-input-name):not(#sos-input-phone):not(#sos-input-people):not(#sos-input-notes):not(#origin-text):not(#dest-text),
+body.dark-mode textarea:not(.bg-white):not(#sos-input-notes),
+body.dark-mode select:not(.bg-white) {
   background-color: #1f2937 !important;
   color: #f1f5f9 !important;
   border-color: #374151 !important;
@@ -591,22 +630,25 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
 }
 
 /* ========================================================
-   Custom Popup Styling cho FloodNav (FE-Popup)
+   Custom Popup Styling cho FloodNav (FE-Popup & C2 Dark Glass)
    ======================================================== */
 .flood-custom-popup .leaflet-popup-content-wrapper {
   padding: 2px;
-  border-radius: 14px;
-  box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.25), 0 8px 12px -6px rgba(15, 23, 42, 0.12);
-  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 14px !important;
+  background: rgba(15, 23, 42, 0.98) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.75), 0 0 15px rgba(14, 165, 233, 0.2) !important;
+  color: #f8fafc !important;
 }
 .flood-custom-popup .leaflet-popup-content {
   margin: 8px 10px;
   line-height: 1.4;
+  color: #f8fafc !important;
 }
 .flood-custom-popup a.leaflet-popup-close-button {
   top: 8px;
   right: 8px;
-  color: #94a3b8;
+  color: #94a3b8 !important;
   font-size: 16px;
   padding: 0;
   width: 22px;
@@ -619,11 +661,12 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   z-index: 10;
 }
 .flood-custom-popup a.leaflet-popup-close-button:hover {
-  color: #0f172a;
-  background-color: #f1f5f9;
+  color: #ffffff !important;
+  background-color: #334155 !important;
 }
 .flood-custom-popup .leaflet-popup-tip {
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.15);
+  background: #0f172a !important;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.5);
 }
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -639,62 +682,116 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   background: #94a3b8;
 }
 
-/* Dark mode cho Popup điểm ngập */
-body.dark-mode .flood-custom-popup .leaflet-popup-content-wrapper {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-  color: #f1f5f9 !important;
+/* ========================================================
+   Bảo vệ độ tương phản chữ trong Leaflet & MapLibre Popup
+   (Khắc phục 100% tình trạng mất chữ / chữ đen trên nền tối)
+   ======================================================== */
+.flood-custom-popup h1,
+.flood-custom-popup h2,
+.flood-custom-popup h3,
+.flood-custom-popup h4,
+.flood-custom-popup h5,
+.flood-custom-popup .text-slate-900,
+.flood-custom-popup .text-slate-800,
+.flood-custom-popup [class*="text-slate-900"],
+.flood-custom-popup [class*="text-slate-800"],
+.maplibregl-popup-content h1,
+.maplibregl-popup-content h2,
+.maplibregl-popup-content h3,
+.maplibregl-popup-content h4,
+.maplibregl-popup-content h5,
+.maplibregl-popup-content h6,
+.maplibregl-popup-content strong,
+.maplibregl-popup-content b,
+.maplibregl-popup-content .text-slate-900,
+.maplibregl-popup-content .text-slate-800,
+.maplibregl-popup-content [class*="text-slate-900"],
+.maplibregl-popup-content [class*="text-slate-800"] {
+  color: #ffffff !important;
 }
-body.dark-mode .flood-custom-popup a.leaflet-popup-close-button {
-  color: #94a3b8;
+
+.flood-custom-popup .text-slate-700,
+.flood-custom-popup .text-slate-600,
+.flood-custom-popup .text-slate-500,
+.flood-custom-popup [class*="text-slate-700"],
+.flood-custom-popup [class*="text-slate-600"],
+.flood-custom-popup [class*="text-slate-500"],
+.maplibregl-popup-content .text-slate-700,
+.maplibregl-popup-content .text-slate-600,
+.maplibregl-popup-content .text-slate-500,
+.maplibregl-popup-content [class*="text-slate-700"],
+.maplibregl-popup-content [class*="text-slate-600"],
+.maplibregl-popup-content [class*="text-slate-500"] {
+  color: #cbd5e1 !important;
 }
-body.dark-mode .flood-custom-popup a.leaflet-popup-close-button:hover {
-  color: #f8fafc;
-  background-color: #334155;
-}
-body.dark-mode .flood-custom-popup .leaflet-popup-tip {
-  background-color: #0f172a !important;
-}
-body.dark-mode .flood-custom-popup h4 {
+
+.flood-custom-popup .bg-slate-50,
+.flood-custom-popup .bg-slate-50\/90,
+.flood-custom-popup .bg-slate-50\/80,
+.flood-custom-popup .bg-white,
+.flood-custom-popup .bg-white\/90,
+.flood-custom-popup .bg-white\/95,
+.flood-custom-popup [class*="bg-slate-50"],
+.flood-custom-popup [class*="bg-white"],
+.maplibregl-popup-content .bg-slate-50,
+.maplibregl-popup-content .bg-slate-100,
+.maplibregl-popup-content .bg-white,
+.maplibregl-popup-content .bg-blue-50,
+.maplibregl-popup-content .bg-amber-50,
+.maplibregl-popup-content .bg-rose-50,
+.maplibregl-popup-content [class*="bg-slate-50"],
+.maplibregl-popup-content [class*="bg-white"],
+.maplibregl-popup-content [class*="bg-blue-50"],
+.maplibregl-popup-content [class*="bg-amber-50"],
+.maplibregl-popup-content [class*="bg-rose-50"] {
+  background-color: rgba(2, 6, 23, 0.85) !important;
+  border-color: rgba(51, 65, 85, 0.85) !important;
   color: #f8fafc !important;
 }
-body.dark-mode .flood-custom-popup .bg-slate-50,
-body.dark-mode .flood-custom-popup .bg-slate-50\/90,
-body.dark-mode .flood-custom-popup .bg-slate-50\/80 {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
+
+.flood-custom-popup .border-slate-100,
+.flood-custom-popup .border-slate-200,
+.flood-custom-popup .border-slate-200\/70,
+.flood-custom-popup .border-slate-200\/80,
+.flood-custom-popup [class*="border-slate-100"],
+.flood-custom-popup [class*="border-slate-200"],
+.maplibregl-popup-content .border-slate-100,
+.maplibregl-popup-content .border-slate-200,
+.maplibregl-popup-content .border-blue-200,
+.maplibregl-popup-content .border-amber-200,
+.maplibregl-popup-content .border-rose-200,
+.maplibregl-popup-content [class*="border-slate-100"],
+.maplibregl-popup-content [class*="border-slate-200"] {
+  border-color: rgba(51, 65, 85, 0.85) !important;
 }
-body.dark-mode .flood-custom-popup .bg-white,
-body.dark-mode .flood-custom-popup .bg-white\/90,
-body.dark-mode .flood-custom-popup .bg-white\/95 {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-}
-body.dark-mode .flood-custom-popup .border-slate-100,
-body.dark-mode .flood-custom-popup .border-slate-200,
-body.dark-mode .flood-custom-popup .border-slate-200\/70,
-body.dark-mode .flood-custom-popup .border-slate-200\/80 {
-  border-color: #334155 !important;
-}
-body.dark-mode .flood-custom-popup .text-slate-900,
-body.dark-mode .flood-custom-popup .text-slate-800,
-body.dark-mode .flood-custom-popup .text-slate-700 {
-  color: #f1f5f9 !important;
-}
-body.dark-mode .flood-custom-popup .text-slate-600,
-body.dark-mode .flood-custom-popup .text-slate-500 {
-  color: #94a3b8 !important;
-}
-body.dark-mode .flood-custom-popup .bg-indigo-50\/70,
-body.dark-mode .flood-custom-popup .bg-indigo-50\/60 {
+
+.flood-custom-popup .bg-indigo-50\/70,
+.flood-custom-popup .bg-indigo-50\/60 {
   background-color: rgba(49, 46, 129, 0.35) !important;
   border-color: rgba(99, 102, 241, 0.4) !important;
 }
-body.dark-mode .flood-custom-popup .text-indigo-900 {
+.flood-custom-popup .text-indigo-900 {
   color: #c7d2fe !important;
 }
-body.dark-mode .flood-custom-popup .text-indigo-600 {
+.flood-custom-popup .text-indigo-600 {
   color: #818cf8 !important;
+}
+
+/* Triệt tiêu thanh attribution mặc định của MapLibre để không bị chồng đè với HUD Bar */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib *,
+.maplibregl-ctrl-bottom-right,
+.maplibregl-compact,
+.maplibregl-ctrl-attrib-button {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 /* ========================================================
@@ -795,6 +892,36 @@ body.command-mode-active .floating-header {
 
 .province-weather-leaflet-popup a.leaflet-popup-close-button:hover {
   color: #ffffff !important;
+}
+
+/* ========================================================
+   NORTHSTAR MAPLIBRE TACTICAL C2 REFINEMENTS
+   ======================================================== */
+.c2-maplibre-cluster:hover .rounded-full {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.7) !important;
+}
+
+.c2-maplibre-pin:hover .rounded-full {
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.7) !important;
+}
+
+.animated-marker-pulse {
+  animation: markerRadarPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes markerRadarPulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 .tactical-province-boundary {
@@ -972,6 +1099,72 @@ body.command-mode-active .floating-header {
 .citizen-tb-cancel:hover {
   background: #e11d48;
   color: #ffffff;
+/* =========================================================================
+ * C2 DARK GLASS NAVIGATION & SCALE CONTROLS (MAPLIBRE GL JS)
+ * ========================================================================= */
+.maplibregl-ctrl-top-right {
+  top: 54px !important;
+  right: 12px !important;
+  margin: 0 !important;
+  z-index: 25 !important;
+}
+
+.maplibregl-ctrl-group {
+  background: rgba(11, 15, 25, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25) !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 34px !important;
+  height: 34px !important;
+  background-color: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.maplibregl-ctrl-group button:active {
+  background-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(2.2) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+  opacity: 0.92 !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon {
+  opacity: 1 !important;
+  filter: invert(1) brightness(2.8) drop-shadow(0 0 5px #38bdf8) !important;
+}
+
+.maplibregl-ctrl-scale {
+  background: rgba(11, 15, 25, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-top: none !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  border-radius: 0 0 6px 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
 
