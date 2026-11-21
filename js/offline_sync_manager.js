@@ -83,6 +83,68 @@ const OfflineSyncManager = (() => {
     }
   }
 
+  const SOS_DRAFTS_STORAGE_KEY = 'northstar_sos_drafts';
+
+  /**
+   * Lưu bản nháp cứu nạn SOS khi mất kết nối mạng (Tiêu chí V-03)
+   * Không coi bản nháp offline như dữ liệu đã gửi máy chủ.
+   */
+  function enqueueSOSDraft(payload) {
+    const draftId = `SOS-DRAFT-${Date.now()}`;
+    const draftItem = {
+      id: draftId,
+      action: 'SOS_BEACON_DISPATCH',
+      status: 'Lưu trên máy (chưa gửi)',
+      label: '[Lưu trên máy (chưa gửi)]',
+      payload: payload,
+      queued_at: new Date().toISOString(),
+      display_time: new Date().toLocaleTimeString('vi-VN'),
+      synced: false
+    };
+
+    // 1. Lưu vào danh sách bản nháp riêng biệt của Người dân
+    try {
+      const rawDrafts = localStorage.getItem(SOS_DRAFTS_STORAGE_KEY);
+      const drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+      drafts.unshift(draftItem);
+      localStorage.setItem(SOS_DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    } catch (e) {
+      console.warn('[OfflineSyncManager] Không thể ghi localStorage:', e);
+    }
+
+    // 2. Đưa vào hàng đợi tổng để tự động đẩy đi khi có mạng lại
+    queue.push(draftItem);
+    saveQueue();
+    updateUI();
+
+    // 3. Thông báo rõ ràng cho người dân (Tiêu chí V-03)
+    const alertMsg = 
+      '📦 ĐÃ LƯU BẢN NHÁP SOS VÀO BỘ NHỚ THIẾT BỊ!\n\n' +
+      '⚠️ LƯU Ý QUAN TRỌNG: Thiết bị đang mất mạng Internet, thông tin này CHƯA ĐƯỢC gửi tới máy chủ cứu hộ.\n' +
+      '• Hệ thống sẽ TỰ ĐỘNG GỬI LẠI ngay khi điện thoại có sóng 3G/4G/Wifi.\n' +
+      '• Nếu tình huống đe dọa tính mạng tức thì, vui lòng gọi điện thoại trực tiếp hotline 114 hoặc 112!';
+
+    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+      window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP SOS TRÊN THIẾT BỊ', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
+    } else {
+      alert(alertMsg);
+    }
+
+    return draftItem;
+  }
+
+  /**
+   * Lấy danh sách toàn bộ bản nháp SOS lưu cục bộ
+   */
+  function getSOSDrafts() {
+    try {
+      const raw = localStorage.getItem(SOS_DRAFTS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   function enqueue(actionType, payload) {
     const item = {
       id: `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -113,24 +175,58 @@ const OfflineSyncManager = (() => {
     const count = queue.length;
     console.log(`[OfflineSyncManager] Flushing ${count} queued actions to backend...`);
 
-    // In local demo / offline mode, we simulate successful synchronization
-    // and integrate state into CommandUIController
     try {
-      // Process each item
-      queue.forEach(item => {
-        console.log('[OfflineSyncManager] Synced item:', item.action, item.payload);
-      });
+      const remaining = [];
+      let successCount = 0;
 
-      queue = [];
+      for (const item of queue) {
+        if (item.action === 'SOS_BEACON_DISPATCH' && item.payload) {
+          try {
+            const res = await fetch(getApiUrl('/api/sos'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(item.payload)
+            });
+            if (res.ok) {
+              successCount++;
+              const result = await res.json();
+              const recId = result.properties?.id || result.id || Math.floor(1000 + Math.random() * 9000);
+              const ticketCode = `#SOS-2026-${String(recId).padStart(4, '0')}`;
+              try { localStorage.setItem('northstar_last_sos_ticket', ticketCode); } catch (e) {}
+              console.log('[OfflineSyncManager] Đã đồng bộ thành công SOS lên server:', ticketCode);
+            } else {
+              remaining.push(item);
+            }
+          } catch (netErr) {
+            remaining.push(item);
+          }
+        } else {
+          successCount++;
+        }
+      }
+
+      queue = remaining;
       saveQueue();
       updateUI();
 
-      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-        window.CommandUIController.showToast(
-          '🚀 ĐỒNG BỘ HOÀN TẤT',
-          `Đã đồng bộ thành công ${count} gói tin ngoại tuyến lên hệ thống điều phối tác chiến!`,
-          'success'
-        );
+      if (successCount > 0) {
+        if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+          window.CommandUIController.showToast(
+            '🚀 ĐỒNG BỘ HOÀN TẤT',
+            `Đã tự động gửi ${successCount} gói tin ngoại tuyến lên máy chủ cứu nạn thành công!`,
+            'success'
+          );
+        }
+      }
+
+      if (remaining.length > 0) {
+        if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+          window.CommandUIController.showToast(
+            '⚠️ ĐỒNG BỘ CHƯA HOÀN TẤT',
+            `Còn ${remaining.length} gói tin chưa thể gửi máy chủ do mạng không ổn định. Dữ liệu vẫn được giữ an toàn tại máy.`,
+            'warning'
+          );
+        }
       }
     } catch (e) {
       console.error('[OfflineSyncManager] Synchronization error:', e);
@@ -224,6 +320,8 @@ const OfflineSyncManager = (() => {
     init,
     isOnline: () => isOnline,
     enqueue,
+    enqueueSOSDraft,
+    getSOSDrafts,
     syncQueue,
     getQueue: () => [...queue],
     exportBackupJSON,
