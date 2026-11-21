@@ -551,9 +551,9 @@
           <div class="flex-1 h-full relative min-w-0 bg-slate-950 overflow-hidden" id="map-container">
             <div id="maplibre-container" class="w-full h-full z-0"></div>
 
-            <!-- Floating Viewport Situation Alert Banner -->
-            <div id="maplibre-viewport-alert" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-xl text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-slate-700/80 bg-slate-900/90 text-slate-200 transition-all duration-300">
-              <div id="maplibre-alert-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 flex-shrink-0 animate-pulse"></div>
+            <!-- Floating Viewport Situation Alert Banner (Sleek Tactical Pill) -->
+            <div id="maplibre-viewport-alert" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-lg text-xs font-semibold px-4 py-1.5 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2 border border-cyan-500/40 bg-slate-950/90 text-slate-200 transition-all duration-300">
+              <div id="maplibre-alert-dot" class="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0 animate-ping"></div>
               <div class="flex-1 truncate text-[11px]" id="maplibre-viewport-alert-text">
                 Đang phân tích dữ liệu quan trắc trong khung nhìn...
               </div>
@@ -562,81 +562,71 @@
               </button>
             </div>
 
-            <!-- Top HUD Overlay Controls (Single Unified Floating Tactical Command Bar) -->
-            <div class="absolute top-2 inset-x-2 z-20 flex items-center justify-between gap-1.5 pointer-events-none select-none flex-nowrap overflow-x-auto pb-1">
+            <!-- Top HUD Overlay Controls (Streamlined Tactical Command Islands) -->
+            <div class="absolute top-2 inset-x-3 z-20 flex items-center justify-between gap-2 pointer-events-none select-none flex-nowrap">
               
-              <!-- Left Info Tag & Search -->
+              <!-- Island 1 (Left): Compact Spotlight Search Capsule -->
+              <div class="pointer-events-auto relative w-48 sm:w-56 focus-within:w-64 transition-all duration-300 shrink-0">
+                <div class="flex items-center bg-slate-950/85 border border-slate-700/70 hover:border-slate-600 rounded-2xl px-3 py-1.5 shadow-2xl backdrop-blur-xl focus-within:border-cyan-500 focus-within:ring-2 focus-within:ring-cyan-500/30">
+                  <i data-lucide="search" class="w-3.5 h-3.5 text-cyan-400 mr-2 shrink-0"></i>
+                  <input id="ml-search-input" type="text" placeholder="Tìm SOS, trạm đo..." class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-full" autocomplete="off" />
+                  <button id="ml-search-clear" onclick="NorthStarMapLibre.clearSearch()" class="hidden text-slate-400 hover:text-white text-xs px-1 cursor-pointer">✕</button>
+                  <span class="text-[9px] font-mono text-slate-500 bg-slate-800/80 px-1 py-0.5 rounded border border-slate-700/50 hidden sm:inline ml-1">/</span>
+                </div>
+                <div id="ml-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl backdrop-blur-xl max-h-72 overflow-y-auto z-40 p-1 divide-y divide-slate-800 text-xs"></div>
+              </div>
+
+              <!-- Island 2 (Center): Unified Segmented Glass Island (Basemaps • Perspectives • Regions) -->
+              <div class="pointer-events-auto bg-slate-950/85 border border-slate-700/70 p-1 rounded-2xl shadow-2xl backdrop-blur-xl hidden lg:flex items-center gap-1.5 text-xs shrink-0">
+                <!-- Basemap Switcher -->
+                <div class="flex items-center gap-0.5 bg-slate-900/80 p-0.5 rounded-xl border border-slate-800">
+                  <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow" title="Nền Tối C2 (Sắc nét, không rối địa hình)">🌑 Tối</button>
+                  <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Ảnh Vệ Tinh Recon">🛰️ Vệ Tinh</button>
+                  <button id="btn-ml-base-topo" onclick="NorthStarMapLibre.switchStyle('topo')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Bản Đồ Địa Hình Lũ">⛰️ Địa Hình</button>
+                  <button id="btn-ml-base-osm" onclick="NorthStarMapLibre.switchStyle('osm')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Bản Đồ Đô Thị & Đường Phố">🗺️ Đô Thị</button>
+                </div>
+
+                <span class="w-px h-4 bg-slate-700/60"></span>
+
+                <!-- Perspective Pitch 2D / 3D -->
+                <div class="flex items-center gap-0.5 bg-slate-900/80 p-0.5 rounded-xl border border-slate-800">
+                  <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow">2D (0°)</button>
+                  <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition">3D (45°)</button>
+                  <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition">60°</button>
+                </div>
+
+                <span class="w-px h-4 bg-slate-700/60 hidden xl:inline"></span>
+
+                <!-- Regional Focus Jump -->
+                <div class="hidden xl:flex items-center gap-0.5 bg-slate-900/80 p-0.5 rounded-xl border border-slate-800">
+                  <button id="ml-jump-all" onclick="NorthStarMapLibre.jumpToRegion('all')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow" title="Toàn Miền Bắc">🌐 Miền Bắc</button>
+                  <button id="ml-jump-hanoi" onclick="NorthStarMapLibre.jumpToRegion('hanoi')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Thủ Đô Hà Nội">🏛️ HN</button>
+                  <button id="ml-jump-taybac" onclick="NorthStarMapLibre.jumpToRegion('taybac')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Tây Bắc (Lào Cai, Yên Bái)">⛰️ Tây Bắc</button>
+                  <button id="ml-jump-quangninh" onclick="NorthStarMapLibre.jumpToRegion('quangninh')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Quảng Ninh - Hải Phòng">🏖️ Quảng Ninh</button>
+                </div>
+              </div>
+
+              <!-- Island 3 (Right): Tactical Tools & Fullscreen -->
               <div class="pointer-events-auto flex items-center gap-1.5 shrink-0">
-                <div class="bg-slate-900/90 border border-slate-700/80 px-2 py-1 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-1.5">
-                  <span class="p-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                    <i data-lucide="box" class="w-3.5 h-3.5"></i>
-                  </span>
-                  <span class="text-[11px] font-black text-white uppercase tracking-wider hidden sm:inline">VECTOR 3D</span>
-                  <span class="px-1 py-0.2 rounded text-[8px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">BSD-3</span>
-                </div>
-
-                <!-- Compact Spotlight Search Input -->
-                <div class="relative w-36 sm:w-44 focus-within:w-56 transition-all duration-300 shrink-0">
-                  <div class="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl px-2 py-1 shadow-2xl backdrop-blur-md focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500/50">
-                    <i data-lucide="search" class="w-3.5 h-3.5 text-cyan-400 mr-1 shrink-0"></i>
-                    <input id="ml-search-input" type="text" placeholder="Tìm SOS, trạm..." class="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-full" autocomplete="off" />
-                    <button id="ml-search-clear" onclick="NorthStarMapLibre.clearSearch()" class="hidden text-slate-400 hover:text-white text-xs px-1 cursor-pointer">✕</button>
-                  </div>
-                  <div id="ml-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl backdrop-blur-md max-h-72 overflow-y-auto z-40 p-1 divide-y divide-slate-800 text-xs"></div>
-                </div>
-              </div>
-
-              <!-- Center Controls: Basemaps & Perspectives (Compact Glass Bar) -->
-              <div class="pointer-events-auto bg-slate-900/90 border border-slate-700/80 p-0.5 rounded-xl shadow-2xl backdrop-blur-md hidden lg:flex items-center gap-1 text-xs shrink-0">
-                <!-- Basemap Selector -->
-                <div class="flex items-center gap-0.5">
-                  <button id="btn-ml-base-satellite" onclick="NorthStarMapLibre.switchStyle('satellite')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow" title="Vệ Tinh">🛰️ Vệ Tinh</button>
-                  <button id="btn-ml-base-dark" onclick="NorthStarMapLibre.switchStyle('dark')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Nền Tối">🌑 Tối</button>
-                  <button id="btn-ml-base-topo" onclick="NorthStarMapLibre.switchStyle('topo')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Địa Hình">⛰️ Địa Hình</button>
-                  <button id="btn-ml-base-osm" onclick="NorthStarMapLibre.switchStyle('osm')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition" title="Đô Thị">🗺️ Đô Thị</button>
-                </div>
-
-                <span class="w-px h-3.5 bg-slate-700"></span>
-
-                <!-- Pitch / Angles -->
-                <div class="flex items-center gap-0.5">
-                  <button id="ml-pitch-0" onclick="NorthStarMapLibre.setPitch(0)" class="px-1.5 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow">2D (0°)</button>
-                  <button id="ml-pitch-45" onclick="NorthStarMapLibre.setPitch(45)" class="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition">3D (45°)</button>
-                  <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition">60°</button>
-                </div>
-
-                <span class="w-px h-3.5 bg-slate-700"></span>
-
-                <!-- Regional Focus Quick Jump -->
-                <div class="flex items-center gap-0.5">
-                  <button id="ml-jump-all" onclick="NorthStarMapLibre.jumpToRegion('all')" class="px-1.5 py-1 rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow bg-cyan-600 text-white" title="Toàn Miền Bắc">🌐 Miền Bắc</button>
-                  <button id="ml-jump-hanoi" onclick="NorthStarMapLibre.jumpToRegion('hanoi')" class="px-1.5 py-1 rounded-lg text-[9.5px] font-semibold cursor-pointer transition bg-slate-800 hover:bg-slate-700 text-slate-300" title="Hà Nội">🏛️ HN</button>
-                  <button id="ml-jump-taybac" onclick="NorthStarMapLibre.jumpToRegion('taybac')" class="px-1.5 py-1 rounded-lg text-[9.5px] font-semibold cursor-pointer transition bg-slate-800 hover:bg-slate-700 text-slate-300" title="Tây Bắc (Lào Cai, Yên Bái)">⛰️ Tây Bắc</button>
-                  <button id="ml-jump-quangninh" onclick="NorthStarMapLibre.jumpToRegion('quangninh')" class="px-1.5 py-1 rounded-lg text-[9.5px] font-semibold cursor-pointer transition bg-slate-800 hover:bg-slate-700 text-slate-300" title="Quảng Ninh - Hải Phòng">🏖️ Quảng Ninh</button>
-                </div>
-              </div>
-
-              <!-- Right Tactical Tools & Fullscreen Button -->
-              <div class="pointer-events-auto flex items-center gap-1 shrink-0">
-                <div class="bg-slate-900/90 border border-slate-700/80 p-0.5 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-0.5 text-xs">
-                  <button id="btn-ml-patrol" onclick="NorthStarMapLibre.toggleFlyoverPatrol()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 text-[10px] font-bold cursor-pointer transition flex items-center gap-1" title="Tuần tra trinh sát 3D tự động">
+                <div class="bg-slate-950/85 border border-slate-700/70 p-1 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-1 text-xs">
+                  <button id="btn-ml-patrol" onclick="NorthStarMapLibre.toggleFlyoverPatrol()" class="px-2.5 py-1 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-rose-300 border border-rose-500/20 text-[10px] font-bold cursor-pointer transition flex items-center gap-1 active:scale-95" title="Tuần tra trinh sát 3D tự động">
                     <span>🚁 Tuần Tra</span>
                   </button>
-                  <button id="btn-ml-measure" onclick="NorthStarMapLibre.toggleMeasureTool()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold cursor-pointer transition flex items-center gap-1" title="Thước đo khoảng cách tác chiến & ETA">
+                  <button id="btn-ml-measure" onclick="NorthStarMapLibre.toggleMeasureTool()" class="px-2.5 py-1 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-cyan-500/20 text-[10px] font-bold cursor-pointer transition flex items-center gap-1 active:scale-95" title="Thước đo khoảng cách tác chiến & ETA">
                     <span>📏 Đo ETA</span>
                   </button>
-                  <button id="btn-ml-drawer" onclick="NorthStarMapLibre.toggleTacticalDrawer()" class="px-2 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-500/50 text-[10px] font-bold cursor-pointer transition flex items-center gap-1" title="Mở bảng chỉ huy tác chiến C2">
-                    <span>📋 Danh Sách C2</span>
+                  <button id="btn-ml-drawer" onclick="NorthStarMapLibre.toggleTacticalDrawer()" class="px-2.5 py-1 rounded-xl bg-cyan-600/25 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 text-[10px] font-bold cursor-pointer transition flex items-center gap-1 active:scale-95" title="Mở bảng chỉ huy tác chiến C2">
+                    <span>📋 Bảng C2</span>
                   </button>
-                  <button id="maplibre-btn-rotate" onclick="NorthStarMapLibre.toggleAutoRotate()" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold cursor-pointer transition" title="Tự động xoay 360 độ">
+                  <button id="maplibre-btn-rotate" onclick="NorthStarMapLibre.toggleAutoRotate()" class="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-[10px] font-bold cursor-pointer transition" title="Tự động xoay 360 độ">
                     <span>🔄</span>
                   </button>
                 </div>
 
                 <!-- Fullscreen Toggle Button -->
-                <button onclick="CommandUIController.toggleFullscreenMap()" id="btn-ml-fullscreen-toggle" class="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold shadow-2xl flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0" title="Phóng to / Thu nhỏ toàn màn hình Bản Đồ Tác Chiến (Phím F)">
-                  <i data-lucide="maximize" class="w-3 h-3"></i>
-                  <span id="btn-ml-fullscreen-label">Toàn Màn Hình</span>
+                <button onclick="CommandUIController.toggleFullscreenMap()" id="btn-ml-fullscreen-toggle" class="px-3 py-1.5 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white text-[10.5px] font-extrabold shadow-2xl backdrop-blur-xl border border-cyan-400/40 flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0" title="Phóng to / Thu nhỏ toàn màn hình Bản Đồ (Phím F)">
+                  <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                  <span id="btn-ml-fullscreen-label" class="hidden sm:inline">Toàn Màn Hình</span>
                 </button>
               </div>
             </div>
@@ -749,10 +739,10 @@
             </div>
 
             <!-- Bottom-Left Floating Layer Dock (Collapsible Minimalist Pill) -->
-            <div class="absolute bottom-8 left-3 z-30 pointer-events-none select-none flex flex-col items-start">
+            <div class="absolute bottom-11 left-4 z-30 pointer-events-none select-none flex flex-col items-start">
               <!-- Expanded Panel (Hidden by default to keep map 100% unobstructed) -->
-              <div id="ml-layers-dock-panel" class="hidden pointer-events-auto mb-2 bg-slate-900/95 border border-slate-700/80 p-2.5 rounded-2xl shadow-2xl backdrop-blur-md space-y-1.5 max-w-xs animate-fade-in">
-                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-800 pb-1">
+              <div id="ml-layers-dock-panel" class="hidden pointer-events-auto mb-2 bg-slate-950/95 border border-slate-700/80 p-3 rounded-2xl shadow-2xl backdrop-blur-xl space-y-2 max-w-xs animate-fade-in">
+                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-800 pb-1.5">
                   <span class="flex items-center gap-1.5 text-cyan-300">
                     <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                     <span>Lớp Tác Chiến 3D</span>
@@ -760,20 +750,20 @@
                   <button onclick="NorthStarMapLibre.toggleLayersDrawer()" class="text-slate-400 hover:text-white px-1 cursor-pointer">✕</button>
                 </div>
                 <div class="grid grid-cols-2 gap-1.5">
-                  <button id="ml-toggle-sos" onclick="NorthStarMapLibre.toggleLayerUI('sos')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Tín hiệu kêu cứu SOS khẩn cấp">🚨 Tín hiệu SOS</button>
-                  <button id="ml-toggle-floodPoints" onclick="NorthStarMapLibre.toggleLayerUI('floodPoints')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Điểm ngập lụt & trạm đo thủy văn">🌊 130 Trạm Ngập</button>
-                  <button id="ml-toggle-shelters" onclick="NorthStarMapLibre.toggleLayerUI('shelters')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Khu vực và điểm sơ tán an toàn">⛺ Điểm Sơ Tán</button>
-                  <button id="ml-toggle-provinces" onclick="NorthStarMapLibre.toggleLayerUI('provinces')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="26 Tỉnh Miền Bắc và dữ liệu khí tượng Open-Meteo">🗺️ 26 Tỉnh Thành</button>
-                  <button id="ml-toggle-storm" onclick="NorthStarMapLibre.toggleLayerUI('storm')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Quỹ đạo và bán kính bão Yagi 50km/100km">🌀 Quỹ Đạo Bão</button>
-                  <button id="ml-toggle-route" onclick="NorthStarMapLibre.toggleLayerUI('route')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Lộ trình an toàn né ngập lụt thuật toán A*">🛣️ Tuyến Cứu Hộ A*</button>
-                  <button id="ml-toggle-units" onclick="NorthStarMapLibre.toggleLayerUI('units')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Đội cơ động phản ứng nhanh và phương tiện cứu hộ">🚤 Đội Cơ Động 114</button>
-                  <button id="ml-toggle-buildings" onclick="NorthStarMapLibre.toggleLayerUI('buildings')" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-900/60 text-cyan-200 border-cyan-500/50 shadow-sm" title="Mô hình khối nhà và công trình 3D khi nghiêng góc nhìn">🏢 Công Trình 3D</button>
-                  <button id="ml-toggle-rainRadar" onclick="NorthStarMapLibre.toggleLayerUI('rainRadar')" class="col-span-2 px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center justify-center gap-1 cursor-pointer bg-slate-800 text-slate-400 border-slate-700 shadow-sm" title="Mô phỏng quét radar mưa phản hồi bão Yagi">🌧️ Radar Mưa Bão Yagi (dBZ)</button>
+                  <button id="ml-toggle-sos" onclick="NorthStarMapLibre.toggleLayerUI('sos')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Tín hiệu kêu cứu SOS khẩn cấp">🚨 Tín hiệu SOS</button>
+                  <button id="ml-toggle-floodPoints" onclick="NorthStarMapLibre.toggleLayerUI('floodPoints')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Điểm ngập lụt & trạm đo thủy văn">🌊 130 Trạm Ngập</button>
+                  <button id="ml-toggle-shelters" onclick="NorthStarMapLibre.toggleLayerUI('shelters')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Khu vực và điểm sơ tán an toàn">⛺ Điểm Sơ Tán</button>
+                  <button id="ml-toggle-provinces" onclick="NorthStarMapLibre.toggleLayerUI('provinces')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="26 Tỉnh Miền Bắc và dữ liệu khí tượng Open-Meteo">🗺️ 26 Tỉnh Thành</button>
+                  <button id="ml-toggle-storm" onclick="NorthStarMapLibre.toggleLayerUI('storm')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Quỹ đạo và bán kính bão Yagi 50km/100km">🌀 Quỹ Đạo Bão</button>
+                  <button id="ml-toggle-route" onclick="NorthStarMapLibre.toggleLayerUI('route')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Lộ trình an toàn né ngập lụt thuật toán A*">🛣️ Tuyến Cứu Hộ A*</button>
+                  <button id="ml-toggle-units" onclick="NorthStarMapLibre.toggleLayerUI('units')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Đội cơ động phản ứng nhanh và phương tiện cứu hộ">🚤 Đội Cơ Động 114</button>
+                  <button id="ml-toggle-buildings" onclick="NorthStarMapLibre.toggleLayerUI('buildings')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer bg-cyan-950/80 text-cyan-200 border-cyan-500/50 shadow-sm" title="Mô hình khối nhà và công trình 3D khi nghiêng góc nhìn">🏢 Công Trình 3D</button>
+                  <button id="ml-toggle-rainRadar" onclick="NorthStarMapLibre.toggleLayerUI('rainRadar')" class="col-span-2 px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex items-center justify-center gap-1 cursor-pointer bg-slate-900 text-slate-400 border-slate-700/80 shadow-sm" title="Mô phỏng quét radar mưa phản hồi bão Yagi">🌧️ Radar Mưa Bão Yagi (dBZ)</button>
                 </div>
               </div>
 
               <!-- Sleek Toggle Pill (Minimalist Glass Button) -->
-              <button id="ml-layers-toggle-pill" onclick="NorthStarMapLibre.toggleLayersDrawer()" class="pointer-events-auto bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 px-2.5 py-1.5 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold text-slate-200 transition cursor-pointer active:scale-95" title="Bật/tắt bảng chọn lớp tác chiến">
+              <button id="ml-layers-toggle-pill" onclick="NorthStarMapLibre.toggleLayersDrawer()" class="pointer-events-auto bg-slate-950/85 hover:bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold text-slate-200 transition-all cursor-pointer active:scale-95 hover:border-cyan-500/50" title="Bật/tắt bảng chọn lớp tác chiến">
                 <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i>
                 <span>Lớp Tác Chiến</span>
                 <span id="ml-active-layers-count" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-950 text-cyan-300 font-mono font-bold border border-cyan-800">8 Lớp</span>
@@ -781,25 +771,25 @@
               </button>
             </div>
 
-            <!-- Bottom Status Strip (Slim Translucent HUD) -->
-            <div class="absolute bottom-1 inset-x-3 z-20 flex items-center justify-between text-[10px] text-slate-400 pointer-events-none select-none bg-slate-900/85 border border-slate-800/80 px-3 py-0.5 rounded-lg backdrop-blur-md">
+            <!-- Bottom Status Strip (Floating Translucent Glass HUD) -->
+            <div class="absolute bottom-2 inset-x-4 z-20 flex items-center justify-between text-[10px] text-slate-400 pointer-events-none select-none bg-slate-950/80 border border-slate-800/80 px-4 py-1.5 rounded-2xl backdrop-blur-xl shadow-2xl">
               <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]"></span>
                 <span id="maplibre-coords-badge" class="font-mono text-cyan-300 font-bold">21.0285° N, 105.8542° E</span>
-                <span>•</span>
+                <span class="text-slate-600">•</span>
                 <span id="maplibre-elevation-badge" class="font-mono text-amber-300 font-bold">Độ cao: +14m ASL</span>
               </div>
               <div class="hidden xl:flex items-center gap-2 text-slate-400">
                 <span id="maplibre-telemetry-badge" class="font-mono text-cyan-400 font-bold">Z: 7.4 | P: 0° | B: 0°</span>
-                <span>•</span>
+                <span class="text-slate-600">•</span>
                 <span>💡 Chuột phải để xoay & nghiêng 3D</span>
               </div>
               <div class="flex items-center gap-2 font-mono text-[9.5px]">
                 <span class="text-slate-400 hidden sm:inline">© Esri, Maxar, OSM • MapLibre</span>
-                <span class="text-slate-600 hidden sm:inline">•</span>
+                <span class="text-slate-700 hidden sm:inline">•</span>
                 <span class="text-cyan-400 font-bold">WebGL 2.0</span>
-                <span>•</span>
-                <span class="text-emerald-400">60 FPS</span>
+                <span class="text-slate-700">•</span>
+                <span class="text-emerald-400 font-bold">60 FPS</span>
               </div>
             </div>
 

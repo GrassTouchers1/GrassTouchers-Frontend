@@ -30,9 +30,9 @@ window.NorthStarMapLibre = (function () {
   let mapInstance = null;
   let isInitialized = false;
   let isAutoRotating = false;
-  let currentPitch = 0; // Mặc định góc nhìn 2D phẳng y hệt Leaflet
+  let currentPitch = 0; // Mặc định góc nhìn 2D phẳng
   let currentBearing = 0;
-  let currentBaseKey = 'satellite'; // Vệ Tinh Không Gian y hệt Leaflet
+  let currentBaseKey = 'dark'; // Nền Tối C2 Dark Canvas sang trọng, sắc nét, không rối địa hình
 
   // Quản lý các nhóm markers động
   const markersRegistry = {
@@ -463,39 +463,39 @@ window.NorthStarMapLibre = (function () {
         paint: {
           'fill-color': [
             'case',
-            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.16)',
-            ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.14)',
-            ['==', ['get', 'name'], 'Thái Nguyên'], 'rgba(245, 158, 11, 0.12)',
-            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.08)',
-            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.08)',
-            'rgba(2, 132, 199, 0.05)'
+            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.12)',
+            ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.10)',
+            ['==', ['get', 'name'], 'Thái Nguyên'], 'rgba(245, 158, 11, 0.09)',
+            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.05)',
+            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.05)',
+            'rgba(2, 132, 199, 0.025)'
           ],
-          'fill-opacity': layerVisibility.provinces ? 0.9 : 0
+          'fill-opacity': layerVisibility.provinces ? 0.85 : 0
         }
       });
 
-      // Lớp viền phát sáng ngoài cùng bao quanh miền Bắc
+      // Lớp viền ranh giới tỉnh tinh tế, thanh thoát chuẩn C2 Tactical
       mapInstance.addLayer({
         id: 'provinces-outer-glow',
         type: 'line',
         source: 'provinces-source',
         paint: {
-          'line-color': '#ffffff',
-          'line-width': 2.8,
-          'line-opacity': layerVisibility.provinces ? 0.95 : 0
+          'line-color': '#0ea5e9',
+          'line-width': 1.4,
+          'line-opacity': layerVisibility.provinces ? 0.65 : 0
         }
       });
 
-      // Lớp đường ranh giới nội tỉnh đứt nét
+      // Lớp đường ranh giới nội tỉnh đứt nét nhẹ nhàng
       mapInstance.addLayer({
         id: 'provinces-dashed-inner',
         type: 'line',
         source: 'provinces-source',
         paint: {
-          'line-color': '#06b6d4',
-          'line-width': 1.6,
-          'line-dasharray': [4, 3],
-          'line-opacity': layerVisibility.provinces ? 0.85 : 0
+          'line-color': '#38bdf8',
+          'line-width': 0.8,
+          'line-dasharray': [4, 4],
+          'line-opacity': layerVisibility.provinces ? 0.45 : 0
         }
       });
 
@@ -1636,8 +1636,8 @@ window.NorthStarMapLibre = (function () {
     el.className = 'c2-maplibre-cluster flex items-center justify-center cursor-pointer select-none group';
     el.style.cssText = `position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: ${size}px; height: ${size}px; pointer-events: auto !important; z-index: 30;`;
     el.innerHTML = `
-      <span class="absolute rounded-full pointer-events-none ${hasDanger ? 'animated-marker-pulse' : ''}" style="width: ${size + 8}px; height: ${size + 8}px; background: ${ringColor};"></span>
-      <div class="rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Click để phóng to)">
+      <span class="absolute rounded-full pointer-events-none ${hasDanger ? 'animated-marker-pulse' : ''}" style="width: ${size + 6}px; height: ${size + 6}px; background: ${ringColor};"></span>
+      <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-xl border border-white/60 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto backdrop-blur-xs" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Click để phóng to)">
         ${count}
       </div>
     `;
@@ -1700,7 +1700,7 @@ window.NorthStarMapLibre = (function () {
     el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 32px; height: 32px; pointer-events: auto !important; z-index: 25;';
     el.innerHTML = `
       ${pulseHtml}
-      <div class="px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-lg border-2 border-white relative z-10 flex items-center justify-center transition-transform duration-200 group-hover:scale-120 pointer-events-auto" style="background: ${badgeBg}; min-width: 28px; height: 24px;" title="${pt.location}: ${depthVal}cm">
+      <div class="px-2 py-0.5 rounded-full text-white text-[10px] font-mono font-black shadow-lg border border-white/60 relative z-10 flex items-center justify-center transition-transform duration-200 group-hover:scale-120 pointer-events-auto backdrop-blur-xs" style="background: ${badgeBg}; min-width: 28px; height: 22px;" title="${pt.location}: ${depthVal}cm">
         ${depthText}
       </div>
     `;
@@ -2766,9 +2766,9 @@ window.NorthStarMapLibre = (function () {
       const btn = document.getElementById(`ml-jump-${k}`);
       if (btn) {
         if (k === regionKey) {
-          btn.className = 'px-2.5 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow bg-cyan-600 text-white';
+          btn.className = 'px-2 py-1 rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow bg-cyan-600 text-white';
         } else {
-          btn.className = 'px-2.5 py-1 rounded-lg text-[10.5px] font-semibold cursor-pointer transition bg-slate-800/80 hover:bg-slate-700 text-slate-300';
+          btn.className = 'px-2 py-1 rounded-lg text-[9.5px] font-medium cursor-pointer transition bg-transparent hover:bg-slate-800 text-slate-300';
         }
       }
     });
@@ -2787,9 +2787,9 @@ window.NorthStarMapLibre = (function () {
       const btn = document.getElementById(`ml-pitch-${p}`);
       if (btn) {
         if (p === deg) {
-          btn.className = 'px-2 py-1 bg-cyan-600 text-white rounded-lg text-[10.5px] font-bold cursor-pointer transition shadow';
+          btn.className = 'px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow';
         } else {
-          btn.className = 'px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10.5px] font-bold cursor-pointer transition';
+          btn.className = 'px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition';
         }
       }
     });
@@ -2836,7 +2836,7 @@ window.NorthStarMapLibre = (function () {
         if (k === key) {
           btn.className = 'px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow';
         } else {
-          btn.className = 'px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition';
+          btn.className = 'px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition';
         }
       }
     });
