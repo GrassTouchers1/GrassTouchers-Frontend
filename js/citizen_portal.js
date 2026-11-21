@@ -403,7 +403,68 @@ const CitizenPortal = (function () {
   // QUẢN LÝ GHIM & XÁC NHẬN VỊ TRÍ HIỆN TRƯỜNG (VIC-04 & TIÊU CHÍ V-04)
   // ==========================================================================
   let sosMarker = null;
+  let accuracyCircle = null;
   let isPickingLocation = false;
+
+  /**
+   * Kích hoạt phản hồi xúc giác (Haptic Feedback) trên thiết bị di động
+   */
+  function triggerHaptic(pattern = [50]) {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (e) {
+        // Trình duyệt không hỗ trợ hoặc chặn quyền vibrate
+      }
+    }
+  }
+
+  /**
+   * Tự động lấy vị trí GPS từ thiết bị di động kèm vòng tròn độ chính xác
+   */
+  function locateGPSWithAccuracy() {
+    if (!navigator.geolocation) {
+      showCitizenToast('⚠️ Thiết bị không hỗ trợ Geolocation API.', 'error');
+      return;
+    }
+
+    showCitizenToast('🛰️ Đang xác định vị trí GPS chính xác cao...', 'info');
+    triggerHaptic([30]);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy || 15);
+
+        triggerHaptic([50, 40, 60]);
+        setSOSLocation(lat, lng, accuracy);
+
+        const accDisplay = document.getElementById('citizen-gps-accuracy');
+        if (accDisplay) {
+          accDisplay.textContent = `±${accuracy}m`;
+        }
+        const accWrapper = document.getElementById('citizen-gps-accuracy-wrapper');
+        if (accWrapper) {
+          accWrapper.classList.remove('hidden');
+        }
+
+        showCitizenToast(`🛰️ GPS định vị thành công (Độ chính xác: ±${accuracy}m)!`, 'success');
+        if (window.map) {
+          window.map.setView([lat, lng], 17);
+        }
+      },
+      (err) => {
+        console.warn('[Citizen GPS] Lỗi định vị:', err.message);
+        showCitizenToast('⚠️ Không thể lấy GPS tự động. Vui lòng chọn thủ công trên bản đồ.', 'error');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }
 
   /**
    * Bắt đầu chế độ chọn vị trí SOS trên bản đồ Leaflet
@@ -433,6 +494,7 @@ const CitizenPortal = (function () {
 
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
+    triggerHaptic([40]);
     setSOSLocation(lat, lng);
 
     showCitizenToast(`✅ Đã ghim vị trí: ${lat.toFixed(4)}, ${lng.toFixed(4)}! Vui lòng tích xác nhận.`, 'success');
@@ -446,7 +508,7 @@ const CitizenPortal = (function () {
   /**
    * Thiết lập và cập nhật vị trí cứu hộ
    */
-  function setSOSLocation(lat, lng) {
+  function setSOSLocation(lat, lng, accuracy = null) {
     state.selectedCoords = { lat: parseFloat(lat), lng: parseFloat(lng) };
     
     const displayEl = document.getElementById('citizen-sos-coord-display');
@@ -454,13 +516,13 @@ const CitizenPortal = (function () {
       displayEl.textContent = `${lat.toFixed(4)}° B, ${lng.toFixed(4)}° Đ`;
     }
 
-    renderSOSMarker(lat, lng);
+    renderSOSMarker(lat, lng, accuracy);
   }
 
   /**
    * Vẽ hoặc di chuyển Marker trên bản đồ có hỗ trợ kéo thả (Draggable Marker)
    */
-  function renderSOSMarker(lat, lng) {
+  function renderSOSMarker(lat, lng, accuracy = null) {
     if (!window.map || typeof L === 'undefined') return;
 
     if (sosMarker) {
@@ -483,12 +545,35 @@ const CitizenPortal = (function () {
         title: 'Vị trí cứu hộ SOS (Kéo thả để tinh chỉnh)'
       }).addTo(window.map);
 
+      sosMarker.on('dragstart', function () {
+        triggerHaptic([30]);
+      });
+
       sosMarker.on('dragend', function (event) {
         const marker = event.target;
         const pos = marker.getLatLng();
+        triggerHaptic([40, 30, 40]);
         setSOSLocation(pos.lat, pos.lng);
         showCitizenToast(`📍 Đã di chuyển ghim tới: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`, 'info');
       });
+    }
+
+    // Hiển thị vòng tròn sai số định vị GPS (Accuracy Radius)
+    if (accuracy && window.map && typeof L !== 'undefined') {
+      if (accuracyCircle) {
+        accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+      } else {
+        accuracyCircle = L.circle([lat, lng], {
+          radius: accuracy,
+          color: '#059669',
+          fillColor: '#10b981',
+          fillOpacity: 0.15,
+          weight: 1.5,
+          dashArray: '4, 4'
+        }).addTo(window.map);
+      }
+    } else if (accuracyCircle && !accuracy) {
+      accuracyCircle.setLatLng([lat, lng]);
     }
 
     window.map.panTo([lat, lng]);
@@ -503,10 +588,12 @@ const CitizenPortal = (function () {
 
     if (badge) {
       if (state.locationConfirmed) {
+        triggerHaptic([60, 40, 60]);
         badge.textContent = 'Đã xác nhận chính xác';
         badge.className = 'text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-verified border border-emerald-300';
         showCitizenToast('✅ Bạn đã xác nhận vị trí này phản ánh đúng hiện trường thực tế.', 'success');
       } else {
+        triggerHaptic([30]);
         badge.textContent = 'Chưa xác nhận';
         badge.className = 'text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-unverified border border-amber-300';
       }
@@ -525,6 +612,8 @@ const CitizenPortal = (function () {
     loadWeatherAndAlerts,
     startPickingSOSLocation,
     setSOSLocation,
+    locateGPSWithAccuracy,
+    triggerHaptic,
     onLocationVerifiedChange,
     state
   };
