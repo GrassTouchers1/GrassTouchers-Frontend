@@ -562,8 +562,27 @@ const NorthStarRescue = (function () {
       return;
     }
 
-    // Lấy toạ độ GPS hoặc tâm bản đồ
-    let coords = window.coords ? window.coords.origin : null;
+    // Tiêu chí V-04: Vị trí cần được người dùng xác nhận/chỉnh sửa, không mặc định luôn chính xác
+    if (window.CitizenPortal && !window.CitizenPortal.state.locationConfirmed) {
+      const targetCoords = window.CitizenPortal.state.selectedCoords || { lat: 21.0285, lng: 105.8542 };
+      const confirmProceed = confirm(
+        '⚠️ BẠN CHƯA XÁC NHẬN VỊ TRÍ CHÍNH XÁC!\n\n' +
+        'Vị trí hiện tại: ' + targetCoords.lat.toFixed(4) + '° B, ' + targetCoords.lng.toFixed(4) + '° Đ.\n\n' +
+        'Bấm OK để gửi vị trí này, hoặc bấm CANCEL để chọn lại vị trí chính xác trên bản đồ.'
+      );
+      if (!confirmProceed) {
+        if (typeof window.CitizenPortal.startPickingSOSLocation === 'function') {
+          window.CitizenPortal.startPickingSOSLocation();
+        }
+        return;
+      }
+    }
+
+    // Lấy toạ độ đã được người dân xác nhận từ CitizenPortal
+    let coords = (window.CitizenPortal && window.CitizenPortal.state.selectedCoords)
+      ? window.CitizenPortal.state.selectedCoords
+      : (window.coords ? window.coords.origin : null);
+
     if (!coords && window.map) {
       const c = window.map.getCenter();
       coords = { lng: c.lng, lat: c.lat };
