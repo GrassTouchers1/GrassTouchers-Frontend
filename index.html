@@ -47,7 +47,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=20261121_prod_v3" />
+  <link rel="stylesheet" href="css/style.css?v=20261121_prod_v4" />
   <style>
     /* Command Interface Specific Overrides */
     .cmd-nav-item {
@@ -143,6 +143,65 @@
       margin: 0 !important;
       padding: 0 !important;
       border: none !important;
+    }
+    /* Định vị bộ điều khiển MapLibre NavigationControl: Đẩy xuống dưới thanh Top HUD để không bao giờ bị đè */
+    .maplibregl-ctrl-top-right {
+      top: 54px !important;
+      right: 12px !important;
+      margin: 0 !important;
+      z-index: 25 !important;
+    }
+    /* Đồng bộ giao diện C2 Dark Glass cho bộ điều hướng MapLibre (Zoom +, Zoom -, La bàn 3D) */
+    .maplibregl-ctrl-group {
+      background: rgba(11, 15, 25, 0.92) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border: 1px solid rgba(56, 189, 248, 0.45) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25) !important;
+      overflow: hidden !important;
+    }
+    .maplibregl-ctrl-group button {
+      width: 34px !important;
+      height: 34px !important;
+      background-color: transparent !important;
+      border: none !important;
+      cursor: pointer !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .maplibregl-ctrl-group button + button {
+      border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    .maplibregl-ctrl-group button:hover {
+      background-color: rgba(56, 189, 248, 0.3) !important;
+    }
+    .maplibregl-ctrl-group button:active {
+      background-color: rgba(56, 189, 248, 0.5) !important;
+    }
+    .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+      filter: invert(1) brightness(2.2) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+      opacity: 0.92 !important;
+      transition: transform 0.2s ease, opacity 0.2s ease !important;
+    }
+    .maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon {
+      opacity: 1 !important;
+      filter: invert(1) brightness(2.8) drop-shadow(0 0 5px #38bdf8) !important;
+    }
+    /* Thước đo tỉ lệ chuẩn C2 Dark Glass */
+    .maplibregl-ctrl-scale {
+      background: rgba(11, 15, 25, 0.88) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(56, 189, 248, 0.45) !important;
+      border-top: none !important;
+      color: #38bdf8 !important;
+      font-weight: 700 !important;
+      font-size: 10px !important;
+      padding: 1px 6px !important;
+      border-radius: 0 0 6px 6px !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
     }
     .animated-marker-pulse {
       animation: markerPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
@@ -3225,20 +3284,20 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261121_prod_v3"></script>
-  <script src="js/offline_sync_manager.js?v=20261121_prod_v3"></script>
-  <script src="js/command_ui_controller.js?v=20261121_prod_v3"></script>
-  <script src="js/coordinator_command.js?v=20261121_prod_v3"></script>
-  <script src="js/map_core.js?v=20261121_prod_v3"></script>
-  <script src="js/provinces_weather_layer.js?v=20261121_prod_v3"></script>
-  <script src="js/rescue_manager.js?v=20261121_prod_v3"></script>
-  <script src="js/advanced_modules.js?v=20261121_prod_v3"></script>
-  <script src="js/storm_simulator.js?v=20261121_prod_v3"></script>
-  <script src="js/voice_sos.js?v=20261121_prod_v3"></script>
+  <script src="js/config.js?v=20261121_prod_v4"></script>
+  <script src="js/offline_sync_manager.js?v=20261121_prod_v4"></script>
+  <script src="js/command_ui_controller.js?v=20261121_prod_v4"></script>
+  <script src="js/coordinator_command.js?v=20261121_prod_v4"></script>
+  <script src="js/map_core.js?v=20261121_prod_v4"></script>
+  <script src="js/provinces_weather_layer.js?v=20261121_prod_v4"></script>
+  <script src="js/rescue_manager.js?v=20261121_prod_v4"></script>
+  <script src="js/advanced_modules.js?v=20261121_prod_v4"></script>
+  <script src="js/storm_simulator.js?v=20261121_prod_v4"></script>
+  <script src="js/voice_sos.js?v=20261121_prod_v4"></script>
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261121_prod_v3"></script>
+  <script src="js/maplibre_engine.js?v=20261121_prod_v4"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
