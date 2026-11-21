@@ -515,10 +515,9 @@ window.NorthStarMapLibre = (function () {
       </div>
     `;
 
-    new maplibregl.Popup({ offset: 12, maxWidth: '280px' })
-      .setLngLat(lngLat)
-      .setHTML(html)
-      .addTo(mapInstance);
+    const popup = new maplibregl.Popup({ offset: 12, maxWidth: '280px' })
+      .setHTML(html);
+    openActivePopup(popup, lngLat);
   }
 
   /**
@@ -1387,24 +1386,40 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popupHtml = `
-          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-800">
-            <div class="font-extrabold text-rose-600 flex items-center gap-1 border-b border-rose-200 pb-1">
+          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
+            <div class="font-black text-rose-400 flex items-center gap-1.5 border-b border-rose-500/30 pb-1.5">
               <span>🚨</span> YÊU CẦU CỨU HỘ KHẨN CẤP
             </div>
-            <div class="font-bold text-slate-900">${p.contact_name || 'Nạn nhân'} - ${p.phone}</div>
-            <div>Số người mắc kẹt: <b>${p.people_count} người</b> ${p.has_elderly_or_children ? '<span class="text-amber-700 font-semibold">(Có trẻ/người già)</span>' : ''}</div>
-            ${p.notes ? `<div class="italic text-[11px] text-slate-600 border-t pt-1">"${p.notes}"</div>` : ''}
-            <div class="pt-1.5 border-t border-slate-200 flex justify-between items-center gap-2">
-              <a href="tel:${p.phone}" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold no-underline">📞 Gọi nạn nhân</a>
-              <button onclick="window.NorthStarRescue && window.NorthStarRescue.resolveSOS(${p.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 rounded-lg text-[11px] font-bold border border-slate-300">✓ Đã an toàn</button>
+            <div class="mt-1">
+              <h4 class="font-black text-sm text-white leading-snug">${p.contact_name || 'Nạn nhân'}</h4>
+              <div class="text-xs font-mono font-bold text-amber-300 mt-0.5">📞 ${p.phone || 'Chưa có SĐT'}</div>
+            </div>
+            <div class="space-y-1 bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px] mt-1.5">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Số người:</span>
+                <span class="font-bold text-white font-mono">${p.people_count} người</span>
+              </div>
+              ${p.has_elderly_or_children ? '<div class="text-[10px] text-amber-400 font-bold">⚠️ Có trẻ nhỏ / người già</div>' : ''}
+              <div class="flex justify-between">
+                <span class="text-slate-400">Mực nước:</span>
+                <span class="font-bold text-rose-400 font-mono">~${p.water_level_cm || 0} cm</span>
+              </div>
+              ${p.notes ? `<div class="italic text-[10.5px] text-slate-300 border-t border-slate-800 pt-1">"${p.notes}"</div>` : ''}
+            </div>
+            <div class="pt-2 border-t border-slate-800 flex justify-between items-center gap-2">
+              <a href="tel:${p.phone}" class="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black text-center no-underline shadow">📞 Gọi</a>
+              <button onclick="window.NorthStarRescue && window.NorthStarRescue.resolveSOS(${p.id})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-emerald-950 text-slate-200 hover:text-emerald-300 rounded-xl text-xs font-bold border border-slate-700 cursor-pointer">✓ Đã an toàn</button>
             </div>
           </div>
         `;
 
-        const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' }).setHTML(popupHtml);
+        const popup = new maplibregl.Popup({ offset: 25, maxWidth: '290px' }).setHTML(popupHtml);
+        el.onclick = (e) => {
+          e.stopPropagation();
+          openActivePopup(popup, [coords[0], coords[1]]);
+        };
         const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
           .setLngLat([coords[0], coords[1]])
-          .setPopup(popup)
           .addTo(mapInstance);
 
         markersRegistry.sos.push(marker);
@@ -1696,19 +1711,22 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popupHtml = `
-        <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-          <div class="font-extrabold text-amber-600 flex items-center gap-1 border-b border-amber-200 pb-1">
+        <div class="p-2.5 font-sans space-y-1 text-xs text-slate-100 select-none">
+          <div class="font-black text-amber-400 flex items-center gap-1 border-b border-amber-500/30 pb-1">
             <span>⚠️</span> ${h.name}
           </div>
-          <div class="text-[11px] text-slate-700 font-semibold">${h.desc}</div>
-          <div class="text-[10px] text-slate-500 font-mono">[${h.lat.toFixed(4)}, ${h.lng.toFixed(4)}]</div>
+          <div class="text-[11px] text-slate-200">${h.desc}</div>
+          <div class="text-[10px] text-slate-400 font-mono">[${h.lat.toFixed(4)}, ${h.lng.toFixed(4)}]</div>
         </div>
       `;
 
       const popup = new maplibregl.Popup({ offset: 18, maxWidth: '240px' }).setHTML(popupHtml);
+      el.onclick = (e) => {
+        e.stopPropagation();
+        openActivePopup(popup, [h.lng, h.lat]);
+      };
       const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
         .setLngLat([h.lng, h.lat])
-        .setPopup(popup)
         .addTo(mapInstance);
 
       markersRegistry.hazards.push(marker);
@@ -1748,22 +1766,34 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popupHtml = `
-          <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-            <div class="font-bold text-emerald-700 flex items-center gap-1 text-sm border-b border-emerald-100 pb-1">
+          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
+            <div class="font-black text-emerald-400 flex items-center gap-1.5 text-xs border-b border-emerald-500/30 pb-1 uppercase">
               <span>🛡️</span> ${p.name}
             </div>
-            <div class="text-[11px] text-slate-600">${p.address || ''}</div>
-            <div class="text-[11px]">Sức chứa: <b>${p.capacity || 500} người</b> (${p.available_slots || 300} còn trống)</div>
-            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+            <div class="text-[11px] text-slate-300">${p.address || ''}</div>
+            <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px]">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Sức chứa:</span>
+                <span class="font-bold text-white font-mono">${p.capacity || 500} người</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Còn trống:</span>
+                <span class="font-bold text-emerald-300 font-mono">${p.available_slots || 300} chỗ</span>
+              </div>
+            </div>
+            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer">
               <span>Sơ tán tới đây</span>
             </button>
           </div>
         `;
 
-        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '250px' }).setHTML(popupHtml);
+        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '260px' }).setHTML(popupHtml);
+        el.onclick = (e) => {
+          e.stopPropagation();
+          openActivePopup(popup, [coords[0], coords[1]]);
+        };
         const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
           .setLngLat([coords[0], coords[1]])
-          .setPopup(popup)
           .addTo(mapInstance);
 
         markersRegistry.shelters.push(marker);
@@ -1806,18 +1836,21 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popupHtml = `
-        <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-          <div class="font-extrabold text-blue-700">${icon} ${u.name}</div>
-          <div class="text-[11px]">Trạng thái: <b class="${u.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}">${u.status === 'ready' ? 'Sẵn sàng cơ động' : 'Đang làm nhiệm vụ'}</b></div>
-          <div class="text-[11px]">Lực lượng: <b>${u.crew}</b></div>
-          <div class="text-[10px] text-slate-500 font-mono">[${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}]</div>
+        <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
+          <div class="font-black text-sky-400 text-sm border-b border-slate-800 pb-1">${icon} ${u.name}</div>
+          <div class="text-[11px]">Trạng thái: <b class="${u.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'}">${u.status === 'ready' ? 'Sẵn sàng cơ động' : 'Đang làm nhiệm vụ'}</b></div>
+          <div class="text-[11px] text-slate-300">Lực lượng: <b class="text-white">${u.crew}</b></div>
+          <div class="text-[10px] text-slate-400 font-mono">[${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}]</div>
         </div>
       `;
 
-      const popup = new maplibregl.Popup({ offset: 15, maxWidth: '220px' }).setHTML(popupHtml);
+      const popup = new maplibregl.Popup({ offset: 15, maxWidth: '240px' }).setHTML(popupHtml);
+      el.onclick = (e) => {
+        e.stopPropagation();
+        openActivePopup(popup, [u.lng, u.lat]);
+      };
       const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
         .setLngLat([u.lng, u.lat])
-        .setPopup(popup)
         .addTo(mapInstance);
 
       markersRegistry.units.push(marker);

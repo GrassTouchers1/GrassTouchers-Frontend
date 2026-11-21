@@ -101,6 +101,25 @@
       padding: 12px 14px !important;
       font-family: inherit !important;
     }
+    .maplibregl-popup-content h1,
+    .maplibregl-popup-content h2,
+    .maplibregl-popup-content h3,
+    .maplibregl-popup-content h4,
+    .maplibregl-popup-content h5,
+    .maplibregl-popup-content .text-slate-900,
+    .maplibregl-popup-content .text-slate-800,
+    .maplibregl-popup-content [class*="text-slate-900"],
+    .maplibregl-popup-content [class*="text-slate-800"] {
+      color: #ffffff !important;
+    }
+    .maplibregl-popup-content .text-slate-700,
+    .maplibregl-popup-content .text-slate-600,
+    .maplibregl-popup-content .text-slate-500,
+    .maplibregl-popup-content [class*="text-slate-700"],
+    .maplibregl-popup-content [class*="text-slate-600"],
+    .maplibregl-popup-content [class*="text-slate-500"] {
+      color: #cbd5e1 !important;
+    }
     .maplibregl-popup-tip {
       border-top-color: rgba(15, 23, 42, 0.96) !important;
       border-bottom-color: rgba(15, 23, 42, 0.96) !important;
@@ -3429,8 +3448,6 @@
           .then((reg) => console.log('[NORTHSTAR PWA] Service Worker active:', reg.scope))
           .catch((err) => console.warn('[NORTHSTAR PWA] SW error:', err));
       }
-
-      if (window.lucide) lucide.createIcons();
     });
   </script>
 

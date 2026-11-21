@@ -397,11 +397,21 @@
   }
 
   function onFeatureClick(e, provinceName) {
+    if (e && e.originalEvent) {
+      L.DomEvent.stopPropagation(e.originalEvent);
+      L.DomEvent.preventDefault(e.originalEvent);
+    }
     const layer = e.target;
     if (layer && typeof layer.closeTooltip === 'function') {
       layer.closeTooltip();
     }
     const clickLatLng = e.latlng || (layer.getBounds ? layer.getBounds().getCenter() : null);
+
+    // Đóng sạch sẽ mọi popup cũ trên toàn bộ bản đồ trước khi mở popup tỉnh (chống đè popup)
+    if (targetMap) {
+      targetMap.closePopup();
+    }
+    document.querySelectorAll('.leaflet-popup').forEach(p => p.remove());
 
     // Mở popup chi tiết khí tượng & tác chiến của cả vùng tỉnh ngay tại điểm click
     if (targetMap && clickLatLng) {
@@ -410,7 +420,9 @@
         minWidth: 300,
         className: 'province-weather-leaflet-popup',
         autoPan: true,
-        autoPanPadding: [30, 30]
+        autoPanPadding: [30, 30],
+        autoClose: true,
+        closeOnClick: true
       })
       .setLatLng(clickLatLng)
       .setContent(buildHoverCardHtml(provinceName))

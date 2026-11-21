@@ -1284,7 +1284,19 @@ function renderFloodPoints(data) {
       minWidth: 320,
       autoPan: true,
       autoPanPadding: [30, 30],
+      autoClose: true,
+      closeOnClick: true,
       className: 'flood-custom-popup'
+    });
+
+    marker.on('click', (e) => {
+      if (e && e.originalEvent) {
+        L.DomEvent.stopPropagation(e.originalEvent);
+        L.DomEvent.preventDefault(e.originalEvent);
+      }
+      if (map) map.closePopup();
+      document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+      marker.openPopup();
     });
 
     floodMarkersLayer.addLayer(marker);
