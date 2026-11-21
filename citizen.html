@@ -35,9 +35,9 @@
     };
   </script>
 
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved Open Source) -->
+  <link rel="stylesheet" href="css/maplibre-gl.css" />
+  <script src="js/vendor/maplibre-gl.js"></script>
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -50,6 +50,32 @@
     body {
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+    }
+    .maplibregl-marker {
+      position: absolute !important;
+      top: 0 !important;
+    }
+    .maplibregl-popup {
+      z-index: 1000 !important;
+      max-width: 320px !important;
+    }
+    .maplibregl-popup-content {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .maplibregl-popup-close-button {
+      color: #cbd5e1 !important;
+      font-size: 16px !important;
+      padding: 4px 8px !important;
+    }
+    .maplibregl-popup-close-button:hover {
+      color: #ffffff !important;
+      background: #ef4444 !important;
+    }
+    .maplibregl-popup-tip {
+      border-top-color: #0b0f19 !important;
+      border-bottom-color: #0b0f19 !important;
     }
     .citizen-tab-btn.active {
       background-color: #0284c7;
@@ -519,37 +545,48 @@
       }
 
       function initMap() {
-        if (typeof L === 'undefined') return;
+        if (typeof maplibregl === 'undefined') return;
 
-        const map = L.map('map', {
-          zoomControl: false,
-          attributionControl: true
-        }).setView([21.0285, 105.8030], 13);
+        // Khởi tạo MapLibre GL JS WebGL 3D Engine với style mở Topo / Dark (Zero API Key)
+        const map = new maplibregl.Map({
+          container: 'map',
+          style: {
+            version: 8,
+            sources: {
+              'esri-topo': {
+                type: 'raster',
+                tiles: [
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+                ],
+                tileSize: 256,
+                attribution: '&copy; Esri &copy; OpenStreetMap contributors'
+              }
+            },
+            layers: [
+              { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 19 }
+            ]
+          },
+          center: [105.8030, 21.0285],
+          zoom: 13,
+          pitch: 0,
+          bearing: 0,
+          antialias: true,
+          attributionControl: false
+        });
 
-        // Sử dụng OpenStreetMap France (CDN châu Âu tốc độ cao, không cần API key, không bị watermark)
-        const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          subdomains: ['a', 'b', 'c'],
-          attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+        window.map = map;
 
-        // Fallback tự động sang Esri World Topo Map nếu đường truyền quốc tế trục trặc
-        baseLayer.on('tileerror', function(error) {
-          if (error && error.tile && error.coords && !error.tile.dataset.fallbackTried) {
-            error.tile.dataset.fallbackTried = 'true';
-            error.tile.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${error.coords.z}/${error.coords.y}/${error.coords.x}`;
+        map.on('load', () => {
+          renderSampleShelters(map);
+          loadCommunityReports(map);
+          if (window.CitizenPortal && typeof window.CitizenPortal.initLocationPicker === 'function') {
+            window.CitizenPortal.initLocationPicker(map);
           }
         });
 
-        L.control.zoom({ position: 'topright' }).addTo(map);
-        window.map = map;
-
-        // Khởi tạo điểm ngập và trạm an toàn mẫu
-        renderSampleShelters(map);
-        loadCommunityReports(map);
-
         setTimeout(() => {
-          map.invalidateSize();
+          map.resize();
         }, 300);
       }
 
