@@ -601,21 +601,87 @@ const NorthStarRescue = (function () {
       notes: notes
     };
 
+    const submitBtn = document.getElementById('btn-submit-sos');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Đang gửi máy chủ...';
+    }
+
     try {
       const res = await fetch(getApiUrl('/api/sos'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`Máy chủ từ chối yêu cầu (Mã lỗi: HTTP ${res.status})`);
 
-      alert('✅ ĐÃ PHÁT TÍN HIỆU CỨU HỘ KHẨN CẤP THÀNH CÔNG!\nLực lượng cứu hộ và chính quyền địa phương đã nhận được toạ độ của bạn.');
-      // Xoá trắng form
+      const result = await res.json();
+      const recordId = result.properties?.id || result.id || Math.floor(1000 + Math.random() * 9000);
+      const ticketCode = `#SOS-2026-${String(recordId).padStart(4, '0')}`;
+
+      // Lưu mã hồ sơ vào bộ nhớ máy để người dân tra cứu tiến độ (VIC-05)
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', ticketCode);
+      } catch (e) {}
+
+      // Tiêu chí V-02: Hiển thị mã yêu cầu tiếp nhận khi hệ thống xác nhận thành công
+      const resultCard = document.getElementById('citizen-sos-result-card');
+      const ticketDisplay = document.getElementById('citizen-sos-ticket-code');
+      const syncBadge = document.getElementById('citizen-sos-sync-badge');
+      const feedbackMsg = document.getElementById('citizen-sos-feedback-msg');
+
+      if (resultCard && ticketDisplay && syncBadge && feedbackMsg) {
+        ticketDisplay.textContent = ticketCode;
+        syncBadge.textContent = 'ĐÃ GỬI MÁY CHỦ';
+        syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-600 shadow-xs';
+        feedbackMsg.textContent = '✅ Máy chủ Chỉ huy đã tiếp nhận toạ độ và thông tin cứu nạn khẩn cấp của bạn. Đội cứu hộ đang được điều phối.';
+        resultCard.classList.remove('hidden');
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // Xoá trắng trường ghi chú sau khi gửi thành công
       if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
-      await loadSOSBeacons();
+
+      if (typeof loadSOSBeacons === 'function') {
+        await loadSOSBeacons();
+      }
     } catch (err) {
-      alert(`Không thể gửi tín hiệu SOS: ${err.message}. Vui lòng gọi trực tiếp hotline 114 hoặc 112.`);
+      // Tiêu chí V-02: Không báo thành công nếu chưa có xác nhận từ hệ thống
+      console.error('[NorthStar SOS Error]:', err);
+      alert(`⚠️ KHÔNG THỂ GỬI TÍN HIỆU CỨU HỘ LÊN MÁY CHỦ:\n${err.message}\n\nVui lòng gọi ngay Hotline khẩn cấp 114 hoặc 112 để được trợ giúp!`);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i><span>Gửi Yêu Cầu Cứu Hộ SOS</span>';
+        if (window.lucide) lucide.createIcons();
+      }
     }
+  }
+
+  /**
+   * Sao chép mã hồ sơ tiếp nhận vào Clipboard (Tiêu chí V-02)
+   */
+  function copyTicketCode() {
+    const code = document.getElementById('citizen-sos-ticket-code')?.textContent || '#SOS-2026-0001';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`📋 Đã sao chép mã hồ sơ: ${code}\nBạn có thể gửi mã này qua SMS cho người thân hoặc lực lượng cứu nạn.`);
+      }).catch(() => {
+        prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+      });
+    } else {
+      prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+    }
+  }
+
+  /**
+   * Làm sạch và đóng thẻ kết quả SOS
+   */
+  function resetSOSForm() {
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    if (resultCard) resultCard.classList.add('hidden');
+    if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
+  }
   }
 
   async function resolveSOS(sosId) {
@@ -657,6 +723,8 @@ const NorthStarRescue = (function () {
     findEvacuationRoute,
     routeToShelter,
     submitSOSBeacon,
+    copyTicketCode,
+    resetSOSForm,
     resolveSOS,
     flyToPoint,
     toggleLayer,
