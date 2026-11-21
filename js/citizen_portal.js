@@ -451,7 +451,11 @@ const CitizenPortal = (function () {
 
         showCitizenToast(`🛰️ GPS định vị thành công (Độ chính xác: ±${accuracy}m)!`, 'success');
         if (window.map) {
-          window.map.setView([lat, lng], 17);
+          if (typeof window.map.flyTo === 'function') {
+            window.map.flyTo({ center: [lng, lat], zoom: 17, speed: 1.2 });
+          } else if (typeof window.map.setView === 'function') {
+            window.map.setView([lat, lng], 17);
+          }
         }
       },
       (err) => {
@@ -571,11 +575,11 @@ const CitizenPortal = (function () {
   }
 
   /**
-   * Xử lý sự kiện nhấp bản đồ để chọn tọa độ
+   * Xử lý sự kiện nhấp bản đồ để chọn tọa độ (Hỗ trợ cả MapLibre và Leaflet)
    */
   function onMapClickForSOS(e) {
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
+    const lat = e.lngLat ? e.lngLat.lat : (e.latlng ? e.latlng.lat : e.lat);
+    const lng = e.lngLat ? e.lngLat.lng : (e.latlng ? e.latlng.lng : e.lng);
     triggerHaptic([40]);
     setSOSLocation(lat, lng);
 
@@ -598,10 +602,52 @@ const CitizenPortal = (function () {
 
   /**
    * Vẽ hoặc di chuyển Marker trên bản đồ có hỗ trợ kéo thả (Draggable Marker)
+   * Tương thích 100% cả MapLibre GL JS WebGL 3D và Leaflet 2D
    */
   function renderSOSMarker(lat, lng, accuracy = null) {
-    if (!window.map || typeof L === 'undefined') return;
+    if (!window.map) return;
 
+    // A. Hỗ trợ động cơ MapLibre GL JS (Vector 3D WebGL)
+    if (typeof maplibregl !== 'undefined' && (window.map instanceof maplibregl.Map || typeof window.map.flyTo === 'function')) {
+      if (sosMarker && typeof sosMarker.setLngLat === 'function') {
+        sosMarker.setLngLat([lng, lat]);
+      } else {
+        const pinEl = document.createElement('div');
+        pinEl.className = 'citizen-sos-custom-pin';
+        pinEl.innerHTML = `
+          <div class="citizen-pin-pulse-container">
+            <div class="citizen-pin-pulse-ring"></div>
+            <div class="citizen-pin-pulse-core"></div>
+          </div>`;
+
+        sosMarker = new maplibregl.Marker({
+          element: pinEl,
+          draggable: true,
+          anchor: 'center'
+        })
+          .setLngLat([lng, lat])
+          .addTo(window.map);
+
+        sosMarker.on('dragstart', function () {
+          triggerHaptic([30]);
+        });
+
+        sosMarker.on('dragend', function () {
+          const pos = sosMarker.getLngLat();
+          triggerHaptic([40, 30, 40]);
+          setSOSLocation(pos.lat, pos.lng);
+          showCitizenToast(`📍 Đã di chuyển ghim tới: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`, 'info');
+        });
+      }
+
+      if (typeof window.map.flyTo === 'function') {
+        window.map.flyTo({ center: [lng, lat], zoom: 16, speed: 1.2 });
+      }
+      return;
+    }
+
+    // B. Dự phòng động cơ Leaflet (2D Raster)
+    if (typeof L === 'undefined') return;
     if (sosMarker) {
       sosMarker.setLatLng([lat, lng]);
     } else {
@@ -653,7 +699,9 @@ const CitizenPortal = (function () {
       accuracyCircle.setLatLng([lat, lng]);
     }
 
-    window.map.panTo([lat, lng]);
+    if (typeof window.map.panTo === 'function') {
+      window.map.panTo([lat, lng]);
+    }
   }
 
   /**
