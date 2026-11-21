@@ -695,7 +695,14 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
 .flood-custom-popup .text-slate-800,
 .flood-custom-popup [class*="text-slate-900"],
 .flood-custom-popup [class*="text-slate-800"],
+.maplibregl-popup-content h1,
+.maplibregl-popup-content h2,
+.maplibregl-popup-content h3,
 .maplibregl-popup-content h4,
+.maplibregl-popup-content h5,
+.maplibregl-popup-content h6,
+.maplibregl-popup-content strong,
+.maplibregl-popup-content b,
 .maplibregl-popup-content .text-slate-900,
 .maplibregl-popup-content .text-slate-800,
 .maplibregl-popup-content [class*="text-slate-900"],
@@ -750,6 +757,15 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
 }
 .flood-custom-popup .text-indigo-600 {
   color: #818cf8 !important;
+}
+
+/* Triệt tiêu thanh attribution mặc định của MapLibre để không bị chồng đè với HUD Bar */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-bottom-right {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ========================================================

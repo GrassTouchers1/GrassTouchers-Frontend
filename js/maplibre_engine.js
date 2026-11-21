@@ -290,8 +290,51 @@ window.NorthStarMapLibre = (function () {
         ],
         pitch: currentPitch,
         bearing: currentBearing,
-        antialias: true
+        antialias: true,
+        attributionControl: false
       });
+
+      // Gắn toàn cục window.map và các hàm tương thích
+      window.map = mapInstance;
+      window.jumpToRegion = jumpToRegion;
+      window.setAsRouteTarget = setRouteOriginDestination;
+
+      mapInstance.invalidateSize = function() {
+        resize();
+      };
+      mapInstance.closePopup = function() {
+        closeCurrentPopup();
+      };
+      mapInstance.hasLayer = function() {
+        return false;
+      };
+
+      const nativeFlyTo = mapInstance.flyTo.bind(mapInstance);
+      mapInstance.flyTo = function(target, zoom, options) {
+        if (Array.isArray(target)) {
+          let lng = target[1];
+          let lat = target[0];
+          if (target[0] > 90 && target[1] < 30) {
+            lng = target[0];
+            lat = target[1];
+          }
+          return nativeFlyTo({
+            center: [lng, lat],
+            zoom: zoom !== undefined ? zoom : mapInstance.getZoom(),
+            duration: (options && options.duration) ? options.duration * 1000 : 1200
+          });
+        } else if (target && typeof target === 'object' && target.lat !== undefined && target.lng !== undefined) {
+          return nativeFlyTo({
+            center: [target.lng, target.lat],
+            zoom: zoom !== undefined ? zoom : mapInstance.getZoom(),
+            duration: (options && options.duration) ? options.duration * 1000 : 1200
+          });
+        } else if (target && typeof target === 'object' && target.center) {
+          return nativeFlyTo(target);
+        } else {
+          return nativeFlyTo.apply(mapInstance, arguments);
+        }
+      };
 
       // Điều khiển góc nhìn & La bàn 3D (NavigationControl)
       mapInstance.addControl(
@@ -1007,9 +1050,12 @@ window.NorthStarMapLibre = (function () {
 
   function closeCurrentPopup() {
     if (currentActivePopup) {
-      currentActivePopup.remove();
+      try { currentActivePopup.remove(); } catch (e) {}
       currentActivePopup = null;
     }
+    document.querySelectorAll('.maplibregl-popup, .leaflet-popup, .flood-custom-popup, .province-weather-leaflet-popup').forEach(p => {
+      try { p.remove(); } catch (e) {}
+    });
   }
 
   function openActivePopup(popup, lngLat) {
@@ -2891,6 +2937,7 @@ window.NorthStarMapLibre = (function () {
     stopVehicleRouteAnimation,
     openStationPopupById,
     closeCurrentPopup,
+    closePopup: closeCurrentPopup,
     renderHanoiDistrictMarkers,
     get map() { return mapInstance; }
   };

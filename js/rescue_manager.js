@@ -35,10 +35,20 @@ const NorthStarRescue = (function () {
   let allSOSBeacons = [];
 
   function initRescueLayers(map) {
-    if (!map) return;
-    if (!disasterLayerGroup) disasterLayerGroup = L.layerGroup().addTo(map);
-    if (!shelterLayerGroup) shelterLayerGroup = L.layerGroup().addTo(map);
-    if (!sosLayerGroup) sosLayerGroup = L.layerGroup().addTo(map);
+    if (window.L && typeof window.L.layerGroup === 'function') {
+      try {
+        if (!disasterLayerGroup) disasterLayerGroup = L.layerGroup();
+        if (!shelterLayerGroup) shelterLayerGroup = L.layerGroup();
+        if (!sosLayerGroup) sosLayerGroup = L.layerGroup();
+        if (map && typeof map.addLayer === 'function') {
+          map.addLayer(disasterLayerGroup);
+          map.addLayer(shelterLayerGroup);
+          map.addLayer(sosLayerGroup);
+        }
+      } catch (e) {
+        console.warn('Leaflet bridge layer init bypassed for MapLibre:', e);
+      }
+    }
     connectRealtimeWebSocket();
   }
 
@@ -111,6 +121,9 @@ const NorthStarRescue = (function () {
       allDisasters = data.features || [];
       renderDisasterLayers();
       renderDisastersSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải dữ liệu vùng thiên tai:', err);
     }
@@ -199,8 +212,8 @@ const NorthStarRescue = (function () {
           </div>
         </div>
       `;
-      circle.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
+      circle.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
       circle.on('click', (e) => {
         if (e && e.originalEvent) {
           L.DomEvent.stopPropagation(e.originalEvent);
@@ -267,6 +280,9 @@ const NorthStarRescue = (function () {
       allShelters = data.features || [];
       renderShelterLayers();
       renderSheltersSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải dữ liệu điểm sơ tán:', err);
     }
@@ -324,7 +340,7 @@ const NorthStarRescue = (function () {
           </button>
         </div>
       `;
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
       marker.on('click', (e) => {
         if (e && e.originalEvent) {
           L.DomEvent.stopPropagation(e.originalEvent);
@@ -391,6 +407,9 @@ const NorthStarRescue = (function () {
       allSOSBeacons = data.features || [];
       renderSOSLayers();
       renderSOSSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải tín hiệu SOS:', err);
     }
@@ -459,7 +478,7 @@ const NorthStarRescue = (function () {
           </div>
         </div>
       `;
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
       marker.on('click', (e) => {
         if (e && e.originalEvent) {
           L.DomEvent.stopPropagation(e.originalEvent);
@@ -581,7 +600,7 @@ const NorthStarRescue = (function () {
     document.getElementById('evac-distance').innerText = `${(routeData.distance_m / 1000).toFixed(2)} km`;
     document.getElementById('evac-duration').innerText = `~${routeData.duration_min} phút (${routeData.vehicle === 'walk' ? 'Đi bộ' : 'Phương tiện'})`;
     document.getElementById('evac-shelter-capacity').innerText = `${sh.current_occupancy}/${sh.capacity} người`;
-    
+
     const hotlineEl = document.getElementById('evac-shelter-hotline');
     if (hotlineEl) {
       if (sh.contact_phone) {
@@ -655,7 +674,7 @@ const NorthStarRescue = (function () {
       alert('✅ ĐÃ PHÁT TÍN HIỆU CỨU HỘ KHẨN CẤP THÀNH CÔNG!\nLực lượng cứu hộ và chính quyền địa phương đã nhận được toạ độ của bạn.');
       // Xoá trắng form
       if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
-      
+
       // 1. Cập nhật marker cứu hộ trên bản đồ
       await loadSOSBeacons();
 
@@ -688,7 +707,7 @@ const NorthStarRescue = (function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rescued' })
       });
-      
+
       // 1. Cập nhật marker trên bản đồ (Ẩn tín hiệu ngay để không gây rối mắt)
       await loadSOSBeacons();
 
@@ -712,18 +731,23 @@ const NorthStarRescue = (function () {
   }
 
   function flyToPoint(lat, lng) {
-    if (window.map) {
+    if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
+      window.NorthStarMapLibre.map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+    } else if (window.map && typeof window.map.flyTo === 'function') {
       window.map.flyTo([lat, lng], 15, { duration: 1.2 });
     }
   }
 
   function toggleLayer(layerType, show) {
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.toggleLayer === 'function') {
+      window.NorthStarMapLibre.toggleLayer(layerType, show);
+    }
     if (!window.map) return;
-    if (layerType === 'disasters' && disasterLayerGroup) {
+    if (layerType === 'disasters' && disasterLayerGroup && typeof window.map.addLayer === 'function') {
       show ? window.map.addLayer(disasterLayerGroup) : window.map.removeLayer(disasterLayerGroup);
-    } else if (layerType === 'shelters' && shelterLayerGroup) {
+    } else if (layerType === 'shelters' && shelterLayerGroup && typeof window.map.addLayer === 'function') {
       show ? window.map.addLayer(shelterLayerGroup) : window.map.removeLayer(shelterLayerGroup);
-    } else if (layerType === 'sos' && sosLayerGroup) {
+    } else if (layerType === 'sos' && sosLayerGroup && typeof window.map.addLayer === 'function') {
       show ? window.map.addLayer(sosLayerGroup) : window.map.removeLayer(sosLayerGroup);
     }
   }

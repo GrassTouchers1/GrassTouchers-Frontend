@@ -1,10 +1,10 @@
-# 🧭 NORTHSTAR COMMAND – Trung Tâm Điều Phối Tác Chiến, Bản Đồ Kép & Tình Báo Thiên Tai
+# 🧭 NORTHSTAR COMMAND – Trung Tâm Điều Phối Tác Chiến, Bản Đồ Vector 3D & Tình Báo Thiên Tai
 ### Phân Hệ Đầu Não Tiếp Nhận Đa Kênh, Thẩm Định Dữ Liệu & Chuyển Giao Cứu Nạn Khẩn Cấp
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OSI Approved](https://img.shields.io/badge/OSI-Approved%20Open%20Source-brightgreen.svg)](https://opensource.org/licenses)
 [![Standard: OLP 2026 PMNM](https://img.shields.io/badge/Standard-OLP%202026%20PMNM-rose.svg)](https://www.olp.vn/)
-[![Dual Map](https://img.shields.io/badge/Dual%20Map-Leaflet%202D%20%2B%20MapLibre%203D-00b4d8.svg)](https://maplibre.org/)
+[![Map Engine](https://img.shields.io/badge/Map%20Engine-MapLibre%20GL%20JS%203D%20Vector-00b4d8.svg)](https://maplibre.org/)
 [![WebGL 2.0 60FPS](https://img.shields.io/badge/WebGL%202.0-60%20FPS%20Hardware--Accelerated-brightgreen.svg)](https://www.khronos.org/webgl/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Offline%20First%20Cache-purple.svg)](https://web.dev/progressive-web-apps/)
 [![Tailwind CSS](https://img.shields.io/badge/UI-Tailwind%20CSS%203.4-38B2AC.svg?logo=tailwind-css)](https://tailwindcss.com/)
@@ -29,33 +29,35 @@ Hệ thống giải quyết triệt để bài toán đứt gãy thông tin tác
 
 ---
 
-## 🗺️ 2. Đột Phá Động Cơ Bản Đồ Kép Tác Chiến (Dual Map Engine)
+## 🗺️ 2. Đột Phá Động Cơ Bản Đồ Vector 3D Tác Chiến (MapLibre GL JS - WebGL 2.0)
 
-Hệ thống hỗ trợ chuyển đổi linh hoạt giữa 2 động cơ bản đồ mạnh mẽ chỉ với 1 cú click:
+Hệ thống ứng dụng **MapLibre GL JS (v4.7.1, BSD-3-Clause)** làm **động cơ bản đồ duy nhất và chính thức**, loại bỏ 100% Leaflet để đạt hiệu năng phần cứng GPU tối đa và trải nghiệm không gian ba chiều chân thực:
 
 ```mermaid
 graph TD
-    subgraph DUAL_MAP["ĐỘNG CƠ BẢN ĐỒ KÉP NORTHSTAR"]
-        L2D["1. BẢN ĐỒ 2D GIS TOÀN CẢNH (Leaflet 1.9.4)
-        - 4 Lớp nền: Esri Dark Canvas, OSM Chuẩn, OSM Quốc Tế, Vệ Tinh Esri
-        - Toàn màn hình 100% diện tích làm việc
-        - Đo cự ly, vẽ bán kính ngập lụt, hiển thị 155 trạm đo mực nước
-        - Định tuyến OSRM / A* né ngập trực quan"]
+    subgraph MAPLIBRE_ENGINE["ĐỘNG CƠ BẢN ĐỒ VECTOR 3D MAPLIBRE GL JS (WEBGL 2.0)"]
+        CORE["TĂNG TỐC PHẦN CỨNG GPU 60 FPS
+        - Khởi tạo trực tiếp trên WebGL 2.0 Canvas
+        - 4 Lớp nền Vector/Raster: Vệ Tinh (Satellite), Nền Tối (Dark), Địa Hình (Topo), Đô Thị (OSM)
+        - Giữ nguyên WebGL Context khi chuyển đổi giữa Bảng Chỉ Huy (Dashboard) và Toàn Màn Hình (Fullscreen GIS)"]
 
-        M3D["2. BẢN ĐỒ 3D KHÔNG GIAN VECTOR (MapLibre GL JS - WebGL 2.0)
-        - Render WebGL 2.0 tăng tốc phần cứng, mượt mà 60 FPS
-        - Góc nghiêng chiến thuật: 0° (2D) - 45° (3D) - 60° (Super-tilt)
+        TILT["GÓC NHÌN TÁC CHIẾN LINH HOẠT
+        - Phẳng trực giao 2D (Pitch 0°)
+        - Không gian chiến thuật 3D (Pitch 45°)
+        - Siêu nghiêng bám địa hình (Pitch 60°)
+        - Tự động xoay 360° (Auto-Rotate) & Khôi phục hướng Bắc chuẩn"]
+
+        TACTICAL["TÌNH BÁO THIÊN TAI THỜI GIAN THỰC
         - Dựng khối 3D công trình đô thị (3D Extrusion Buildings)
-        - Gom cụm thông minh (Smart Clustering): gom gọn ở zoom xa kèm viền radar đỏ
-        - Phóng to mượt mà (Smooth FitBounds 650ms) khi click cụm
-        - Vòng tròn ngập lụt tự động ẩn ở zoom xa, chỉ hiện tinh tế ở đường phố (>= 13.0)
-        - Khóa nhãn & marker phẳng (Billboard Viewport Alignment) không méo
-        - Popup trạm C2 Dark Glass: IoT, xu hướng, dự báo AI 30m/60m, [Điểm Đi]/[Điểm Đến]
-        - Viewport Alert Banner nổi: tự động đếm trạm nguy hiểm/cảnh báo/an toàn
-        - Spotlight Search & Ngăn kéo Tactical Drawer 4 Tab
-        - Thước đo cự ly 3D & Chế độ Tuần tra Drone 3D tự động"]
+        - Smart Clustering 155 trạm thủy văn IoT kèm radar cảnh báo
+        - Vòng tròn ngập lụt hiển thị chính xác theo cấp độ zoom
+        - Billboard Viewport Alignment: Khóa phẳng nhãn và biểu tượng
+        - Radar quét mưa bão Yagi phản hồi dBZ
+        - Bảng C2 Tactical Drawer 4 Tab (🚨 SOS, 🌊 Trạm Ngập, ⛺ Trú Ẩn, ⚡ Cơ Động)
+        - Thước đo tác chiến 3D & Tính toán ETA (Ca-nô, Xe lội nước, Đi bộ)
+        - Bay tuần tra trinh sát 3D tự động (Flyover Patrol)"]
     end
-    L2D <===>|"Nút Chuyển Đổi Trên Header / Phím Tắt"| M3D
+    CORE --> TILT --> TACTICAL
 ```
 
 ---
@@ -98,7 +100,7 @@ flowchart LR
 5. **Hàng Đợi Xác Minh & Lọc Trùng 50m (`pane-cmd_verification`):** Thuật toán đối soát không gian 50m tự động phát hiện tin trùng lặp, hỗ trợ gộp tin báo vào cụm tác chiến chính.
 6. **Thời Tiết & Mạng Lưới Quan Trắc OpenAQ (`pane-cmd_weather`):** Cập nhật dữ liệu nhiệt độ, sức gió, lượng mưa và mạng lưới 18 trạm quan trắc chất lượng không khí chuẩn OpenAQ & Open-Meteo Air Quality Open Data (US AQI, PM2.5, PM10, CO, NO₂) với 4 thẻ KPI, bộ lọc tỉnh thành, định vị 3D và thanh trượt mô phỏng mưa bão 0–100mm.
 7. **155 Trạm Thủy Văn & Cảnh Báo Lũ (`pane-cmd_flood_intel`):** Giám sát mực nước các sông Thao, sông Lô, sông Đà, sông Bùi theo 3 cấp độ Báo Động (BĐ1, BĐ2, BĐ3) và lưu lượng xả đáy thủy điện.
-8. **Bản Đồ Tác Chiến Fullscreen GIS (`pane-cmd_disaster_map`):** Bản đồ mở rộng 100% diện tích làm việc trên nền Leaflet 2D, chuyển đổi 4 lớp nền (Esri Dark Canvas, OSM Chuẩn, OSM Quốc Tế, Vệ Tinh Esri), đo cự ly và lia tâm bản đồ.
+8. **Bản Đồ Tác Chiến Fullscreen GIS (`pane-cmd_disaster_map`):** Bản đồ mở rộng 100% diện tích làm việc trên nền MapLibre GL JS 3D Vector WebGL, 4 lớp nền (Vệ Tinh, Nền Tối, Địa Hình, Đô Thị OSM), đo cự ly và tính toán ETA phương tiện (ca-nô, xe tải, lội bộ), tuần tra 3D tự động.
 9. **Bản Đồ Vector 3D MapLibre (`pane-cmd_maplibre_3d`):** Bản đồ không gian 3D WebGL 2.0 (60 FPS), nghiêng 3D $45^\circ/60^\circ$, khối nhà 3D, Smart Clustering, Viewport Alert Banner, Drone Patrol 3D, Thước đo khoảng cách 3D, Tactical Drawer, Spotlight Search, Dự báo AI 30m/60m, nút chỉ định lộ trình cứu hộ `[🟢 Điểm Đi]` & `[🏁 Điểm Đến]`.
 10. **Đơn Vị Cứu Hộ Cơ Động (`pane-cmd_rescue_teams`):** Danh bạ biên đội cứu hộ (Ca-nô 150HP, Xuồng phao, Xe 4x4, Thợ lặn, Trực thăng Mi-17) kèm trạng thái sẵn sàng và cơ số thiết bị.
 11. **Điểm Sơ Tán An Toàn (`pane-cmd_safe_zones`):** Mạng lưới 15 điểm sơ tán kiên cố kèm thanh tiến độ sức chứa, định vị bản đồ và kho tiếp tế (nước sạch, lương khô, áo phao).
@@ -220,7 +222,7 @@ Mở trình duyệt tại: **`http://localhost:3000`**
 * 🚒 Điều phối cứu hộ: `http://localhost:3000/?role=rescue_coordinator`
 * 📦 Điều phối cứu trợ: `http://localhost:3000/?role=relief_coordinator`
 * 🌐 Mở trực tiếp Bản đồ Vector 3D: `http://localhost:3000/?view=cmd_maplibre_3d`
-* 🗺️ Mở trực tiếp Bản đồ Fullscreen 2D: `http://localhost:3000/?view=cmd_disaster_map`
+* 🗺️ Mở trực tiếp Bản đồ Fullscreen GIS: `http://localhost:3000/?view=cmd_disaster_map`
 
 ---
 

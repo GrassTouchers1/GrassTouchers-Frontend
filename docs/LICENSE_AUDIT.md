@@ -27,7 +27,7 @@ Toàn bộ hệ thống NORTHSTAR được xây dựng trên nguyên tắc **100
 graph TD
     subgraph "GIẤY PHÉP MỞ PHỤ THUỘC (PERMISSIVE LICENSES)"
         MIT[MIT License: FastAPI, Pydantic, Tailwind, OSMnx]
-        BSD[BSD 2/3-Clause: Leaflet, NetworkX, Scikit-learn, Uvicorn, httpx]
+        BSD[BSD 3-Clause: MapLibre GL JS, NetworkX, Scikit-learn, Uvicorn, httpx]
         ISC[ISC License: Lucide Icons]
     end
 
@@ -71,18 +71,16 @@ graph TD
 ### 3.2. Phụ thuộc Frontend (Web & PWA)
 | Thư viện | Phiên bản | Giấy phép | Tình trạng OSI | Mục đích sử dụng |
 | :--- | :--- | :--- | :---: | :--- |
-| **Leaflet.js** | `1.9.4` | BSD 2-Clause | ✅ OSI Approved | Engine bản đồ tương tác 2D C2 siêu nhẹ, tối ưu mọi thiết bị |
-| **MapLibre GL JS** | `4.7.1` | BSD 3-Clause | ✅ OSI Approved | Engine bản đồ 3D Vector WebGL (Dual-Engine song song) |
+| **MapLibre GL JS** | `4.7.1` | BSD 3-Clause | ✅ OSI Approved | Động cơ bản đồ số duy nhất: Vector 3D WebGL 2.0 (60 FPS), nghiêng 3D $45^\circ/60^\circ$ |
 | **Tailwind CSS**| `3.x` | MIT License | ✅ OSI Approved | Khung giao diện responsive và dark-mode |
 | **Lucide Icons**| `Latest` | ISC License | ✅ OSI Approved | Hệ thống biểu tượng giao diện người dùng |
 | **Chart.js** | `4.4.1` | MIT License | ✅ OSI Approved | Biểu đồ trực quan hóa dữ liệu lượng mưa |
 
-### 3.3. Chuyên đề Thẩm tra Bản quyền Bản đồ: Leaflet vs MapLibre vs Mapbox
-Nhằm giải quyết dứt điểm các hiểu nhầm phổ biến trong thẩm định phần mềm nguồn mở:
-- **Leaflet.js:** 100% mã nguồn mở tự do (BSD 2-Clause, [OSI Approved](https://opensource.org/license/bsd-2-clause)). Cung cấp giải pháp bản đồ nhẹ, tương thích mọi thiết bị di động yếu.
-- **MapLibre GL JS:** 100% mã nguồn mở tự do (BSD 3-Clause, [OSI Approved](https://opensource.org/license/bsd-3-clause), bảo trợ bởi Linux Foundation). Được cộng đồng fork từ Mapbox GL JS v1 khi Mapbox chuyển sang nguồn đóng.
+### 3.3. Chuyên đề Thẩm tra Bản quyền Bản đồ: MapLibre GL JS (BSD 3-Clause) – Động Cơ Duy Nhất
+Nhằm đảm bảo tính minh bạch và tuân thủ tối đa các tiêu chuẩn phần mềm nguồn mở:
+- **MapLibre GL JS (v4.7.1):** 100% mã nguồn mở tự do (BSD 3-Clause, [OSI Approved](https://opensource.org/license/bsd-3-clause), bảo trợ bởi MapLibre Foundation thuộc Linux Foundation Directed Fund). Được lựa chọn làm **động cơ bản đồ duy nhất và chính thức** cho toàn bộ hệ thống NorthStar. Tăng tốc phần cứng GPU WebGL 2.0 (60 FPS), hỗ trợ dựng khối nhà 3D, trực quan hóa radar bão và phân tích tình báo ngập lụt.
+- **Loại bỏ hoàn toàn Leaflet:** Dự án đã chuyển dịch triệt để khỏi Leaflet 2D truyền thống sang MapLibre GL JS hiện đại, tối giản hóa kiến trúc mã nguồn và loại bỏ triệt để các tệp CSS/JS dư thừa.
 - **Mapbox GL JS (v2.0+):** **MÃ NGUỒN ĐÓNG (Proprietary)**. Hệ sinh thái NORTHSTAR **tuyệt đối không sử dụng** Mapbox để đảm bảo 100% tiêu chí PoF của Hội thi OLP PMNM.
-- **Kiến trúc Dual-Engine của NorthStar:** Cho phép chỉ huy tác chiến chuyển đổi mượt mà giữa **Leaflet (2D C2)** và **MapLibre (3D Vector WebGL)** chỉ với 1 chạm, chứng minh năng lực làm chủ kỹ thuật toàn diện.
 
 ---
 

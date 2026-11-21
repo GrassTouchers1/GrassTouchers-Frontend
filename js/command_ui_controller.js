@@ -214,13 +214,6 @@ const CommandUIController = (function () {
     if (map) mapInstance = map;
     else if (!mapInstance && window.map) mapInstance = window.map;
 
-    if (mapInstance) {
-      if (!tacticalLayers.sosGroup) tacticalLayers.sosGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.unitsGroup) tacticalLayers.unitsGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.sheltersGroup) tacticalLayers.sheltersGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup = L.layerGroup().addTo(mapInstance);
-    }
-
     if (isInitialized) {
       renderAllComponents();
       renderTacticalMapLayers();
@@ -971,6 +964,10 @@ const CommandUIController = (function () {
   // 3. ĐIỀU HƯỚNG MÀN HÌNH & THỰC THI PHÂN QUYỀN RBAC (VIEW & ROLE MANAGEMENT)
   // =========================================================================
   function switchView(viewId) {
+    if (viewId === 'cmd_maplibre_3d') {
+      viewId = 'cmd_disaster_map';
+    }
+
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
 
     // Kiểm tra quyền truy cập của vai trò hiện tại
@@ -1023,14 +1020,15 @@ const CommandUIController = (function () {
       }
     }
 
-    // Đảm bảo Leaflet cập nhật kích thước khung vẽ
+    // Đảm bảo MapLibre GL JS cập nhật kích thước khung vẽ
     setTimeout(() => {
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.resize === 'function') {
+        window.NorthStarMapLibre.resize();
+      }
       if (mapInstance && typeof mapInstance.invalidateSize === 'function') {
         mapInstance.invalidateSize();
-      } else if (window.map) {
-        window.map.invalidateSize();
       }
-    }, 150);
+    }, 100);
 
     if (viewId === 'cmd_weather') {
       if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.updatePaneCards === 'function') {
@@ -1039,7 +1037,7 @@ const CommandUIController = (function () {
       fetchAndRenderOpenAQStations();
     }
 
-    if (viewId === 'cmd_maplibre_3d' || viewId === 'cmd_disaster_map') {
+    if (viewId === 'cmd_disaster_map') {
       // Tự động thu gọn bảng chỉ số KPI và sidebar để nhường 100% không gian khoáng đạt cho bản đồ
       toggleTopStatsCollapse(true);
       toggleSidebarCollapse(true);
@@ -1049,17 +1047,15 @@ const CommandUIController = (function () {
       toggleSidebarCollapse(false);
     }
 
-    if (viewId === 'cmd_maplibre_3d' && window.NorthStarMapLibre) {
-      setTimeout(() => {
-        window.NorthStarMapLibre.init('maplibre-container');
-        window.NorthStarMapLibre.resize();
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-          lucide.createIcons();
-        }
-      }, 100);
-    }
-
     renderAllComponents();
+  }
+
+  function toggleFullscreenMap() {
+    if (state.currentView === 'cmd_disaster_map') {
+      switchView('cmd_dashboard');
+    } else {
+      switchView('cmd_disaster_map');
+    }
   }
 
   // Chuyển đổi vai trò người dùng (6 Vai Trò Tác Chiến)
@@ -2784,48 +2780,20 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       badgeClass: 'bg-teal-950/80 text-teal-300 border-teal-700'
     },
 
-    // 2. Thư viện & Công nghệ Giao diện Client (6 thành phần)
-    {
-      id: 'leaflet',
-      name: 'Leaflet.js',
-      version: 'v1.9.4',
-      category: 'frontend',
-      categoryLabel: 'Giao diện & Bản đồ (Frontend)',
-      role: 'Engine hiển thị bản đồ tương tác GIS, quản lý Tiles, GeoJSON Polygons, Popups và Tooltips',
-      license: 'BSD 2-Clause (OSI Approved)',
-      licenseUrl: 'https://opensource.org/licenses/BSD-2-Clause',
-      termsUrl: 'https://github.com/Leaflet/Leaflet/blob/main/LICENSE',
-      icon: '🍃',
-      type: 'Interactive Map JavaScript Library',
-      badgeClass: 'bg-blue-950/80 text-blue-300 border-blue-700'
-    },
+    // 2. Thư viện & Công nghệ Giao diện Client (Frontend)
     {
       id: 'maplibre-gl',
       name: 'MapLibre GL JS',
-      version: 'v4.7.1 (Dual Engine)',
+      version: 'v4.7.1 (Sole Primary Map Engine)',
       category: 'frontend',
       categoryLabel: 'Giao diện & Bản đồ (Frontend)',
-      role: 'Engine hiển thị bản đồ 3D Vector WebGL song song với Leaflet, hỗ trợ nghiêng góc 3D, xoay 360 độ và tăng tốc phần cứng GPU',
+      role: 'Động cơ bản đồ vector 3D WebGL 2.0 chính duy nhất của hệ thống, quản lý toàn bộ Tiles, ranh giới 26 tỉnh GeoJSON, tín hiệu SOS radar, 130 trạm đo thủy văn và mô hình công trình 3D',
       license: 'BSD 3-Clause (OSI Approved)',
       licenseUrl: 'https://opensource.org/licenses/BSD-3-Clause',
       termsUrl: 'https://github.com/maplibre/maplibre-gl-js/blob/main/LICENSE.txt',
       icon: '🌐',
       type: 'Open Source 3D Vector WebGL Map Engine',
       badgeClass: 'bg-cyan-950/80 text-cyan-300 border-cyan-700'
-    },
-    {
-      id: 'leaflet-markercluster',
-      name: 'Leaflet.markercluster',
-      version: 'v1.5.3',
-      category: 'frontend',
-      categoryLabel: 'Giao diện & Bản đồ (Frontend)',
-      role: 'Gom cụm động thông minh 130 trạm thủy văn và điểm ngập úng nội đô theo mật độ zoom',
-      license: 'MIT License (OSI Approved)',
-      licenseUrl: 'https://opensource.org/licenses/MIT',
-      termsUrl: 'https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENSE.txt',
-      icon: '⭕',
-      type: 'Spatial Clustering Extension',
-      badgeClass: 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
     },
     {
       id: 'tailwind-css',
@@ -3896,108 +3864,8 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   // 5. BẢN ĐỒ TÁC CHIẾN GIS TƯƠNG TÁC (TACTICAL GIS INTEGRATION)
   // =========================================================================
   function renderTacticalMapLayers() {
-    if (!mapInstance) return;
-
-    // 1. Vẽ các điểm SOS - Chỉ hiển thị các tín hiệu chưa điều phối / đang chờ xử lý
-    // Khi đã xuất quân hoặc đã cứu hộ xong, tín hiệu lập tức biến mất khỏi bản đồ để tránh trùng lặp và rối mắt
-    if (tacticalLayers.sosGroup) {
-      tacticalLayers.sosGroup.clearLayers();
-      const activeSOS = sosData.filter(s => s.status === 'pending' || s.status === 'verified');
-
-      activeSOS.forEach(s => {
-        const markerHtml = `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute w-8 h-8 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
-            <div class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white">
-              SOS
-            </div>
-          </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-sos-icon',
-          html: markerHtml,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-
-        const m = L.marker([s.lat, s.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
-            <div class="font-extrabold text-rose-700">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</div>
-            <div class="font-bold text-slate-900">${s.contact_name} - ${s.phone}</div>
-            <div>Số người: <b>${s.people_count} người ${s.has_vulnerable ? '(Có trẻ nhỏ/người già)' : ''}</b></div>
-            <p class="text-[11px] text-slate-600 italic">"${s.notes}"</p>
-            <div class="pt-1 border-t flex justify-end">
-              <button onclick="CommandUIController.openDispatchModal('${s.id}')" class="px-2 py-1 bg-rose-600 text-white font-bold rounded text-xs cursor-pointer">
-                Lập Lệnh Cứu Nạn
-              </button>
-            </div>
-          </div>
-        `);
-        tacticalLayers.sosGroup.addLayer(m);
-      });
-    }
-
-    // 2. Vẽ vị trí các đội cứu hộ
-    if (tacticalLayers.unitsGroup) {
-      tacticalLayers.unitsGroup.clearLayers();
-      unitsData.forEach(u => {
-        const isBoat = u.type === 'boat';
-        const iconHtml = `
-          <div class="relative flex items-center justify-center">
-            <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black">
-              ${isBoat ? '🚤' : '🚛'}
-            </div>
-            <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
-          </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-unit-icon',
-          html: iconHtml,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
-
-        const m = L.marker([u.lat, u.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
-            <div class="font-bold text-blue-700">${u.name}</div>
-            <div>Chỉ huy: <b>${u.commander}</b> (SĐT: ${u.phone})</div>
-            <div>Trạng thái: <b>${u.status === 'ready' ? '🟢 Sẵn sàng' : '🟡 Đang cơ động'}</b></div>
-            <div>Trang bị: ${u.equipment}</div>
-          </div>
-        `);
-        tacticalLayers.unitsGroup.addLayer(m);
-      });
-    }
-
-    // 3. Vẽ các điểm sơ tán an toàn
-    if (tacticalLayers.sheltersGroup) {
-      tacticalLayers.sheltersGroup.clearLayers();
-      shelterData.forEach(sh => {
-        const iconHtml = `
-          <div class="w-7 h-7 rounded-full bg-emerald-600 text-white shadow-md border-2 border-white flex items-center justify-center text-xs font-black">
-            🛡️
-          </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-shelter-icon',
-          html: iconHtml,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-
-        const m = L.marker([sh.lat, sh.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
-            <div class="font-bold text-emerald-700">🛡️ ${sh.name}</div>
-            <div class="text-[11px] text-slate-600">${sh.address}</div>
-            <div>Sức chứa: <b>${sh.current_occupancy} / ${sh.capacity}</b> người</div>
-            <div>Nhu yếu phẩm: ${sh.supplies_status}</div>
-          </div>
-        `);
-        tacticalLayers.sheltersGroup.addLayer(m);
-      });
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+      window.NorthStarMapLibre.syncAllLayers();
     }
   }
 
@@ -4557,41 +4425,26 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   }
 
   function drawTacticalMissionRoute(missionId) {
-    if (!mapInstance || !tacticalLayers.dispatchRoutesGroup) return;
-
     const mission = missionData.find(m => m.id === missionId);
     if (!mission) return;
 
-    const unit = unitsData.find(u => u.id === mission.assigned_unit_id);
-    const unitCoord = unit ? [unit.lat, unit.lng] : [mission.victim_lat - 0.02, mission.victim_lng - 0.02];
     const victimCoord = [mission.victim_lat, mission.victim_lng];
-    const shelterCoord = [mission.shelter_lat, mission.shelter_lng];
-
-    tacticalLayers.dispatchRoutesGroup.clearLayers();
-
-    // 1. Tuyến từ Đội đến Nạn nhân (Đường nét đứt màu đỏ/cam)
-    const leg1 = L.polyline([unitCoord, victimCoord], {
-      color: '#ef4444',
-      weight: 4,
-      dashArray: '6, 8',
-      opacity: 0.9
-    }).addTo(tacticalLayers.dispatchRoutesGroup);
-
-    // 2. Tuyến từ Nạn nhân đến Điểm Sơ tán (Đường màu xanh ngọc)
-    const leg2 = L.polyline([victimCoord, shelterCoord], {
-      color: '#10b981',
-      weight: 4,
-      opacity: 0.9
-    }).addTo(tacticalLayers.dispatchRoutesGroup);
-
-    mapInstance.fitBounds(L.latLngBounds([unitCoord, victimCoord, shelterCoord]), { padding: [60, 60] });
-    showToast('🧭 CẮM TUYẾN TÁC CHIẾN', `Đã hiển thị lộ trình [${mission.id}] trên bản đồ`, 'info');
+    if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
+      window.NorthStarMapLibre.map.flyTo({ center: [victimCoord[1], victimCoord[0]], zoom: 14.5, duration: 1200 });
+    }
+    showToast('🧭 CẮM TUYẾN TÁC CHIẾN', `Đã hiển thị lộ trình [${mission.id}] trên bản đồ 3D`, 'info');
   }
 
   function flyToLocation(lat, lng, label) {
-    if (!mapInstance) return;
-    mapInstance.flyTo([lat, lng], 14, { duration: 1.2 });
-    showToast('🎯 LIA BẢN ĐỒ', `Đã chuyển tâm bản đồ tới: ${label || 'Mục tiêu'}`, 'info');
+    if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
+      window.NorthStarMapLibre.map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+      showToast('🎯 LIA BẢN ĐỒ', `Đã chuyển tâm bản đồ tới: ${label || 'Mục tiêu'}`, 'info');
+      return;
+    }
+    if (mapInstance && typeof mapInstance.flyTo === 'function') {
+      mapInstance.flyTo([lat, lng], 14, { duration: 1.2 });
+      showToast('🎯 LIA BẢN ĐỒ', `Đã chuyển tâm bản đồ tới: ${label || 'Mục tiêu'}`, 'info');
+    }
   }
 
   function verifyIncident(id) {
@@ -4727,9 +4580,8 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   }
 
   function toggleTacticalLayers() {
-    const panel = document.getElementById('multi-hazard-layer-control');
-    if (panel) {
-      panel.classList.toggle('hidden');
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.toggleLayersDrawer === 'function') {
+      window.NorthStarMapLibre.toggleLayersDrawer();
     }
   }
 
@@ -4954,6 +4806,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     verifyLiveLicenses,
     exportLicensesReport,
     toggleTacticalLayers,
+    toggleFullscreenMap,
     init,
     toggleFullscreen,
     showToast,
