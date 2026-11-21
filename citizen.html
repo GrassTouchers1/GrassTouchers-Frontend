@@ -511,16 +511,28 @@
           attributionControl: true
         }).setView([21.0285, 105.8030], 13);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Sử dụng CartoDB Voyager mượt mà, ổn định cao và fallback tự động sang OSM France
+        const baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          subdomains: 'abcd',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(map);
+
+        baseLayer.on('tileerror', function(error) {
+          if (error && error.tile && error.coords) {
+            error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${error.coords.z}/${error.coords.x}/${error.coords.y}.png`;
+          }
+        });
 
         L.control.zoom({ position: 'topright' }).addTo(map);
         window.map = map;
 
         // Khởi tạo điểm ngập và trạm an toàn mẫu
         renderSampleShelters(map);
+
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 300);
       }
 
       function renderSampleShelters(map) {
