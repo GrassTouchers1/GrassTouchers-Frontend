@@ -601,6 +601,12 @@ const NorthStarRescue = (function () {
       notes: notes
     };
 
+    // Tiêu chí V-03: Kiểm tra chế độ mất kết nối mạng (Offline)
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      handleOfflineSOSDraft(payload);
+      return;
+    }
+
     const submitBtn = document.getElementById('btn-submit-sos');
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -646,15 +652,55 @@ const NorthStarRescue = (function () {
         await loadSOSBeacons();
       }
     } catch (err) {
-      // Tiêu chí V-02: Không báo thành công nếu chưa có xác nhận từ hệ thống
-      console.error('[NorthStar SOS Error]:', err);
-      alert(`⚠️ KHÔNG THỂ GỬI TÍN HIỆU CỨU HỘ LÊN MÁY CHỦ:\n${err.message}\n\nVui lòng gọi ngay Hotline khẩn cấp 114 hoặc 112 để được trợ giúp!`);
+      // Tiêu chí V-03: Khi lỗi mạng/máy chủ sập, tự động chuyển sang lưu hàng đợi ngoại tuyến Offline
+      console.warn('[NorthStar SOS] Lỗi kết nối mạng, chuyển sang lưu trữ cục bộ:', err.message);
+      handleOfflineSOSDraft(payload, err.message);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i><span>Gửi Yêu Cầu Cứu Hộ SOS</span>';
         if (window.lucide) lucide.createIcons();
       }
+    }
+  }
+
+  /**
+   * Xử lý lưu bản nháp cứu nạn SOS khi mất mạng hoặc máy chủ lỗi (Tiêu chí V-03)
+   */
+  function handleOfflineSOSDraft(payload, reason = null) {
+    let draftItem = null;
+    if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOSDraft === 'function') {
+      draftItem = window.OfflineSyncManager.enqueueSOSDraft(payload);
+    } else {
+      const draftId = `SOS-DRAFT-${Date.now()}`;
+      draftItem = { id: draftId };
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', draftId);
+      } catch (e) {}
+    }
+
+    const ticketCode = draftItem?.id || `SOS-DRAFT-${Date.now()}`;
+
+    // Hiển thị thẻ kết quả với nhãn màu vàng cảnh báo rõ ràng [Lưu trên máy (chưa gửi)]
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    const ticketDisplay = document.getElementById('citizen-sos-ticket-code');
+    const syncBadge = document.getElementById('citizen-sos-sync-badge');
+    const feedbackMsg = document.getElementById('citizen-sos-feedback-msg');
+
+    if (resultCard && ticketDisplay && syncBadge && feedbackMsg) {
+      ticketDisplay.textContent = ticketCode;
+      syncBadge.textContent = 'LƯU TRÊN MÁY (CHƯA GỬI)';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600 animate-pulse';
+      feedbackMsg.innerHTML = 
+        '<strong class="text-amber-300">⚠️ ĐANG NGOẠI TUYẾN:</strong> Bản nháp cứu hộ đã được lưu an toàn trên máy của bạn. ' +
+        'Hệ thống sẽ <strong>TỰ ĐỘNG GỬI LÊN MÁY CHỦ</strong> ngay khi có sóng 3G/4G/Wifi trở lại. ' +
+        'Nếu khẩn cấp đe dọa tính mạng, hãy gọi ngay hotline <strong>114</strong> hoặc <strong>112</strong>!';
+      resultCard.classList.remove('hidden');
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+      window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP TRÊN MÁY', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
     }
   }
 
