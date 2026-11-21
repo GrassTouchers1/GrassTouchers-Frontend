@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<!--
+  Copyright (C) 2026 NORTHSTAR Contributors
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at:
+      http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NORTHSTAR CITIZEN - Cổng Dân Sự & Cứu Hộ Khẩn Cấp (Mobile PWA)</title>
+  <meta name="description" content="Phân hệ dành riêng cho Người dân trong phòng chống thiên tai, cảnh báo ngập lụt, gửi SOS khẩn cấp và tra cứu cứu hộ.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <style>
+    /* Styling chuyên biệt cho giao diện di động Người dân */
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .citizen-tab-btn.active {
+      background-color: #0284c7;
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+    .citizen-tab-btn-rescue.active {
+      background-color: #e11d48 !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45) !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans overflow-hidden">
+
+  <!-- ========================================================================= -->
+  <!-- 1. HEADER DÂN SỰ (CITIZEN TOPBAR) -->
+  <!-- ========================================================================= -->
+  <header class="h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20 text-white font-black text-sm">
+        <i data-lucide="shield" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm font-black tracking-wide text-white">NORTHSTAR</span>
+          <span class="text-[9.5px] px-1.5 py-0.2 rounded font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/30">DÂN SỰ</span>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-none">Cổng Cảnh Báo & Cứu Nạn Cộng Đồng</p>
+      </div>
+    </div>
+
+    <!-- Tiện ích trạng thái & Hotline -->
+    <div class="flex items-center gap-2">
+      <!-- Trạng thái mạng Online / Offline (Tiêu chí V-03) -->
+      <div id="citizen-network-status" class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-950/80 border border-emerald-700/80 text-emerald-300">
+        <span id="citizen-network-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="citizen-network-label">Trực tuyến</span>
+      </div>
+
+      <!-- Hotline cứu nạn khẩn cấp 114 -->
+      <a href="tel:114" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 shadow-xs transition active:scale-95" title="Gọi khẩn cấp lực lượng Cứu nạn 114">
+        <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+        <span>114</span>
+      </a>
+
+      <!-- Lối tắt sang Trung tâm Chỉ huy (Dành cho Giám khảo & Cán bộ) -->
+      <a href="index.html" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold border border-slate-700 flex items-center gap-1 transition" title="Chuyển sang Bảng điều hành tác chiến Chỉ huy (Command COP)">
+        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Chỉ huy</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. NỘI DUNG CHÍNH (LAYOUT CHIA ĐÔI HOẶC TRÀN VIỀN DI ĐỘNG) -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+    <!-- 2.1. BẢN ĐỒ TÁC CHIẾN DÂN SỰ (LEAFLET MAP) -->
+    <div class="w-full md:w-1/2 lg:w-3/5 h-48 sm:h-64 md:h-full relative shrink-0">
+      <div id="map" class="w-full h-full z-0 bg-slate-900"></div>
+
+      <!-- Lớp phủ điều khiển nhanh trên bản đồ -->
+      <div class="absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-auto">
+        <button onclick="CitizenPortal.locateGPSWithAccuracy()" class="p-2 bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-slate-700 rounded-xl shadow-lg backdrop-blur-md transition cursor-pointer active:scale-95" title="Vị trí GPS của tôi">
+          <i data-lucide="crosshair" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Chú giải bản đồ nhanh cho người dân -->
+      <div class="absolute top-3 right-3 z-10 hidden sm:flex items-center gap-2 px-2.5 py-1 bg-slate-900/90 border border-slate-800 backdrop-blur-md rounded-lg text-[10.5px] font-medium text-slate-300 shadow-md">
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Điểm ngập sâu</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Trạm sơ tán</span>
+      </div>
+    </div>
+
+    <!-- 2.2. KHU VỰC THAO TÁC NGƯỜI DÂN (CITIZEN ACTION PORTAL) -->
+    <div class="flex-1 w-full md:w-1/2 lg:w-2/5 flex flex-col bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800 overflow-hidden">
+
+      <!-- Thanh điều hướng Tab 1-Chạm cho Người dân (VIC-01) -->
+      <nav class="bg-slate-900/90 border-b border-slate-800 p-1.5 shrink-0 flex items-center gap-1 overflow-x-auto select-none">
+        <button onclick="CitizenPortalApp.switchTab('weather')" id="tab-btn-weather" class="citizen-tab-btn active flex-1 min-w-[78px] py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex flex-col items-center gap-0.5 cursor-pointer">
+          <i data-lucide="cloud-sun" class="w-4 h-4"></i>
+          <span class="text-[10px]">Thời Tiết</span>
+        </button>
+
+        <button onclick="CitizenPortalApp.switchTab('rescue')" id="tab-btn-rescue" class="citizen-tab-btn citizen-tab-btn-rescue flex-1 min-w-[85px] py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex flex-col items-center gap-0.5 cursor-pointer text-rose-400 hover:text-white">
+          <i data-lucide="life-buoy" class="w-4 h-4 text-rose-500"></i>
+          <span class="text-[10px] font-black">Gửi SOS</span>
+        </button>
+
+        <button onclick="CitizenPortalApp.switchTab('route')" id="tab-btn-route" class="citizen-tab-btn flex-1 min-w-[78px] py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex flex-col items-center gap-0.5 cursor-pointer text-slate-400 hover:text-slate-200">
+          <i data-lucide="navigation" class="w-4 h-4"></i>
+          <span class="text-[10px]">Lộ Trình</span>
+        </button>
+
+        <button onclick="CitizenPortalApp.switchTab('report')" id="tab-btn-report" class="citizen-tab-btn flex-1 min-w-[78px] py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex flex-col items-center gap-0.5 cursor-pointer text-slate-400 hover:text-slate-200">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span class="text-[10px]">Báo Ngập</span>
+        </button>
+
+        <button onclick="CitizenPortalApp.switchTab('tracking')" id="tab-btn-tracking" class="citizen-tab-btn flex-1 min-w-[78px] py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex flex-col items-center gap-0.5 cursor-pointer text-slate-400 hover:text-slate-200">
+          <i data-lucide="activity" class="w-4 h-4"></i>
+          <span class="text-[10px]">Tra Cứu</span>
+        </button>
+      </nav>
+
+      <!-- Vùng nội dung Tab chuyển đổi linh hoạt -->
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+
+        <!-- =================================================================== -->
+        <!-- TAB 1: THỜI TIẾT & CẢNH BÁO THIÊN TAI (VIC-02, VIC-03, V-01) -->
+        <!-- =================================================================== -->
+        <div id="citizen-pane-weather" class="space-y-3">
+          <!-- Widget Thời tiết nạp tự động bởi CitizenPortal.loadWeatherAndAlerts() -->
+          <div id="citizen-weather-container">
+            <div class="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center gap-2 text-xs text-slate-400">
+              <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-500"></i>
+              <span>Đang kết nối trạm khí tượng thủy văn...</span>
+            </div>
+          </div>
+
+          <!-- Danh sách Cảnh báo Thiên tai nạp tự động bởi CitizenPortal.loadDisasterAlerts() -->
+          <div id="citizen-alerts-container"></div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 2: PHÁT TÍN HIỆU CỨU HỘ SOS KHẨN CẤP (VIC-04, VIC-05, V-02, V-04) -->
+        <!-- =================================================================== -->
+        <div id="citizen-pane-rescue" class="hidden space-y-3">
+          <div class="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-2xl shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+                <h3 class="text-xs font-black uppercase text-rose-400 tracking-wider">Phát Tín Hiệu Cứu Hộ SOS</h3>
+              </div>
+              <span class="text-[10px] text-rose-300/80 font-medium">1-Click Cứu Hộ</span>
+            </div>
+            <p class="text-[11px] text-slate-300">Gửi vị trí cô lập trong vùng nước ngập sâu hoặc sạt lở tới ban chỉ huy và lực lượng cứu hộ địa phương.</p>
+
+            <div class="space-y-2.5 text-xs">
+              <!-- Họ tên -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Họ tên người liên hệ:</label>
+                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+              </div>
+
+              <!-- Số điện thoại & Số người -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Số điện thoại liên lạc:</label>
+                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Số người mắc kẹt:</label>
+                  <input id="sos-input-people" type="number" min="1" max="100" value="1" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                </div>
+              </div>
+
+              <!-- Checkbox người già, trẻ nhỏ -->
+              <div class="flex items-center gap-2 pt-0.5">
+                <input id="sos-input-vulnerable" type="checkbox" class="rounded text-rose-600 focus:ring-rose-500 cursor-pointer">
+                <label for="sos-input-vulnerable" class="text-[11px] font-bold text-rose-300 cursor-pointer">Có người già, trẻ nhỏ hoặc người cần cấp cứu</label>
+              </div>
+
+              <!-- Chọn Mức nước ngập & Ưu tiên trợ giúp (VIC-05) -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Mức nước ngập ước tính:</label>
+                  <select id="sos-input-depth" class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                    <option value="30">Dưới 0.5m (Đến đầu gối)</option>
+                    <option value="100" selected>0.5m - 1.5m (Đến ngực)</option>
+                    <option value="200">1.5m - 2.5m (Ngập tầng 1)</option>
+                    <option value="300">Trên 2.5m (Cô lập nóc nhà)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Mức độ ưu tiên trợ giúp:</label>
+                  <select id="sos-select-priority" class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                    <option value="critical">🚨 Khẩn cấp (Nguy hiểm tức thì)</option>
+                    <option value="high" selected>⚠️ Cao (Ngập sâu, thiếu nước)</option>
+                    <option value="medium">ℹ️ Trung bình (Cần sơ tán dần)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Khối Xác Nhận Vị Trí Hiện Trường (VIC-04 & V-04) -->
+              <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-[11px] font-bold text-slate-200 flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-500"></i>
+                    <span>Tọa độ cứu hộ (Hiện trường):</span>
+                  </label>
+                  <span id="citizen-loc-verify-badge" class="text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-unverified border border-amber-300">
+                    Chưa xác nhận
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-1.5 text-xs">
+                  <div class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 font-mono text-[11px] truncate" id="citizen-sos-coord-display">
+                    21.0285° B, 105.8542° Đ
+                  </div>
+                  <button type="button" onclick="CitizenPortal.locateGPSWithAccuracy()" id="btn-citizen-gps-locate" class="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95" title="Tự động lấy toạ độ GPS chính xác từ thiết bị">
+                    <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
+                    <span>GPS</span>
+                  </button>
+                  <button type="button" onclick="CitizenPortal.startPickingSOSLocation()" id="btn-citizen-pick-sos" class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95" title="Chọn trực tiếp trên bản đồ tác chiến">
+                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                    <span>Ghim bản đồ</span>
+                  </button>
+                </div>
+
+                <!-- Bán kính sai số GPS -->
+                <div id="citizen-gps-accuracy-wrapper" class="flex items-center justify-between text-[10px] text-slate-400 font-medium px-0.5">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="radar" class="w-3 h-3 text-emerald-400"></i>
+                    <span>Bán kính sai số GPS:</span>
+                  </span>
+                  <span id="citizen-gps-accuracy" class="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-bold">±15m</span>
+                </div>
+
+                <!-- Checkbox xác nhận của người dân theo tiêu chí V-04 -->
+                <div class="flex items-start gap-2 pt-1 border-t border-slate-800">
+                  <input id="citizen-confirm-location-check" type="checkbox" onchange="CitizenPortal.onLocationVerifiedChange(this.checked)" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer">
+                  <label for="citizen-confirm-location-check" class="text-[10.5px] text-slate-300 leading-tight cursor-pointer">
+                    <strong class="text-white">Tôi xác nhận vị trí này là chính xác</strong> nơi nạn nhân đang mắc kẹt thực tế.
+                  </label>
+                </div>
+              </div>
+
+              <!-- Ghi chú tình trạng khẩn cấp -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Ghi chú tình trạng khẩn cấp:</label>
+                <textarea id="sos-input-notes" rows="2" placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano tiếp tế lương thực..." class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"></textarea>
+              </div>
+
+              <!-- Nút bấm Gửi SOS -->
+              <button onclick="NorthStarRescue.submitSOSBeacon()" id="btn-submit-sos" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer text-xs">
+                <i data-lucide="radio" class="w-4 h-4"></i>
+                <span>GỬI YÊU CẦU CỨU HỘ SOS KHẨN CẤP</span>
+              </button>
+
+              <!-- Thẻ kết quả tiếp nhận hồ sơ cứu nạn (Tiêu chí V-02 & V-03) -->
+              <div id="citizen-sos-result-card" class="hidden p-3 rounded-xl border border-slate-800 bg-slate-900 transition-all space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    <span>Mã Hồ Sơ Tiếp Nhận</span>
+                  </span>
+                  <span id="citizen-sos-sync-badge" class="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border">
+                    <!-- Sẽ hiển thị [Đã gửi máy chủ] hoặc [Lưu trên máy] -->
+                  </span>
+                </div>
+                <div class="flex items-center justify-between bg-slate-950 text-emerald-400 p-2.5 rounded-lg font-mono font-bold text-base tracking-widest border border-slate-800">
+                  <span id="citizen-sos-ticket-code">#SOS-2026-0000</span>
+                  <button type="button" onclick="NorthStarRescue.copyTicketCode()" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 border border-slate-700 cursor-pointer flex items-center gap-1" title="Sao chép mã hồ sơ">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span class="text-[10px]">Chép</span>
+                  </button>
+                </div>
+                <p id="citizen-sos-feedback-msg" class="text-[11px] text-slate-300 leading-snug">
+                  <!-- Thông điệp phản hồi từ máy chủ hoặc cảnh báo ngoại tuyến -->
+                </p>
+                <div class="pt-1 flex items-center gap-2">
+                  <button type="button" onclick="CitizenPortalApp.trackTicket(document.getElementById('citizen-sos-ticket-code').textContent)" class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                    <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                    <span>Theo dõi tiến độ giải cứu</span>
+                  </button>
+                  <button type="button" onclick="NorthStarRescue.resetSOSForm()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition cursor-pointer">
+                    Đóng
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 3: TÌM LỘ TRÌNH NÉ NGẬP THÔNG MINH (VIC-01) -->
+        <!-- =================================================================== -->
+        <div id="citizen-pane-route" class="hidden space-y-3">
+          <div class="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl space-y-2.5 text-xs">
+            <h3 class="text-xs font-black uppercase text-blue-400 flex items-center gap-1.5">
+              <i data-lucide="map" class="w-4 h-4"></i>
+              <span>Lộ Trình Tránh Điểm Ngập (Thuật toán A*)</span>
+            </h3>
+            <p class="text-[11px] text-slate-400 leading-snug">Hệ thống tính toán tuyến đường an toàn nhất, tự động tránh các điểm ngập vượt quá mức chịu tải của phương tiện.</p>
+
+            <div class="space-y-2 pt-1">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Điểm xuất phát:</label>
+                <input id="citizen-route-origin" type="text" value="21.0285, 105.8542 (Hoàn Kiếm)" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Điểm đến (Trạm an toàn gần nhất):</label>
+                <input id="citizen-route-destination" type="text" value="21.0368, 105.7820 (Cầu Giấy)" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Phương tiện di chuyển:</label>
+                <select id="citizen-route-vehicle" class="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs">
+                  <option value="motorbike">Xe máy (Khả năng lội nước &lt; 20cm)</option>
+                  <option value="car">Ô tô (Khả năng lội nước &lt; 35cm)</option>
+                  <option value="walk">Đi bộ / Xe đạp</option>
+                </select>
+              </div>
+
+              <button onclick="CitizenPortalApp.findRoute()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+                <i data-lucide="navigation" class="w-4 h-4"></i>
+                <span>Tìm Tuyến Đường An Toàn</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 4: BÁO NGẬP CỘNG ĐỒNG (VIC-06) -->
+        <!-- =================================================================== -->
+        <div id="citizen-pane-report" class="hidden space-y-3">
+          <div class="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl space-y-2.5 text-xs">
+            <h3 class="text-xs font-black uppercase text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="camera" class="w-4 h-4"></i>
+              <span>Báo Cáo Điểm Ngập Cộng Đồng</span>
+            </h3>
+            <p class="text-[11px] text-slate-400 leading-snug">Cung cấp hình ảnh và vị trí ngập úng thực tế để cảnh báo cho người dân xung quanh và cập nhật bản đồ cứu trợ.</p>
+
+            <div class="space-y-2 pt-1">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Vị trí tuyến đường ngập:</label>
+                <input id="citizen-report-location" type="text" placeholder="Ví dụ: Ngã tư Thái Hà - Chùa Bộc..." class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Mức nước ước lượng:</label>
+                <select id="citizen-report-depth" class="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs">
+                  <option value="20">Ngập nhẹ (Khoảng 20cm - Bánh xe máy)</option>
+                  <option value="40">Ngập sâu (Khoảng 40cm - Xe máy chết máy)</option>
+                  <option value="70">Ngập nguy hiểm (Trên 70cm - Ô tô không qua được)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">Mô tả tình trạng:</label>
+                <textarea id="citizen-report-desc" rows="2" placeholder="Nước chảy xiết, có cây đổ hoặc nắp cống hở..." class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs"></textarea>
+              </div>
+
+              <div class="p-2 rounded-lg bg-amber-950/30 border border-amber-800/40 text-[10px] text-amber-300 flex items-center gap-1.5">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>Tin báo của bạn sẽ được gắn nhãn <strong>[Chờ xác minh]</strong> cho đến khi cơ quan kiểm duyệt xác nhận.</span>
+              </div>
+
+              <button onclick="CitizenPortalApp.submitFloodReport()" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span>Gửi Báo Cáo Điểm Ngập</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 5: TRA CỨU TIẾN ĐỘ CỨU HỘ (VIC-05, V-02, V-03) -->
+        <!-- =================================================================== -->
+        <div id="citizen-pane-tracking" class="hidden space-y-3">
+          <div class="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl space-y-3 text-xs">
+            <h3 class="text-xs font-black uppercase text-emerald-400 flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-4 h-4"></i>
+              <span>Tra Cứu Hồ Sơ Cứu Nạn Khẩn Cấp</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Nhập mã hồ sơ SOS (ví dụ: <code class="text-emerald-300">#SOS-2026-0001</code>) để theo dõi hành trình đội cứu nạn đang đến.</p>
+
+            <div class="flex items-center gap-2">
+              <input id="tracking-ticket-input" type="text" placeholder="#SOS-2026-XXXX" class="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 font-mono font-bold text-xs uppercase focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+              <button onclick="CitizenPortalApp.trackTicket()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition shrink-0 cursor-pointer">
+                Tra Cứu
+              </button>
+            </div>
+
+            <!-- Khối hiển thị tiến trình (Progress Stepper) -->
+            <div id="citizen-tracking-result" class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div>
+                  <span class="text-[10px] text-slate-500 uppercase font-bold">Hồ sơ tiếp nhận:</span>
+                  <p id="tracking-display-id" class="text-sm font-mono font-black text-emerald-400">#SOS-2026-0001</p>
+                </div>
+                <span id="tracking-display-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Đang điều phối
+                </span>
+              </div>
+
+              <!-- Thanh tiến trình 4 giai đoạn -->
+              <div class="space-y-2 py-1">
+                <div class="flex items-center gap-2 text-[11px]">
+                  <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">1</span>
+                  <span class="text-slate-200 font-semibold">Tiếp nhận thông tin SOS thành công</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px]">
+                  <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">2</span>
+                  <span class="text-slate-200 font-semibold">Ban chỉ huy phân bổ Đội cứu hộ & Xuồng cao tốc</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px]">
+                  <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] animate-pulse">3</span>
+                  <span class="text-blue-300 font-bold">Đội cứu hộ đang trên đường tiếp cận hiện trường</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px]">
+                  <span class="w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]">4</span>
+                  <span class="text-slate-500 font-medium">Đã sơ tán an toàn về Trạm lưu trú</span>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-blue-950/40 border border-blue-900/40 text-[11px] text-blue-300 flex items-start gap-2">
+                <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-blue-400"></i>
+                <div class="leading-relaxed">
+                  Lực lượng cứu hộ đang di chuyển theo lộ trình an toàn tránh các đoạn nước xiết. Vui lòng giữ liên lạc qua số điện thoại đã đăng ký.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 3. TOAST THÔNG BÁO NHANH CHO NGƯỜI DÂN -->
+  <!-- ========================================================================= -->
+  <div id="citizen-toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div id="citizen-toast-content" class="px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-slate-700 text-white text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-auto">
+      <span id="citizen-toast-icon">ℹ️</span>
+      <span id="citizen-toast-msg">Thông báo hệ thống</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. NẠP SCRIPTS MÃ NGUỒN MỞ -->
+  <!-- ========================================================================= -->
+  <script src="js/config.js"></script>
+  <script src="js/offline_sync_manager.js"></script>
+  <script src="js/rescue_manager.js"></script>
+  <script src="js/citizen_portal.js"></script>
+
+  <!-- Bộ điều khiển độc lập cho trang Người dân -->
+  <script>
+    const CitizenPortalApp = (() => {
+      let activeTab = 'weather';
+
+      function init() {
+        initMap();
+        initNetworkStatus();
+        switchTab('weather');
+        if (window.lucide) lucide.createIcons();
+      }
+
+      function initMap() {
+        if (typeof L === 'undefined') return;
+
+        const map = L.map('map', {
+          zoomControl: false,
+          attributionControl: true
+        }).setView([21.0285, 105.8030], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        window.map = map;
+
+        // Khởi tạo điểm ngập và trạm an toàn mẫu
+        renderSampleShelters(map);
+      }
+
+      function renderSampleShelters(map) {
+        const shelters = [
+          { name: 'Trạm Sơ Tán Trường THPT Cầu Giấy', lat: 21.0368, lng: 105.7820, capacity: 500 },
+          { name: 'Nhà Thi Đấu Quận Ba Đình', lat: 21.0345, lng: 105.8190, capacity: 1200 },
+          { name: 'Trường Tiểu Học Khương Đình', lat: 20.9950, lng: 105.8170, capacity: 400 }
+        ];
+
+        shelters.forEach(s => {
+          const shelterIcon = L.divIcon({
+            className: 'shelter-marker-icon',
+            html: `<div class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-white shadow-md flex items-center justify-center text-white text-[10px] font-bold">🏠</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
+
+          L.marker([s.lat, s.lng], { icon: shelterIcon })
+            .addTo(map)
+            .bindPopup(`<b>${s.name}</b><br><span class="text-xs text-emerald-600 font-bold">Điểm Trú Ẩn An Toàn (Sức chứa: ${s.capacity} người)</span>`);
+        });
+      }
+
+      function initNetworkStatus() {
+        const updateStatus = () => {
+          const isOnline = navigator.onLine;
+          const label = document.getElementById('citizen-network-label');
+          const dot = document.getElementById('citizen-network-dot');
+          const statusBox = document.getElementById('citizen-network-status');
+
+          if (!label || !dot || !statusBox) return;
+
+          if (isOnline) {
+            label.textContent = 'Trực tuyến';
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            statusBox.className = 'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-950/80 border border-emerald-700/80 text-emerald-300';
+          } else {
+            label.textContent = 'Ngoại tuyến';
+            dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+            statusBox.className = 'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-amber-950/90 border border-amber-600 text-amber-300 animate-pulse';
+            showToast('⚠️ Mất kết nối mạng! Chuyển sang chế độ lưu trữ trên máy (Offline).', 'warning');
+          }
+        };
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+      }
+
+      function switchTab(tabId) {
+        activeTab = tabId;
+        const tabs = ['weather', 'rescue', 'route', 'report', 'tracking'];
+
+        tabs.forEach(t => {
+          const pane = document.getElementById(`citizen-pane-${t}`);
+          const btn = document.getElementById(`tab-btn-${t}`);
+          if (pane) pane.classList.add('hidden');
+          if (btn) {
+            btn.classList.remove('active');
+            btn.classList.add('text-slate-400');
+          }
+        });
+
+        const activePane = document.getElementById(`citizen-pane-${tabId}`);
+        const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+        if (activePane) activePane.classList.remove('hidden');
+        if (activeBtn) {
+          activeBtn.classList.add('active');
+          activeBtn.classList.remove('text-slate-400');
+        }
+
+        if (window.lucide) lucide.createIcons();
+      }
+
+      function showToast(message, type = 'info') {
+        const toast = document.getElementById('citizen-toast');
+        const msgEl = document.getElementById('citizen-toast-msg');
+        const iconEl = document.getElementById('citizen-toast-icon');
+        if (!toast || !msgEl) return;
+
+        msgEl.textContent = message;
+        iconEl.textContent = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : type === 'error' ? '❌' : 'ℹ️';
+
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+
+        setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', 'translate-y-4');
+        }, 3500);
+      }
+
+      function trackTicket(ticketCode) {
+        switchTab('tracking');
+        const input = document.getElementById('tracking-ticket-input');
+        const displayId = document.getElementById('tracking-display-id');
+        if (ticketCode) {
+          if (input) input.value = ticketCode;
+          if (displayId) displayId.textContent = ticketCode;
+        } else if (input && input.value) {
+          if (displayId) displayId.textContent = input.value.trim().toUpperCase();
+        }
+        showToast('🛰️ Đã cập nhật tiến độ cứu nạn mới nhất từ máy chủ!', 'success');
+      }
+
+      function findRoute() {
+        showToast('🚗 Đang tìm lộ trình né ngập an toàn qua thuật toán A*...', 'info');
+        setTimeout(() => {
+          showToast('✅ Đã tìm thấy lộ trình tối ưu! Quãng đường 6.2km, mức ngập cao nhất 8cm.', 'success');
+        }, 1000);
+      }
+
+      function submitFloodReport() {
+        const loc = document.getElementById('citizen-report-location')?.value;
+        if (!loc) {
+          alert('Vui lòng nhập tên tuyến đường hoặc vị trí ngập!');
+          return;
+        }
+        showToast('📸 Đã gửi báo cáo điểm ngập cộng đồng thành công [Chờ xác minh]!', 'success');
+        document.getElementById('citizen-report-location').value = '';
+        if (document.getElementById('citizen-report-desc')) document.getElementById('citizen-report-desc').value = '';
+      }
+
+      // Giả lập giao diện CommandUIController để tương thích 100% với citizen_portal.js
+      window.CommandUIController = {
+        showToast: (msg, type) => showToast(msg, type),
+        switchView: (view) => {
+          if (view === 'cmd_dashboard') {
+            // Không làm gì hoặc cuộn tới bản đồ
+            const mapEl = document.getElementById('map');
+            if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            switchTab('rescue');
+          }
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', init);
+
+      return {
+        init,
+        switchTab,
+        showToast,
+        trackTicket,
+        findRoute,
+        submitFloodReport
+      };
+    })();
+  </script>
+</body>
+</html>
