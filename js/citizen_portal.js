@@ -399,6 +399,120 @@ const CitizenPortal = (function () {
     }
   }
 
+  // ==========================================================================
+  // QUẢN LÝ GHIM & XÁC NHẬN VỊ TRÍ HIỆN TRƯỜNG (VIC-04 & TIÊU CHÍ V-04)
+  // ==========================================================================
+  let sosMarker = null;
+  let isPickingLocation = false;
+
+  /**
+   * Bắt đầu chế độ chọn vị trí SOS trên bản đồ Leaflet
+   */
+  function startPickingSOSLocation() {
+    isPickingLocation = true;
+    showCitizenToast('📍 Hãy nhấp chuột vào vị trí ngập/mắc kẹt thực tế trên bản đồ hoặc kéo thả ghim!', 'info');
+
+    if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+      window.CommandUIController.switchView('cmd_dashboard');
+    }
+
+    if (window.map) {
+      window.map.once('click', onMapClickForSOS);
+      const mapContainer = document.getElementById('map');
+      if (mapContainer) mapContainer.style.cursor = 'crosshair';
+    }
+  }
+
+  /**
+   * Xử lý sự kiện nhấp bản đồ để chọn tọa độ
+   */
+  function onMapClickForSOS(e) {
+    isPickingLocation = false;
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) mapContainer.style.cursor = '';
+
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    setSOSLocation(lat, lng);
+
+    showCitizenToast(`✅ Đã ghim vị trí: ${lat.toFixed(4)}, ${lng.toFixed(4)}! Vui lòng tích xác nhận.`, 'success');
+
+    if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+      window.CommandUIController.switchView('cmd_citizen_preview');
+      if (typeof switchTab === 'function') switchTab('rescue');
+    }
+  }
+
+  /**
+   * Thiết lập và cập nhật vị trí cứu hộ
+   */
+  function setSOSLocation(lat, lng) {
+    state.selectedCoords = { lat: parseFloat(lat), lng: parseFloat(lng) };
+    
+    const displayEl = document.getElementById('citizen-sos-coord-display');
+    if (displayEl) {
+      displayEl.textContent = `${lat.toFixed(4)}° B, ${lng.toFixed(4)}° Đ`;
+    }
+
+    renderSOSMarker(lat, lng);
+  }
+
+  /**
+   * Vẽ hoặc di chuyển Marker trên bản đồ có hỗ trợ kéo thả (Draggable Marker)
+   */
+  function renderSOSMarker(lat, lng) {
+    if (!window.map || typeof L === 'undefined') return;
+
+    if (sosMarker) {
+      sosMarker.setLatLng([lat, lng]);
+    } else {
+      const pinIcon = L.divIcon({
+        className: 'citizen-sos-custom-pin',
+        html: `
+          <div class="citizen-pin-pulse-container">
+            <div class="citizen-pin-pulse-ring"></div>
+            <div class="citizen-pin-pulse-core"></div>
+          </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      sosMarker = L.marker([lat, lng], {
+        icon: pinIcon,
+        draggable: true,
+        title: 'Vị trí cứu hộ SOS (Kéo thả để tinh chỉnh)'
+      }).addTo(window.map);
+
+      sosMarker.on('dragend', function (event) {
+        const marker = event.target;
+        const pos = marker.getLatLng();
+        setSOSLocation(pos.lat, pos.lng);
+        showCitizenToast(`📍 Đã di chuyển ghim tới: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`, 'info');
+      });
+    }
+
+    window.map.panTo([lat, lng]);
+  }
+
+  /**
+   * Xử lý khi người dân đánh dấu xác nhận vị trí (Tiêu chí V-04)
+   */
+  function onLocationVerifiedChange(isVerified) {
+    state.locationConfirmed = !!isVerified;
+    const badge = document.getElementById('citizen-loc-verify-badge');
+
+    if (badge) {
+      if (state.locationConfirmed) {
+        badge.textContent = 'Đã xác nhận chính xác';
+        badge.className = 'text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-verified border border-emerald-300';
+        showCitizenToast('✅ Bạn đã xác nhận vị trí này phản ánh đúng hiện trường thực tế.', 'success');
+      } else {
+        badge.textContent = 'Chưa xác nhận';
+        badge.className = 'text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-unverified border border-amber-300';
+      }
+    }
+  }
+
   // Khởi tạo ngay khi trang tải xong
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -409,6 +523,9 @@ const CitizenPortal = (function () {
   return {
     init,
     loadWeatherAndAlerts,
+    startPickingSOSLocation,
+    setSOSLocation,
+    onLocationVerifiedChange,
     state
   };
 })();
