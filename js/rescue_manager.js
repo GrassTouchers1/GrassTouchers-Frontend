@@ -506,16 +506,16 @@ const NorthStarRescue = (function () {
       const coords = f.geometry.coordinates;
 
       return `
-        <div class="p-2.5 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-50 transition shadow-sm">
+        <div class="p-2.5 rounded-xl border border-rose-900/40 bg-slate-900/80 hover:bg-slate-800/80 transition shadow-sm">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-rose-900">🆘 ${p.contact_name} (${p.people_count} người)</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded font-bold bg-rose-200 text-rose-900">${p.priority}</span>
+            <span class="text-xs font-black text-rose-300">🆘 ${p.contact_name} (${p.people_count} người)</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800">${p.priority}</span>
           </div>
-          <div class="text-[11px] text-slate-600 mt-1">SĐT: <a href="tel:${p.phone}" class="text-blue-600 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• Có trẻ nhỏ/người già' : ''}</div>
-          ${p.notes ? `<div class="text-[11px] text-slate-500 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
+          <div class="text-[11px] text-slate-300 mt-1">SĐT: <a href="tel:${p.phone}" class="text-amber-300 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• <span class="text-amber-400 font-bold">Có trẻ nhỏ/người già</span>' : ''}</div>
+          ${p.notes ? `<div class="text-[11px] text-slate-400 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
           <div class="mt-2 flex items-center justify-between">
-            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-blue-600 font-semibold hover:underline">Vị trí bản đồ</button>
-            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-slate-500 hover:text-emerald-600 font-medium">Đánh dấu đã cứu</button>
+            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>
+            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer">Đánh dấu đã cứu</button>
           </div>
         </div>
       `;

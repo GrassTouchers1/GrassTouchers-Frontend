@@ -3149,7 +3149,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
               </span>
               <div>
                 <h3 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  ĐỐI SOÁT PHÁP LÝ BẢN ĐỒ NGUỒN MỞ: LEAFLET vs MAPLIBRE vs MAPBOX
+                  ĐỐI SOÁT PHÁP LÝ BẢN ĐỒ NGUỒN MỞ: MAPLIBRE GL JS vs LEAFLET vs MAPBOX
                   <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">100% ĐẠT CHUẨN PoF</span>
                 </h3>
                 <p class="text-[11px] text-slate-300">Minh bạch giấy phép mã nguồn mở quốc tế phê chuẩn bởi Tổ chức Sáng kiến Mã nguồn mở (OSI).</p>
@@ -3175,17 +3175,6 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
               <tbody class="divide-y divide-slate-800/60 text-[11.5px]">
                 <tr class="hover:bg-slate-800/40">
                   <td class="p-2 font-bold text-white flex items-center gap-1.5">
-                    <span class="text-emerald-400">🍃</span> Leaflet.js (v1.9.4)
-                  </td>
-                  <td class="p-2 font-mono font-bold text-emerald-300">BSD-2-Clause</td>
-                  <td class="p-2">
-                    <a href="https://opensource.org/license/bsd-2-clause" target="_blank" class="text-cyan-400 underline font-semibold">OSI Approved (#18) ↗</a>
-                  </td>
-                  <td class="p-2 text-emerald-400 font-bold">✓ 100% FOSS Mở tự do</td>
-                  <td class="p-2 text-slate-300 font-medium">Lõi tác chiến 2D C2, nhẹ, ổn định trên mọi thiết bị di động</td>
-                </tr>
-                <tr class="hover:bg-slate-800/40">
-                  <td class="p-2 font-bold text-white flex items-center gap-1.5">
                     <span class="text-cyan-400">🌐</span> MapLibre GL JS (v4.7.1)
                   </td>
                   <td class="p-2 font-mono font-bold text-cyan-300">BSD-3-Clause</td>
@@ -3193,7 +3182,18 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
                     <a href="https://opensource.org/license/bsd-3-clause" target="_blank" class="text-cyan-400 underline font-semibold">OSI Approved (#19) ↗</a>
                   </td>
                   <td class="p-2 text-emerald-400 font-bold">✓ 100% FOSS (Linux Foundation)</td>
-                  <td class="p-2 text-slate-300 font-medium">Lõi Vector 3D WebGL, xoay góc nghiêng 360°, tăng tốc GPU</td>
+                  <td class="p-2 text-emerald-300 font-medium font-bold">★ ĐỘNG CƠ BẢN ĐỒ CHÍNH DUY NHẤT: Vector 3D WebGL, xoay 360°, tăng tốc GPU</td>
+                </tr>
+                <tr class="hover:bg-slate-800/40">
+                  <td class="p-2 font-bold text-slate-400 flex items-center gap-1.5">
+                    <span class="text-slate-500">🍃</span> Leaflet.js (v1.9.4)
+                  </td>
+                  <td class="p-2 font-mono font-bold text-slate-400">BSD-2-Clause</td>
+                  <td class="p-2">
+                    <a href="https://opensource.org/license/bsd-2-clause" target="_blank" class="text-slate-400 underline font-semibold">OSI Approved (#18) ↗</a>
+                  </td>
+                  <td class="p-2 text-slate-400 font-bold">✓ 100% FOSS Mở tự do</td>
+                  <td class="p-2 text-slate-400 font-medium">Đã thay thế hoàn toàn bằng MapLibre GL JS để tối ưu hóa WebGL 3D hiện đại</td>
                 </tr>
                 <tr class="hover:bg-slate-800/40 bg-rose-950/20">
                   <td class="p-2 font-bold text-rose-300 flex items-center gap-1.5">
@@ -3208,7 +3208,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
             </table>
           </div>
           <div class="p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-amber-300/90 leading-relaxed">
-            💡 <b>Ghi chú phản biện trước Ban Giám Khảo:</b> Thư viện bị đóng mã nguồn thương mại là <b>Mapbox GL JS (từ v2.0)</b>, chính vì vậy cộng đồng mã nguồn mở và Linux Foundation đã fork ra <b>MapLibre GL JS</b>. Còn <b>Leaflet.js</b> từ khi ra đời đến nay vẫn luôn là FOSS 100% dưới giấy phép mở BSD-2-Clause. Hệ thống NorthStar tích hợp <b>cả hai động cơ mở (Dual-Engine)</b> nhằm tối ưu hóa 100% khả năng cứu nạn.
+            💡 <b>Ghi chú phản biện trước Ban Giám Khảo:</b> Thư viện bị đóng mã nguồn thương mại là <b>Mapbox GL JS (từ v2.0)</b>, chính vì vậy cộng đồng mã nguồn mở và Linux Foundation đã fork ra <b>MapLibre GL JS</b>. Hệ thống NorthStar sử dụng <b>MapLibre GL JS v4.7.1</b> làm động cơ bản đồ vector 3D chính thức duy nhất, tuân thủ 100% giấy phép mở BSD-3-Clause và các quy chế nghiêm ngặt của OLP PMNM 2026.
           </div>
         </div>
 

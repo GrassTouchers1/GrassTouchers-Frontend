@@ -517,48 +517,82 @@ window.NorthStarMapLibre = (function () {
 
   function showProvinceWeatherPopup(lngLat, provinceName) {
     let weatherInfo = null;
-    if (window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.weatherDataCache) {
-      weatherInfo = window.ProvinceWeatherLayer.weatherDataCache[provinceName];
+    if (window.ProvinceWeatherLayer) {
+      if (typeof window.ProvinceWeatherLayer.getCache === 'function') {
+        const cache = window.ProvinceWeatherLayer.getCache();
+        if (cache && cache[provinceName]) weatherInfo = cache[provinceName];
+      }
+      if (!weatherInfo && window.ProvinceWeatherLayer.weatherDataCache) {
+        weatherInfo = window.ProvinceWeatherLayer.weatherDataCache[provinceName];
+      }
     }
 
-    const temp = weatherInfo ? weatherInfo.temp : '24.5°C';
-    const rain = weatherInfo ? weatherInfo.precipitation : '12.4 mm';
-    const wind = weatherInfo ? weatherInfo.windSpeed : '48 km/h (Cấp 6)';
-    const status = weatherInfo ? weatherInfo.weatherStatus : 'Mưa lớn, nguy cơ sạt lở';
+    const temp = weatherInfo ? (weatherInfo.temp !== undefined ? `${weatherInfo.temp}°C` : '24.5°C') : '24.5°C';
+    const rain = weatherInfo ? (weatherInfo.rain !== undefined ? `${weatherInfo.rain} mm` : (weatherInfo.precipitation || '12.4 mm')) : '12.4 mm';
+    const wind = weatherInfo ? (weatherInfo.windSpeed !== undefined ? `${weatherInfo.windSpeed} km/h` : '48 km/h (Cấp 6)') : '48 km/h (Cấp 6)';
+    const status = weatherInfo ? (weatherInfo.weatherDesc || weatherInfo.weatherStatus || 'Mưa lớn, nguy cơ sạt lở') : 'Mưa lớn, nguy cơ sạt lở';
+    const aqi = weatherInfo ? weatherInfo.aqi : 48;
+    const pm25 = weatherInfo ? weatherInfo.pm25 : 18;
 
     const html = `
-      <div class="p-3 font-sans space-y-2 text-slate-800 text-xs">
-        <div class="flex items-center justify-between border-b border-slate-200 pb-1.5">
-          <div class="font-extrabold text-sm text-cyan-700 flex items-center gap-1.5">
-            <span>🏛️</span> ${provinceName}
+      <div class="p-3 font-sans space-y-2.5 text-slate-100 text-xs select-none min-w-[285px] max-w-[320px]">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+          <div class="font-black text-sm text-cyan-300 flex items-center gap-1.5">
+            <span>🏛️</span> <span>${provinceName}</span>
           </div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800">Miền Bắc</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-950/80 text-cyan-300 border border-cyan-700/70">Miền Bắc</span>
         </div>
+
+        <!-- 4 Grid Indicators: C2 Dark Glass -->
         <div class="grid grid-cols-2 gap-2 text-[11px]">
-          <div class="bg-slate-50 p-1.5 rounded border border-slate-200">
-            <span class="text-slate-500 block text-[9.5px]">Nhiệt độ:</span>
-            <span class="font-bold text-slate-900">${temp}</span>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Nhiệt độ:</span>
+            <span class="font-black text-amber-300 font-mono text-base mt-0.5 block leading-none">${temp}</span>
           </div>
-          <div class="bg-blue-50 p-1.5 rounded border border-blue-200">
-            <span class="text-blue-500 block text-[9.5px]">Lượng mưa 24h:</span>
-            <span class="font-bold text-blue-700">${rain}</span>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Lượng mưa 24h:</span>
+            <span class="font-black text-cyan-300 font-mono text-base mt-0.5 block leading-none">${rain}</span>
           </div>
-          <div class="bg-amber-50 p-1.5 rounded border border-amber-200">
-            <span class="text-amber-500 block text-[9.5px]">Gió giật:</span>
-            <span class="font-bold text-amber-700">${wind}</span>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Gió giật:</span>
+            <span class="font-black text-emerald-300 font-mono text-xs mt-0.5 block leading-tight">${wind}</span>
           </div>
-          <div class="bg-rose-50 p-1.5 rounded border border-rose-200">
-            <span class="text-rose-500 block text-[9.5px]">Tình trạng:</span>
-            <span class="font-bold text-rose-700 truncate block">${status}</span>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Tình trạng:</span>
+            <span class="font-bold text-rose-400 text-xs mt-0.5 block truncate leading-tight" title="${status}">${status}</span>
           </div>
         </div>
-        <div class="text-[9.5px] text-slate-500 italic pt-1 border-t border-slate-100">
-          Nguồn: Open-Meteo API (Trực quan hóa WebGL GPU 3D)
+
+        <!-- Chất lượng không khí OpenAQ -->
+        <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 flex items-center justify-between text-[10.5px]">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs">🍃</span>
+            <span class="text-slate-300 font-medium">Không khí:</span>
+            <span class="font-mono font-bold text-emerald-300">AQI ${aqi}</span>
+          </div>
+          <span class="text-[9.5px] font-mono text-slate-400">PM2.5: ${pm25} µg/m³</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
+          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.zoomToProvince('${provinceName}')" class="flex-1 py-1.5 px-2 rounded-lg bg-sky-600/30 hover:bg-sky-600 text-sky-200 hover:text-white border border-sky-500/40 text-[10.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+            <span>🔍 Phóng to</span>
+          </button>
+          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.focusProvinceRegion('${provinceName}')" class="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/40 text-[10.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+            <span>🎯 Trọng tâm</span>
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-[9.5px] text-slate-400 italic pt-1 border-t border-slate-800/60 flex items-center justify-between">
+          <span>Nguồn: Open-Meteo & OpenAQ</span>
+          <span class="text-cyan-400 font-mono font-bold">WebGL 3D</span>
         </div>
       </div>
     `;
 
-    const popup = new maplibregl.Popup({ offset: 12, maxWidth: '280px' })
+    const popup = new maplibregl.Popup({ offset: 12, maxWidth: '320px' })
       .setHTML(html);
     openActivePopup(popup, lngLat);
   }
@@ -2410,17 +2444,16 @@ window.NorthStarMapLibre = (function () {
     });
 
     const html = `
-      <div class="p-2 font-sans space-y-1 text-xs text-slate-800">
-        <div class="font-extrabold text-cyan-700 text-sm border-b border-cyan-100 pb-1">${title}</div>
-        <div class="text-[11px] text-slate-600">${details}</div>
-        <div class="text-[10px] text-slate-400 font-mono">[${lat.toFixed(4)}, ${lng.toFixed(4)}]</div>
+      <div class="p-2.5 font-sans space-y-1 text-xs text-slate-100 select-none">
+        <div class="font-black text-cyan-300 text-sm border-b border-slate-700/80 pb-1">${title}</div>
+        <div class="text-[11px] text-slate-200 mt-1">${details}</div>
+        <div class="text-[10px] text-slate-400 font-mono mt-1">[${lat.toFixed(4)}, ${lng.toFixed(4)}]</div>
       </div>
     `;
 
-    new maplibregl.Popup({ offset: 18, maxWidth: '260px' })
-      .setLngLat([lng, lat])
-      .setHTML(html)
-      .addTo(mapInstance);
+    const popup = new maplibregl.Popup({ offset: 18, maxWidth: '270px' })
+      .setHTML(html);
+    openActivePopup(popup, [lng, lat]);
   }
 
   /**
@@ -2906,6 +2939,21 @@ window.NorthStarMapLibre = (function () {
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
 
+  function zoomToProvince(provinceName) {
+    if (!mapInstance) return;
+    const meta = (window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.metadata && window.ProvinceWeatherLayer.metadata[provinceName]) || null;
+    if (meta && meta.lat && meta.lng) {
+      mapInstance.flyTo({ center: [meta.lng, meta.lat], zoom: 9.5, duration: 800 });
+      return;
+    }
+  }
+
+  function focusProvinceRegion(provinceName) {
+    if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.focusProvinceRegion === 'function') {
+      window.ProvinceWeatherLayer.focusProvinceRegion(provinceName);
+    }
+  }
+
   return {
     init,
     setPitch,
@@ -2918,6 +2966,8 @@ window.NorthStarMapLibre = (function () {
     setRouteOriginDestination,
     syncAllLayers,
     resize,
+    zoomToProvince,
+    focusProvinceRegion,
     // Expanded Tactical Features
     toggleFlyoverPatrol,
     advancePatrol,
@@ -2936,6 +2986,7 @@ window.NorthStarMapLibre = (function () {
     startVehicleRouteAnimation,
     stopVehicleRouteAnimation,
     openStationPopupById,
+    showProvinceWeatherPopup,
     closeCurrentPopup,
     closePopup: closeCurrentPopup,
     renderHanoiDistrictMarkers,
