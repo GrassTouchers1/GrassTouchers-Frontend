@@ -1266,7 +1266,8 @@
 
             <!-- Citizen Tabs Navigation -->
             <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800 text-xs font-bold overflow-x-auto">
-              <button onclick="switchTab('route')" id="citizen-tab-btn-route" class="flex-1 min-w-[130px] py-2 rounded-lg bg-blue-600 text-white text-center cursor-pointer transition">🚗 Tìm Lộ Trình</button>
+              <button onclick="switchTab('weather')" id="citizen-tab-btn-weather" class="flex-1 min-w-[155px] py-2 rounded-lg bg-emerald-600 text-white text-center cursor-pointer transition font-black shadow-xs">⛅ Thời Tiết & Cảnh Báo</button>
+              <button onclick="switchTab('route')" id="citizen-tab-btn-route" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">🚗 Tìm Lộ Trình</button>
               <button onclick="switchTab('points')" id="citizen-tab-btn-points" class="flex-1 min-w-[120px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">⚠️ Điểm Ngập (130)</button>
               <button onclick="switchTab('report')" id="citizen-tab-btn-report" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">📸 Báo Ngập</button>
               <button onclick="switchTab('rescue')" id="citizen-tab-btn-rescue" class="flex-1 min-w-[130px] py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-center cursor-pointer transition">🆘 Gửi Cứu Hộ</button>
@@ -1275,7 +1276,17 @@
 
             <!-- Citizen Tab Contents Container -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div id="tab-route" class="space-y-4">
+              <!-- 0. TAB WEATHER & MULTI-HAZARD ALERTS (VIC-02, VIC-03, V-01) -->
+              <div id="tab-weather" class="space-y-4">
+                <div id="citizen-weather-container">
+                  <!-- Được nạp tự động bởi CitizenPortal.loadWeatherAndAlerts() -->
+                </div>
+                <div id="citizen-alerts-container">
+                  <!-- Được nạp tự động bởi CitizenPortal.loadDisasterAlerts() -->
+                </div>
+              </div>
+
+              <div id="tab-route" class="hidden space-y-4">
           <div id="algo-info-card" class="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-800 flex items-start gap-2 relative transition-all">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600"></i>
             <div class="leading-relaxed flex-1 text-[11px]">
@@ -1877,6 +1888,37 @@
               <div class="flex items-center gap-2 pt-1">
                 <input id="sos-input-vulnerable" type="checkbox" class="rounded text-rose-600 focus:ring-rose-500">
                 <label for="sos-input-vulnerable" class="text-[11px] font-bold text-rose-800">Có người già, trẻ nhỏ hoặc người bệnh</label>
+              </div>
+
+              <!-- Khối Xác Nhận Vị Trí Hiện Trường (VIC-04 & V-04) -->
+              <div class="p-3 bg-white border border-rose-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-500"></i>
+                    <span>Tọa độ cứu hộ (Hiện trường):</span>
+                  </label>
+                  <span id="citizen-loc-verify-badge" class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    Chưa xác nhận
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs">
+                  <div class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-mono text-[11px] truncate" id="citizen-sos-coord-display">
+                    21.0285° B, 105.8542° Đ
+                  </div>
+                  <button type="button" onclick="CitizenPortal.startPickingSOSLocation()" id="btn-citizen-pick-sos" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95">
+                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                    <span>Chọn trên bản đồ</span>
+                  </button>
+                </div>
+
+                <!-- Checkbox xác nhận của người dân theo tiêu chí V-04 -->
+                <div class="flex items-start gap-2 pt-1 border-t border-slate-100">
+                  <input id="citizen-confirm-location-check" type="checkbox" onchange="CitizenPortal.onLocationVerifiedChange(this.checked)" class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                  <label for="citizen-confirm-location-check" class="text-[10.5px] text-slate-600 leading-tight cursor-pointer">
+                    <strong class="text-slate-800">Tôi xác nhận vị trí này là chính xác</strong> nơi nạn nhân đang mắc kẹt thực tế.
+                  </label>
+                </div>
               </div>
 
               <div>
@@ -3064,6 +3106,7 @@
   <script src="js/advanced_modules.js?v=20261118_v17"></script>
   <script src="js/storm_simulator.js?v=20261118_v17"></script>
   <script src="js/voice_sos.js?v=20261118_v17"></script>
+  <script src="js/citizen_portal.js?v=20261120_v1"></script>
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
