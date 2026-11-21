@@ -1657,14 +1657,27 @@
                   </span>
                 </div>
 
-                <div class="flex items-center gap-2 text-xs">
+                <div class="flex items-center gap-1.5 text-xs">
                   <div class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-mono text-[11px] truncate" id="citizen-sos-coord-display">
                     21.0285° B, 105.8542° Đ
                   </div>
-                  <button type="button" onclick="CitizenPortal.startPickingSOSLocation()" id="btn-citizen-pick-sos" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95">
-                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-                    <span>Chọn trên bản đồ</span>
+                  <button type="button" onclick="CitizenPortal.locateGPSWithAccuracy()" id="btn-citizen-gps-locate" class="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95" title="Tự động lấy toạ độ GPS chính xác từ thiết bị">
+                    <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
+                    <span>GPS</span>
                   </button>
+                  <button type="button" onclick="CitizenPortal.startPickingSOSLocation()" id="btn-citizen-pick-sos" class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95" title="Chọn trực tiếp trên bản đồ tác chiến">
+                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                    <span>Chọn bản đồ</span>
+                  </button>
+                </div>
+
+                <!-- Nhãn bán kính sai số định vị GPS -->
+                <div id="citizen-gps-accuracy-wrapper" class="flex items-center justify-between text-[10px] text-slate-500 font-medium px-0.5">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="radar" class="w-3 h-3 text-emerald-500"></i>
+                    <span>Bán kính sai số GPS:</span>
+                  </span>
+                  <span id="citizen-gps-accuracy" class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold">±15m</span>
                 </div>
 
                 <!-- Checkbox xác nhận của người dân theo tiêu chí V-04 -->
