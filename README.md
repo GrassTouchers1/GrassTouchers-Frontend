@@ -253,4 +253,4 @@ Toàn bộ hệ thống tuân thủ 100% các tiêu chí khắt khe nhất của
 - 🤝 **Quy định đóng góp cộng đồng:** [CONTRIBUTING.md](CONTRIBUTING.md).
 - 🐛 **Hệ thống Quản lý Lỗi Phần mềm (Bug Tracker):** Tiếp nhận tại [GitHub Issues](https://github.com/GrassTouchers1/GrassTouchers-Frontend/issues) với Issue Templates chuẩn trong `.github/ISSUE_TEMPLATE/`.
 - 🏷️ **Bản phát hành chính thức dự thi:** [Release v1.0.0](https://github.com/GrassTouchers1/GrassTouchers-Frontend/releases/tag/v1.0.0).
-- 🌐 **Dữ liệu mở (100% Open Data, Tuyệt đối không cào web, Không phụ thuộc KTTV Quốc gia/NCHMF):** OpenStreetMap (ODbL 1.0), Open-Meteo Weather & Air Quality (CC-BY 4.0), OpenAQ Air Quality Network (CC-BY 4.0), Copernicus Sentinel-1 SAR & GloFAS (EU Open Access), NASA GPM IMERG (NASA Open Data), Open Development Mekong (CC-BY 4.0).
+- 🌐 **Dữ liệu mở (100% Open Data, Chuẩn mở quốc tế FOSS/OSI, Tuyệt đối không cào web):** OpenStreetMap (ODbL 1.0), Open-Meteo Weather & Air Quality (CC-BY 4.0), OpenAQ Air Quality Network (CC-BY 4.0), Copernicus Sentinel-1 SAR & GloFAS (EU Open Access), NASA GPM IMERG (NASA Open Data), Open Development Mekong (CC-BY 4.0).
