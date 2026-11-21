@@ -174,9 +174,9 @@
         <button id="btn-mode-command" onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2 py-1 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1">
           🛡️ <span class="hidden sm:inline">COMMAND</span>
         </button>
-        <button id="btn-mode-citizen" onclick="CommandUIController.switchView('cmd_citizen_preview')" class="px-2 py-1 rounded-md text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1">
-          🌐 <span class="hidden sm:inline">DÂN SỰ</span>
-        </button>
+        <a id="btn-mode-citizen" href="citizen.html" class="px-2 py-1 rounded-md text-[10px] font-bold text-blue-300 hover:text-white bg-blue-900/40 hover:bg-blue-800/60 border border-blue-500/30 transition cursor-pointer flex items-center gap-1 shadow-xs" title="Mở Cổng Dân Sự độc lập (Mobile PWA)">
+          🌐 <span class="hidden sm:inline">DÂN SỰ (PWA)</span>
+        </a>
       </div>
     </div>
   </header>
@@ -309,10 +309,13 @@
               <i data-lucide="users" class="w-4 h-4 shrink-0 text-purple-400"></i>
               <span class="cmd-nav-label flex-1 truncate">Phân Quyền Vai Trò (RBAC)</span>
             </button>
-            <button class="cmd-nav-item w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_citizen_preview" onclick="CommandUIController.switchView('cmd_citizen_preview')">
-              <i data-lucide="smartphone" class="w-4 h-4 shrink-0 text-sky-400"></i>
-              <span class="cmd-nav-label flex-1 truncate">Cổng Dân Sự (Citizen Portal)</span>
-            </button>
+            <div class="flex items-center gap-1">
+              <button class="cmd-nav-item flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 text-left cursor-pointer" data-view="cmd_citizen_preview" onclick="CommandUIController.switchView('cmd_citizen_preview')">
+                <i data-lucide="smartphone" class="w-4 h-4 shrink-0 text-sky-400"></i>
+                <span class="cmd-nav-label flex-1 truncate">Cổng Dân Sự (Preview)</span>
+              </button>
+              <a href="citizen.html" class="px-2 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 rounded-md text-[9.5px] font-bold shrink-0 transition" title="Mở trang Dân sự độc lập citizen.html">PWA &rarr;</a>
+            </div>
           </div>
         </div>
 
