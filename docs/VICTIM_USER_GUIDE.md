@@ -120,8 +120,9 @@ python -m unittest tests/test_citizen_workflow.py
 1. **Bản quyền mã nguồn mở:** Tất cả các tệp mã nguồn HTML, JS, CSS, Python đều chứa tiêu đề bản quyền chuẩn **Apache License Version 2.0**.
 2. **Không có đường dẫn cục bộ:** Mọi tham chiếu tài nguyên, API đều sử dụng đường dẫn tương đối hoặc cổng dịch vụ tiêu chuẩn (`/api/...`, `http://127.0.0.1:8000`), không sử dụng đường dẫn cứng ổ đĩa (`C:\...` hoặc `D:\...`).
 3. **Thư viện mã nguồn mở 100%:**
-   - **Leaflet.js:** Bản đồ tương tác Web GIS (Giấy phép BSD 2-Clause).
-   - **OpenStreetMap / OSM France:** Nguồn dữ liệu bản đồ nền mở không yêu cầu khóa thương mại (ODbL / CC-BY-SA).
+   - **MapLibre GL JS:** Động cơ bản đồ WebGL 3D Vector mở (Giấy phép BSD 3-Clause, OSI Approved). Tích hợp trực tiếp tại `js/vendor/maplibre-gl.js`, zero API key, không phụ thuộc máy chủ ngoài.
+   - **Leaflet.js:** Bản đồ tương tác dự phòng cho môi trường máy cấu hình tối thiểu (Giấy phép BSD 2-Clause).
+   - **OpenStreetMap & Esri Topo:** Nguồn dữ liệu bản đồ nền mở không yêu cầu khóa thương mại (ODbL / CC-BY-SA).
    - **Open-Meteo:** API thời tiết mã nguồn mở (CC-BY 4.0).
    - **Lucide Icons:** Bộ biểu tượng giao diện mở hiện đại (Giấy phép ISC).
    - **Tailwind CSS:** Khung giao diện tiện ích mở (Giấy phép MIT).

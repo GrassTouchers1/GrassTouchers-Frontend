@@ -93,6 +93,20 @@ class TestComplianceAudit(unittest.TestCase):
             f"Phát hiện đường dẫn cứng cá nhân vi phạm quy chế PMNM:\n" + "\n".join(violations)
         )
 
+    def test_04_maplibre_vendor_assets_and_license(self):
+        """Kiểm tra tệp MapLibre GL JS mã nguồn mở cục bộ tồn tại và hợp lệ."""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        css_path = os.path.join(base_dir, "css", "maplibre-gl.css")
+        js_path = os.path.join(base_dir, "js", "vendor", "maplibre-gl.js")
+        self.assertTrue(os.path.isfile(css_path), "Tệp css/maplibre-gl.css phải tồn tại")
+        self.assertTrue(os.path.isfile(js_path), "Tệp js/vendor/maplibre-gl.js phải tồn tại")
+        with open(js_path, "r", encoding="utf-8", errors="ignore") as f:
+            header = f.read(1000)
+            self.assertTrue(
+                "MapLibre" in header or "BSD" in header or "maplibregl" in header,
+                "MapLibre GL JS phải chứa thông tin bản quyền mã nguồn mở"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
