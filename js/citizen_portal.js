@@ -467,6 +467,90 @@ const CitizenPortal = (function () {
   }
 
   /**
+   * Hiển thị thanh công cụ nổi điều khiển ghim vị trí (Tactical Floating Toolbar)
+   */
+  function showPickingToolbar() {
+    removePickingToolbar();
+    const toolbar = document.createElement('div');
+    toolbar.id = 'citizen-picking-toolbar';
+    toolbar.className = 'citizen-map-pin-toolbar';
+    toolbar.innerHTML = `
+      <div class="citizen-tb-content">
+        <div class="citizen-tb-title">
+          <span class="citizen-tb-dot"></span>
+          <span>Đang chọn tọa độ cứu hộ</span>
+        </div>
+        <div class="citizen-tb-actions">
+          <button type="button" class="citizen-tb-btn citizen-tb-gps" onclick="CitizenPortal.locateGPSWithAccuracy()" title="Tự động lấy toạ độ GPS">
+            <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
+            <span>GPS</span>
+          </button>
+          <button type="button" class="citizen-tb-btn citizen-tb-confirm" onclick="CitizenPortal.confirmCurrentLocation()" title="Xác nhận toạ độ này">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <span>Xác nhận</span>
+          </button>
+          <button type="button" class="citizen-tb-btn citizen-tb-cancel" onclick="CitizenPortal.cancelPickingLocation()" title="Hủy bỏ">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+      mapContainer.appendChild(toolbar);
+      if (window.lucide) lucide.createIcons({ parent: toolbar });
+    }
+  }
+
+  /**
+   * Xóa thanh công cụ nổi
+   */
+  function removePickingToolbar() {
+    const existing = document.getElementById('citizen-picking-toolbar');
+    if (existing) existing.remove();
+  }
+
+  /**
+   * Xác nhận nhanh vị trí hiện tại từ thanh công cụ
+   */
+  function confirmCurrentLocation() {
+    triggerHaptic([60, 40, 60]);
+    removePickingToolbar();
+    isPickingLocation = false;
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) mapContainer.style.cursor = '';
+    if (window.map) window.map.off('click', onMapClickForSOS);
+
+    const check = document.getElementById('citizen-confirm-location-check');
+    if (check) check.checked = true;
+    onLocationVerifiedChange(true);
+
+    showCitizenToast('✅ Đã xác nhận vị trí cứu hộ thành công!', 'success');
+
+    if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+      window.CommandUIController.switchView('cmd_citizen_preview');
+      if (typeof switchTab === 'function') switchTab('rescue');
+    }
+  }
+
+  /**
+   * Hủy chế độ chọn vị trí
+   */
+  function cancelPickingLocation() {
+    triggerHaptic([30]);
+    removePickingToolbar();
+    isPickingLocation = false;
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) mapContainer.style.cursor = '';
+    if (window.map) window.map.off('click', onMapClickForSOS);
+
+    if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+      window.CommandUIController.switchView('cmd_citizen_preview');
+      if (typeof switchTab === 'function') switchTab('rescue');
+    }
+  }
+
+  /**
    * Bắt đầu chế độ chọn vị trí SOS trên bản đồ Leaflet
    */
   function startPickingSOSLocation() {
@@ -477,8 +561,10 @@ const CitizenPortal = (function () {
       window.CommandUIController.switchView('cmd_dashboard');
     }
 
+    showPickingToolbar();
+
     if (window.map) {
-      window.map.once('click', onMapClickForSOS);
+      window.map.on('click', onMapClickForSOS);
       const mapContainer = document.getElementById('map');
       if (mapContainer) mapContainer.style.cursor = 'crosshair';
     }
@@ -488,21 +574,12 @@ const CitizenPortal = (function () {
    * Xử lý sự kiện nhấp bản đồ để chọn tọa độ
    */
   function onMapClickForSOS(e) {
-    isPickingLocation = false;
-    const mapContainer = document.getElementById('map');
-    if (mapContainer) mapContainer.style.cursor = '';
-
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
     triggerHaptic([40]);
     setSOSLocation(lat, lng);
 
-    showCitizenToast(`✅ Đã ghim vị trí: ${lat.toFixed(4)}, ${lng.toFixed(4)}! Vui lòng tích xác nhận.`, 'success');
-
-    if (window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
-      window.CommandUIController.switchView('cmd_citizen_preview');
-      if (typeof switchTab === 'function') switchTab('rescue');
-    }
+    showCitizenToast(`📍 Đã ghim: ${lat.toFixed(4)}, ${lng.toFixed(4)}. Bấm "Xác nhận" trên thanh công cụ để hoàn tất!`, 'info');
   }
 
   /**
@@ -611,6 +688,8 @@ const CitizenPortal = (function () {
     init,
     loadWeatherAndAlerts,
     startPickingSOSLocation,
+    confirmCurrentLocation,
+    cancelPickingLocation,
     setSOSLocation,
     locateGPSWithAccuracy,
     triggerHaptic,
