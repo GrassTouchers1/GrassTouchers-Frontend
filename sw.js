@@ -17,19 +17,17 @@
  */
 
 // Service Worker for NORTHSTAR (GrassTouchers Frontend)
-const CACHE_NAME = 'northstar-cache-v1';
+const CACHE_NAME = 'northstar-cache-v20261121_prod_v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './css/style.css',
+  './css/tailwind.css',
   './js/config.js',
-  './js/map_core.js',
-  './js/dashboard.js',
-  './js/storm_simulator.js',
-  './js/vehicle_sim.js',
-  './js/voice_warning.js',
-  './js/rescue_manager.js',
-  './js/demo_suite.js',
+  './js/maplibre_engine.js',
+  './js/command_ui_controller.js',
+  './js/provinces_weather_layer.js',
+  './data/vietnam_northern_provinces.geojson',
   './manifest.json'
 ];
 
