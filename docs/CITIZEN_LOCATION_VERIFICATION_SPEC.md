@@ -49,8 +49,16 @@ flowchart TD
 
 ### 3.1. Các thành phần giao diện (UI Components)
 * **Khung hiển thị tọa độ:** `#citizen-sos-coord-display` (Hiển thị kinh/vĩ độ định dạng 4 chữ số thập phân).
-* **Nút kích hoạt ghim bản đồ:** `#btn-citizen-pick-sos` (Chuyển con trỏ bản đồ sang dạng `crosshair` và lắng nghe sự kiện nhấp chuột).
+* **Nút lấy vị trí GPS tự động:** `#btn-citizen-gps-locate` (Kích hoạt Geolocation API độ chính xác cao).
+* **Chỉ số bán kính sai số GPS:** `#citizen-gps-accuracy` (Đo độ lệch vị trí thực tế `±Xm` kèm vòng tròn sai số Leaflet).
+* **Nút kích hoạt ghim bản đồ:** `#btn-citizen-pick-sos` (Chuyển con trỏ bản đồ sang dạng `crosshair` và bật thanh tác chiến).
+* **Thanh công cụ tác chiến nổi:** `#citizen-picking-toolbar` (Thanh glassmorphism nổi trên bản đồ gồm nút GPS, Xác nhận, Hủy).
 * **Ghim cứu hộ động:** `citizen-sos-custom-pin` (Marker dạng `draggable`, hỗ trợ kéo thả trực tiếp đến vị trí mong muốn).
+* **Vòng tròn sai số định vị:** `accuracyCircle` (Vòng tròn màu ngọc lục bảo biểu thị khoảng sai số xung quanh vị trí ghim).
+* **Phản hồi xúc giác (Haptic Feedback):**
+  * Chạm ghim / bắt đầu kéo: rung nhẹ 30ms.
+  * Thả ghim / di chuyển tọa độ: rung 3 nhịp [40ms, 30ms, 40ms].
+  * Xác nhận vị trí: rung xác thực [60ms, 40ms, 60ms].
 * **Nhãn trạng thái xác minh:** `#citizen-loc-verify-badge`
   * `Chưa xác nhận` (Vàng - `citizen-loc-unverified`)
   * `Đã xác nhận chính xác` (Xanh lá - `citizen-loc-verified`)
