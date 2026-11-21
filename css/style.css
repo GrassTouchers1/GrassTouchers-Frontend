@@ -779,11 +779,19 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
 
 /* Triệt tiêu thanh attribution mặc định của MapLibre để không bị chồng đè với HUD Bar */
 .maplibregl-ctrl-attrib,
-.maplibregl-ctrl-bottom-right {
+.maplibregl-ctrl-attrib *,
+.maplibregl-ctrl-bottom-right,
+.maplibregl-compact,
+.maplibregl-ctrl-attrib-button {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 /* ========================================================

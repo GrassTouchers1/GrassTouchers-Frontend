@@ -349,6 +349,20 @@ window.NorthStarMapLibre = (function () {
       // Thước đo tỉ lệ bản đồ (ScaleControl)
       mapInstance.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
+      // Triệt tiêu tuyệt đối thanh attribution của MapLibre để bảo toàn không gian hiển thị cho HUD Bar
+      function stripMapLibreAttribution() {
+        try {
+          const els = document.querySelectorAll('.maplibregl-ctrl-attrib, .maplibregl-ctrl-bottom-right, .maplibregl-compact, .maplibregl-ctrl-attrib-button');
+          els.forEach(el => el.remove());
+        } catch (e) {}
+      }
+      stripMapLibreAttribution();
+      mapInstance.on('load', stripMapLibreAttribution);
+      mapInstance.on('idle', stripMapLibreAttribution);
+      mapInstance.on('render', stripMapLibreAttribution);
+      const stripTimer = setInterval(stripMapLibreAttribution, 300);
+      setTimeout(() => clearInterval(stripTimer), 5000);
+
       mapInstance.on('load', () => {
         isInitialized = true;
         setupProvincesVectorLayer();
@@ -535,64 +549,69 @@ window.NorthStarMapLibre = (function () {
     const pm25 = weatherInfo ? weatherInfo.pm25 : 18;
 
     const html = `
-      <div class="p-3 font-sans space-y-2.5 text-slate-100 text-xs select-none min-w-[285px] max-w-[320px]">
+      <div style="padding: 14px; font-family: 'Be Vietnam Pro', 'Inter', -apple-system, sans-serif; min-width: 300px; max-width: 330px; background: #0b0f19; color: #f8fafc; border-radius: 14px; box-shadow: 0 20px 45px rgba(0,0,0,0.8), 0 0 20px rgba(14,165,233,0.15); border: 1px solid rgba(56,189,248,0.3); user-select: none;">
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-          <div class="font-black text-sm text-cyan-300 flex items-center gap-1.5">
-            <span>🏛️</span> <span>${provinceName}</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(51,65,85,0.7); padding-bottom: 10px; margin-bottom: 12px; padding-right: 24px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🏛️</span>
+            <span style="font-size: 15px; font-weight: 900; color: #38bdf8; letter-spacing: -0.01em;">${provinceName}</span>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-950/80 text-cyan-300 border border-cyan-700/70">Miền Bắc</span>
+          <span style="font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; background: rgba(8,47,73,0.9); color: #38bdf8; border: 1px solid rgba(14,165,233,0.6);">Miền Bắc</span>
         </div>
 
-        <!-- 4 Grid Indicators: C2 Dark Glass -->
-        <div class="grid grid-cols-2 gap-2 text-[11px]">
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
-            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Nhiệt độ:</span>
-            <span class="font-black text-amber-300 font-mono text-base mt-0.5 block leading-none">${temp}</span>
+        <!-- 4 Grid Indicators: C2 Dark Glass with Bulletproof Inline Colors -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px;">
+          <!-- Nhiệt độ -->
+          <div style="background: rgba(2,6,23,0.85); padding: 10px; border-radius: 10px; border: 1px solid rgba(30,41,59,0.9); display: flex; flex-direction: column; justify-content: space-between;">
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Nhiệt độ:</span>
+            <span style="color: #fde047; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 900; line-height: 1; display: block;">${temp}</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
-            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Lượng mưa 24h:</span>
-            <span class="font-black text-cyan-300 font-mono text-base mt-0.5 block leading-none">${rain}</span>
+          <!-- Lượng mưa 24h -->
+          <div style="background: rgba(2,6,23,0.85); padding: 10px; border-radius: 10px; border: 1px solid rgba(30,41,59,0.9); display: flex; flex-direction: column; justify-content: space-between;">
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Lượng mưa 24h:</span>
+            <span style="color: #38bdf8; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 900; line-height: 1; display: block;">${rain}</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
-            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Gió giật:</span>
-            <span class="font-black text-emerald-300 font-mono text-xs mt-0.5 block leading-tight">${wind}</span>
+          <!-- Gió giật -->
+          <div style="background: rgba(2,6,23,0.85); padding: 10px; border-radius: 10px; border: 1px solid rgba(30,41,59,0.9); display: flex; flex-direction: column; justify-content: space-between;">
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Gió giật:</span>
+            <span style="color: #34d399; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; font-weight: 800; line-height: 1.2; display: block;">${wind}</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
-            <span class="text-slate-400 block text-[9.5px] font-medium uppercase tracking-wider">Tình trạng:</span>
-            <span class="font-bold text-rose-400 text-xs mt-0.5 block truncate leading-tight" title="${status}">${status}</span>
+          <!-- Tình trạng -->
+          <div style="background: rgba(2,6,23,0.85); padding: 10px; border-radius: 10px; border: 1px solid rgba(30,41,59,0.9); display: flex; flex-direction: column; justify-content: space-between;">
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Tình trạng:</span>
+            <span style="color: #f87171; font-size: 12px; font-weight: 800; line-height: 1.2; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${status}">${status}</span>
           </div>
         </div>
 
         <!-- Chất lượng không khí OpenAQ -->
-        <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 flex items-center justify-between text-[10.5px]">
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs">🍃</span>
-            <span class="text-slate-300 font-medium">Không khí:</span>
-            <span class="font-mono font-bold text-emerald-300">AQI ${aqi}</span>
+        <div style="background: rgba(2,6,23,0.7); padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(30,41,59,0.8); display: flex; align-items: center; justify-content: space-between; font-size: 11px; margin-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px;">🍃</span>
+            <span style="color: #cbd5e1; font-weight: 600;">Không khí:</span>
+            <span style="font-family: monospace; font-weight: 900; color: #34d399;">AQI ${aqi}</span>
           </div>
-          <span class="text-[9.5px] font-mono text-slate-400">PM2.5: ${pm25} µg/m³</span>
+          <span style="font-size: 10px; font-family: monospace; color: #94a3b8;">PM2.5: ${pm25} µg/m³</span>
         </div>
 
         <!-- Action Buttons -->
-        <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
-          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.zoomToProvince('${provinceName}')" class="flex-1 py-1.5 px-2 rounded-lg bg-sky-600/30 hover:bg-sky-600 text-sky-200 hover:text-white border border-sky-500/40 text-[10.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+        <div style="display: flex; gap: 8px; border-top: 1px solid rgba(51,65,85,0.7); padding-top: 10px; margin-bottom: 8px;">
+          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.zoomToProvince('${provinceName}')" style="flex: 1; padding: 7px 10px; border-radius: 8px; background: rgba(2,132,199,0.25); color: #38bdf8; border: 1px solid rgba(14,165,233,0.5); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
             <span>🔍 Phóng to</span>
           </button>
-          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.focusProvinceRegion('${provinceName}')" class="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-500/40 text-[10.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+          <button type="button" onclick="window.NorthStarMapLibre && window.NorthStarMapLibre.focusProvinceRegion('${provinceName}')" style="flex: 1; padding: 7px 10px; border-radius: 8px; background: rgba(5,150,105,0.25); color: #34d399; border: 1px solid rgba(16,185,129,0.5); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
             <span>🎯 Trọng tâm</span>
           </button>
         </div>
 
         <!-- Footer -->
-        <div class="text-[9.5px] text-slate-400 italic pt-1 border-t border-slate-800/60 flex items-center justify-between">
+        <div style="font-size: 9.5px; color: #64748b; font-style: italic; border-top: 1px solid rgba(30,41,59,0.7); padding-top: 6px; display: flex; align-items: center; justify-content: space-between;">
           <span>Nguồn: Open-Meteo & OpenAQ</span>
-          <span class="text-cyan-400 font-mono font-bold">WebGL 3D</span>
+          <span style="color: #38bdf8; font-family: monospace; font-weight: 800;">WebGL 3D GPU</span>
         </div>
       </div>
     `;
 
-    const popup = new maplibregl.Popup({ offset: 12, maxWidth: '320px' })
+    const popup = new maplibregl.Popup({ offset: 12, maxWidth: '340px' })
       .setHTML(html);
     openActivePopup(popup, lngLat);
   }
@@ -1152,7 +1171,16 @@ window.NorthStarMapLibre = (function () {
     return aiPredictionsData;
   }
 
+  let isViewportAlertDismissed = false;
+
+  function dismissViewportAlert() {
+    isViewportAlertDismissed = true;
+    const alertEl = document.getElementById('maplibre-viewport-alert');
+    if (alertEl) alertEl.classList.add('hidden');
+  }
+
   function updateMapLibreViewportAlert() {
+    if (isViewportAlertDismissed) return;
     if (!mapInstance || !cachedRawFloodPoints.length) return;
     const alertEl = document.getElementById('maplibre-viewport-alert');
     const alertText = document.getElementById('maplibre-viewport-alert-text');
@@ -1175,17 +1203,19 @@ window.NorthStarMapLibre = (function () {
     const warningCount = inView.filter(p => (p.depth >= 5 && p.depth < 20) || p.status === 'warning').length;
     const safeCount = inView.filter(p => p.depth < 5 && p.status !== 'offline' && p.status !== 'no_data').length;
 
+    if (dangerCount === 0 && warningCount === 0) {
+      alertEl.classList.add('hidden');
+      return;
+    }
+
     alertEl.classList.remove('hidden');
 
     if (dangerCount > 0) {
-      if (alertDot) alertDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0 animate-ping';
-      alertText.innerHTML = `⚠️ Khung nhìn có <b>${inView.length} trạm</b>: <span class="text-rose-400 font-bold">${dangerCount} điểm nguy hiểm</span>, <span class="text-amber-400">${warningCount} cảnh báo</span>, <span class="text-emerald-400">${safeCount} an toàn</span>`;
-    } else if (warningCount > 0) {
-      if (alertDot) alertDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0 animate-pulse';
-      alertText.innerHTML = `Khung nhìn có <b>${inView.length} trạm</b>: <span class="text-amber-400 font-bold">${warningCount} điểm cảnh báo</span>, <span class="text-emerald-400">${safeCount} an toàn</span>`;
+      if (alertDot) alertDot.className = 'w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 animate-ping';
+      alertText.innerHTML = `⚠️ <b>${inView.length} trạm trong vùng</b>: <span class="text-rose-400 font-bold">${dangerCount} điểm ngập sâu</span>, <span class="text-amber-400 font-semibold">${warningCount} cảnh báo</span>`;
     } else {
-      if (alertDot) alertDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0';
-      alertText.innerHTML = `✓ Khu vực an toàn: <b>${inView.length} trạm</b> quan trắc ghi nhận không có ngập sâu.`;
+      if (alertDot) alertDot.className = 'w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 animate-pulse';
+      alertText.innerHTML = `<b>${inView.length} trạm trong vùng</b>: <span class="text-amber-400 font-semibold">${warningCount} điểm cảnh báo ngập nhẹ</span>`;
     }
   }
 
@@ -1199,88 +1229,76 @@ window.NorthStarMapLibre = (function () {
     const sourceDisplay = pt.source === 'sensor' || sensor_id ? `Cảm biến IoT (${sensor_id})` : 'Cảm biến quan trắc';
 
     let statusLabel = 'An toàn';
-    let badgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
     let centerBoxHtml = '';
 
     if (status === 'danger' || depthVal >= 20) {
       statusLabel = 'Nguy hiểm';
-      badgeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
       centerBoxHtml = `
-        <div class="bg-rose-950/40 rounded-xl p-2.5 border border-rose-800/50 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] uppercase tracking-wider font-bold text-rose-300 flex items-center gap-1">
-              🚨 Mực Nước Báo Động
-            </span>
-            <span class="text-[10px] font-mono text-rose-400 bg-rose-900/60 px-1.5 py-0.2 rounded border border-rose-700/60">Vượt ngưỡng</span>
+        <div style="background: #1a080d; border: 1px solid #991b1b; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #fca5a5; font-size: 10px; font-weight: 800; text-transform: uppercase;">🚨 Mực Nước Báo Động</span>
+            <span style="color: #f87171; background: #450a0a; border: 1px solid #7f1d1d; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-family: monospace; font-weight: 800;">Vượt ngưỡng</span>
           </div>
-          <div class="flex items-baseline justify-between mt-1">
-            <div class="flex items-baseline gap-1">
-              <span class="text-2xl font-black text-rose-400">${depthVal}</span>
-              <span class="text-xs font-bold text-slate-400">cm</span>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span style="color: #f87171; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+              <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
             </div>
-            <span class="text-[11px] text-slate-300">Ngưỡng: <b class="text-white">${threshold_cm} cm</b></span>
+            <span style="color: #cbd5e1; font-size: 11px;">Ngưỡng: <b style="color: #ffffff;">${threshold_cm} cm</b></span>
           </div>
-          <p class="text-[10px] text-rose-300/80 italic pt-0.5">Mực nước ngập sâu, phương tiện gầm thấp không thể qua lại.</p>
+          <p style="color: #fca5a5; font-size: 10px; font-style: italic; margin-top: 4px;">Mực nước ngập sâu, phương tiện gầm thấp không thể qua lại.</p>
         </div>
       `;
     } else if (status === 'warning' || depthVal >= 5) {
       statusLabel = 'Chú ý';
-      badgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
       centerBoxHtml = `
-        <div class="bg-amber-950/40 rounded-xl p-2.5 border border-amber-800/50 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] uppercase tracking-wider font-bold text-amber-300 flex items-center gap-1">
-              ⚠️ Mực Nước Cảnh Báo
-            </span>
-            <span class="text-[10px] font-mono text-amber-400 bg-amber-900/60 px-1.5 py-0.2 rounded border border-amber-700/60">Cần theo dõi</span>
+        <div style="background: #1a1204; border: 1px solid #92400e; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #fde68a; font-size: 10px; font-weight: 800; text-transform: uppercase;">⚠️ Mực Nước Cảnh Báo</span>
+            <span style="color: #fbbf24; background: #451a03; border: 1px solid #78350f; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-family: monospace; font-weight: 800;">Cần theo dõi</span>
           </div>
-          <div class="flex items-baseline justify-between mt-1">
-            <div class="flex items-baseline gap-1">
-              <span class="text-2xl font-black text-amber-400">${depthVal}</span>
-              <span class="text-xs font-bold text-slate-400">cm</span>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span style="color: #fbbf24; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+              <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
             </div>
-            <span class="text-[11px] text-slate-300">Ngưỡng: <b class="text-white">${threshold_cm} cm</b></span>
+            <span style="color: #cbd5e1; font-size: 11px;">Ngưỡng: <b style="color: #ffffff;">${threshold_cm} cm</b></span>
           </div>
-          <p class="text-[10px] text-amber-300/80 italic pt-0.5">Mực nước xấp xỉ ngưỡng, di chuyển cẩn thận.</p>
+          <p style="color: #fde68a; font-size: 10px; font-style: italic; margin-top: 4px;">Mực nước xấp xỉ ngưỡng, di chuyển cẩn thận.</p>
         </div>
       `;
     } else if (status === 'offline') {
       statusLabel = 'Mất kết nối';
-      badgeClass = 'bg-slate-700/50 text-slate-300 border-slate-600/50';
       centerBoxHtml = `
-        <div class="bg-slate-900/70 rounded-xl p-2.5 border border-slate-700/60 space-y-1">
-          <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">Trạng thái trạm</span>
-          <div class="flex items-center gap-1.5 text-slate-300 font-bold text-xs">
-            <span>📡 Cảm biến mất kết nối</span>
-          </div>
-          <p class="text-[10.5px] text-slate-400">Số đo gần nhất ghi nhận: <b class="text-amber-400">${depthVal} cm</b></p>
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+          <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase;">Trạng thái trạm</span>
+          <div style="color: #cbd5e1; font-weight: 700; font-size: 12px; margin-top: 4px;">📡 Cảm biến mất kết nối</div>
+          <p style="color: #94a3b8; font-size: 10.5px; margin-top: 4px;">Số đo gần nhất: <b style="color: #fbbf24;">${depthVal} cm</b></p>
         </div>
       `;
     } else if (status === 'stale') {
       statusLabel = 'Dữ liệu cũ';
-      badgeClass = 'bg-amber-900/40 text-amber-300 border-amber-700/50';
       centerBoxHtml = `
-        <div class="bg-amber-950/30 rounded-xl p-2.5 border border-amber-800/40 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] uppercase tracking-wider font-bold text-amber-300">🕒 Dữ liệu quá 24h</span>
-            <span class="text-xl font-black text-amber-400">${depthVal} cm</span>
+        <div style="background: #1a1204; border: 1px solid #78350f; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #fde68a; font-size: 10px; font-weight: 800;">🕒 Dữ liệu quá 24h</span>
+            <span style="color: #fbbf24; font-size: 18px; font-weight: 900; font-family: monospace;">${depthVal} cm</span>
           </div>
-          <p class="text-[10px] text-slate-400">Chưa nhận bản ghi đo mới nhất trong ngày.</p>
+          <p style="color: #94a3b8; font-size: 10px; margin-top: 4px;">Chưa nhận bản ghi đo mới nhất trong ngày.</p>
         </div>
       `;
     } else {
       statusLabel = 'An toàn';
-      badgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
       centerBoxHtml = `
-        <div class="bg-emerald-950/30 rounded-xl p-2.5 border border-emerald-800/40 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] uppercase tracking-wider font-bold text-emerald-300">✓ Tuyến Đường An Toàn</span>
-            <div class="flex items-baseline gap-1">
-              <span class="text-2xl font-black text-emerald-400">${depthVal}</span>
-              <span class="text-xs font-bold text-slate-400">cm</span>
+        <div style="background: #04190e; border: 1px solid #065f46; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6ee7b7; font-size: 10px; font-weight: 800; text-transform: uppercase;">✓ Tuyến Đường An Toàn</span>
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span style="color: #34d399; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+              <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
             </div>
           </div>
-          <div class="text-[10.5px] text-slate-300">Phương tiện lưu thông hoàn toàn bình thường.</div>
+          <p style="color: #a7f3d0; font-size: 10.5px; margin-top: 4px;">Phương tiện lưu thông hoàn toàn bình thường.</p>
         </div>
       `;
     }
@@ -1292,27 +1310,25 @@ window.NorthStarMapLibre = (function () {
       const f60 = aiPred.forecast_60m;
       const d30 = Math.round(f30.predicted_depth_cm);
       const d60 = Math.round(f60.predicted_depth_cm);
-      const r30Color = d30 >= 20 ? 'text-rose-400' : (d30 >= 5 ? 'text-amber-400' : 'text-emerald-400');
-      const r60Color = d60 >= 20 ? 'text-rose-400' : (d60 >= 5 ? 'text-amber-400' : 'text-emerald-400');
+      const r30Color = d30 >= 20 ? '#f87171' : (d30 >= 5 ? '#fbbf24' : '#34d399');
+      const r60Color = d60 >= 20 ? '#f87171' : (d60 >= 5 ? '#fbbf24' : '#34d399');
 
       aiHtml = `
-        <div class="bg-indigo-950/40 rounded-xl p-2 border border-indigo-700/40 space-y-1.5">
-          <div class="flex items-center justify-between border-b border-indigo-800/50 pb-1">
-            <span class="text-[10px] font-bold text-indigo-300 flex items-center gap-1 uppercase tracking-wider">
-              <span>🤖</span> DỰ BÁO NGẬP BẰNG AI
-            </span>
-            <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-700/60">Tự động</span>
+        <div style="background: #0b0f2a; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; padding: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(99,102,241,0.3); padding-bottom: 4px; margin-bottom: 6px;">
+            <span style="color: #a5b4fc; font-size: 10px; font-weight: 800; text-transform: uppercase;">🤖 DỰ BÁO NGẬP BẰNG AI</span>
+            <span style="color: #c7d2fe; font-size: 9px; font-family: monospace; background: rgba(67,56,202,0.6); padding: 1px 6px; border-radius: 4px;">Tự động</span>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-center pt-0.5">
-            <div class="bg-slate-900/80 rounded-lg p-1.5 border border-slate-700/60">
-              <span class="text-[9.5px] text-slate-400 block font-medium">Sau 30 phút</span>
-              <span class="text-base font-black ${r30Color}">${d30} cm</span>
-              <span class="text-[9px] block text-slate-400 mt-0.5">${d30 >= 20 ? 'Nguy hiểm' : d30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center;">
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+              <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 30 phút</span>
+              <span style="color: ${r30Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">${d30} cm</span>
+              <span style="color: #94a3b8; font-size: 9px; display: block;">${d30 >= 20 ? 'Nguy hiểm' : d30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
             </div>
-            <div class="bg-slate-900/80 rounded-lg p-1.5 border border-slate-700/60">
-              <span class="text-[9.5px] text-slate-400 block font-medium">Sau 60 phút</span>
-              <span class="text-base font-black ${r60Color}">${d60} cm</span>
-              <span class="text-[9px] block text-slate-400 mt-0.5">${d60 >= 20 ? 'Nguy hiểm' : d60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+              <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 60 phút</span>
+              <span style="color: ${r60Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">${d60} cm</span>
+              <span style="color: #94a3b8; font-size: 9px; display: block;">${d60 >= 20 ? 'Nguy hiểm' : d60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
             </div>
           </div>
         </div>
@@ -1320,27 +1336,25 @@ window.NorthStarMapLibre = (function () {
     } else {
       const est30 = Math.max(0, Math.round(depthVal + (pt.water_trend === 'rising' ? 3 : -2)));
       const est60 = Math.max(0, Math.round(depthVal + (pt.water_trend === 'rising' ? 5 : -4)));
-      const r30Color = est30 >= 20 ? 'text-rose-400' : (est30 >= 5 ? 'text-amber-400' : 'text-emerald-400');
-      const r60Color = est60 >= 20 ? 'text-rose-400' : (est60 >= 5 ? 'text-amber-400' : 'text-emerald-400');
+      const r30Color = est30 >= 20 ? '#f87171' : (est30 >= 5 ? '#fbbf24' : '#34d399');
+      const r60Color = est60 >= 20 ? '#f87171' : (est60 >= 5 ? '#fbbf24' : '#34d399');
 
       aiHtml = `
-        <div class="bg-indigo-950/40 rounded-xl p-2 border border-indigo-700/40 space-y-1.5">
-          <div class="flex items-center justify-between border-b border-indigo-800/50 pb-1">
-            <span class="text-[10px] font-bold text-indigo-300 flex items-center gap-1 uppercase tracking-wider">
-              <span>🤖</span> DỰ BÁO NGẬP BẰNG AI
-            </span>
-            <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-700/60">Hồi quy thủy văn</span>
+        <div style="background: #0b0f2a; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; padding: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(99,102,241,0.3); padding-bottom: 4px; margin-bottom: 6px;">
+            <span style="color: #a5b4fc; font-size: 10px; font-weight: 800; text-transform: uppercase;">🤖 DỰ BÁO NGẬP BẰNG AI</span>
+            <span style="color: #c7d2fe; font-size: 9px; font-family: monospace; background: rgba(67,56,202,0.6); padding: 1px 6px; border-radius: 4px;">Hồi quy</span>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-center pt-0.5">
-            <div class="bg-slate-900/80 rounded-lg p-1.5 border border-slate-700/60">
-              <span class="text-[9.5px] text-slate-400 block font-medium">Sau 30 phút</span>
-              <span class="text-base font-black ${r30Color}">~${est30} cm</span>
-              <span class="text-[9px] block text-slate-400 mt-0.5">${est30 >= 20 ? 'Nguy hiểm' : est30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center;">
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+              <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 30 phút</span>
+              <span style="color: ${r30Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">~${est30} cm</span>
+              <span style="color: #94a3b8; font-size: 9px; display: block;">${est30 >= 20 ? 'Nguy hiểm' : est30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
             </div>
-            <div class="bg-slate-900/80 rounded-lg p-1.5 border border-slate-700/60">
-              <span class="text-[9.5px] text-slate-400 block font-medium">Sau 60 phút</span>
-              <span class="text-base font-black ${r60Color}">~${est60} cm</span>
-              <span class="text-[9px] block text-slate-400 mt-0.5">${est60 >= 20 ? 'Nguy hiểm' : est60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+              <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 60 phút</span>
+              <span style="color: ${r60Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">~${est60} cm</span>
+              <span style="color: #94a3b8; font-size: 9px; display: block;">${est60 >= 20 ? 'Nguy hiểm' : est60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
             </div>
           </div>
         </div>
@@ -1352,18 +1366,18 @@ window.NorthStarMapLibre = (function () {
     const safeLocationName = location.replace(/'/g, "\\'");
 
     return `
-      <div class="space-y-2 p-1 min-w-[290px] max-w-[340px] text-slate-200">
+      <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(56,189,248,0.3); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 295px; max-width: 340px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
         <!-- Header -->
-        <div class="border-b border-slate-700/60 pb-1.5 pr-6">
-          <div class="flex items-start justify-between gap-1.5">
-            <h4 class="font-extrabold text-white text-[13px] leading-snug flex-1">🌊 ${location}</h4>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass} shrink-0">
+        <div style="border-bottom: 1px solid rgba(51,65,85,0.7); padding-bottom: 8px; margin-bottom: 8px; padding-right: 20px;">
+          <div style="display: flex; align-items: start; justify-content: space-between; gap: 6px;">
+            <h4 style="font-weight: 800; color: #ffffff; font-size: 13px; line-height: 1.3; margin: 0; flex: 1;">🌊 ${location}</h4>
+            <span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800; border: 1px solid ${status === 'danger' || depthVal >= 20 ? 'rgba(239,68,68,0.6)' : (status === 'warning' || depthVal >= 5 ? 'rgba(245,158,11,0.6)' : 'rgba(16,185,129,0.6)')}; background: ${status === 'danger' || depthVal >= 20 ? 'rgba(69,10,10,0.8)' : (status === 'warning' || depthVal >= 5 ? 'rgba(69,26,3,0.8)' : 'rgba(4,25,14,0.8)')}; color: ${status === 'danger' || depthVal >= 20 ? '#fca5a5' : (status === 'warning' || depthVal >= 5 ? '#fde68a' : '#6ee7b7')}; flex-shrink: 0;">
               ${statusLabel}
             </span>
           </div>
-          <div class="text-[11px] text-slate-400 flex items-center justify-between gap-1 mt-1">
-            <span class="text-cyan-400 font-semibold truncate">📍 ${districtName}</span>
-            <span class="font-mono text-slate-500 text-[10px] shrink-0">${pt.lat.toFixed(4)}°B, ${pt.lng.toFixed(4)}°Đ</span>
+          <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px;">
+            <span style="color: #38bdf8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 ${districtName}</span>
+            <span style="font-family: monospace; color: #64748b; font-size: 10px; flex-shrink: 0;">${pt.lat.toFixed(4)}°B, ${pt.lng.toFixed(4)}°Đ</span>
           </div>
         </div>
 
@@ -1371,18 +1385,18 @@ window.NorthStarMapLibre = (function () {
         ${centerBoxHtml}
 
         <!-- Thông tin cập nhật & nguồn -->
-        <div class="space-y-1 text-[10.5px] text-slate-300 border-b border-slate-800/80 pb-1.5">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-400">Nguồn trạm:</span>
-            <span class="font-mono text-cyan-300 font-bold">${sourceDisplay}</span>
+        <div style="font-size: 10.5px; color: #cbd5e1; border-bottom: 1px solid rgba(51,65,85,0.7); padding-bottom: 6px; margin-bottom: 6px; line-height: 1.6;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8;">Nguồn trạm:</span>
+            <span style="font-family: monospace; color: #38bdf8; font-weight: 700;">${sourceDisplay}</span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-400">Xu hướng:</span>
-            <span class="font-bold text-white">${trendText}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8;">Xu hướng:</span>
+            <span style="font-weight: 700; color: #ffffff;">${trendText}</span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-400">Dự kiến cạn:</span>
-            <span class="font-medium text-amber-300 font-mono">${drainEst}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8;">Dự kiến cạn:</span>
+            <span style="font-weight: 600; color: #fde047; font-family: monospace;">${drainEst}</span>
           </div>
         </div>
 
@@ -1390,11 +1404,11 @@ window.NorthStarMapLibre = (function () {
         ${aiHtml}
 
         <!-- 2 Nút thao tác lộ trình cứu hộ -->
-        <div class="pt-1.5 flex gap-2 border-t border-slate-800/80">
-          <button onclick="NorthStarMapLibre.setRouteOriginDestination('origin', ${pt.lng}, ${pt.lat}, '${safeLocationName}')" class="flex-1 py-1.5 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow cursor-pointer">
+        <div style="padding-top: 8px; display: flex; gap: 8px; border-top: 1px solid rgba(51,65,85,0.7);">
+          <button onclick="NorthStarMapLibre.setRouteOriginDestination('origin', ${pt.lng}, ${pt.lat}, '${safeLocationName}')" style="flex: 1; padding: 7px 10px; background: linear-gradient(135deg, #059669, #0d9488); color: #ffffff; border: 1px solid rgba(16,185,129,0.5); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
             <span>🟢</span> Điểm Đi
           </button>
-          <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${pt.lng}, ${pt.lat}, '${safeLocationName}')" class="flex-1 py-1.5 px-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow cursor-pointer">
+          <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${pt.lng}, ${pt.lat}, '${safeLocationName}')" style="flex: 1; padding: 7px 10px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #ffffff; border: 1px solid rgba(59,130,246,0.5); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
             <span>🏁</span> Điểm Đến
           </button>
         </div>
@@ -1466,29 +1480,26 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popupHtml = `
-          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
-            <div class="font-black text-rose-400 flex items-center gap-1.5 border-b border-rose-500/30 pb-1.5">
-              <span>🚨</span> YÊU CẦU CỨU HỘ KHẨN CẤP
+          <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(239,68,68,0.4); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 285px; max-width: 320px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(239,68,68,0.3); padding-bottom: 8px; margin-bottom: 8px; padding-right: 20px;">
+              <span style="font-weight: 900; color: #f87171; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span> SOS CỨU HỘ
+              </span>
+              <span style="font-size: 10px; font-family: monospace; color: #cbd5e1; background: rgba(30,41,59,0.8); border: 1px solid #475569; border-radius: 4px; padding: 1px 6px;">#${p.id || 'SOS'}</span>
             </div>
-            <div class="mt-1">
-              <h4 class="font-black text-sm text-white leading-snug">${p.contact_name || 'Nạn nhân'}</h4>
-              <div class="text-xs font-mono font-bold text-amber-300 mt-0.5">📞 ${p.phone || 'Chưa có SĐT'}</div>
+            <div style="margin-bottom: 8px;">
+              <h4 style="font-weight: 800; color: #ffffff; font-size: 13px; margin: 0; line-height: 1.3;">${p.contact_name || 'Nạn nhân'}</h4>
+              <div style="font-size: 12px; font-family: monospace; font-weight: 700; color: #fbbf24; margin-top: 2px;">📞 ${p.phone || 'Chưa có SĐT'}</div>
             </div>
-            <div class="space-y-1 bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px] mt-1.5">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Số người:</span>
-                <span class="font-bold text-white font-mono">${p.people_count} người</span>
-              </div>
-              ${p.has_elderly_or_children ? '<div class="text-[10px] text-amber-400 font-bold">⚠️ Có trẻ nhỏ / người già</div>' : ''}
-              <div class="flex justify-between">
-                <span class="text-slate-400">Mực nước:</span>
-                <span class="font-bold text-rose-400 font-mono">~${p.water_level_cm || 0} cm</span>
-              </div>
-              ${p.notes ? `<div class="italic text-[10.5px] text-slate-300 border-t border-slate-800 pt-1">"${p.notes}"</div>` : ''}
+            <div style="background: rgba(2,6,23,0.85); border: 1px solid rgba(51,65,85,0.7); border-radius: 10px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; line-height: 1.6;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Số người:</span><span style="font-weight: 800; color: #ffffff; font-family: monospace;">${p.people_count} người</span></div>
+              ${p.has_elderly_or_children ? '<div style="color: #fbbf24; font-weight: 800; font-size: 10.5px;">⚠️ Có trẻ nhỏ / người già</div>' : ''}
+              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Mực nước:</span><span style="font-weight: 800; color: #f87171; font-family: monospace;">~${p.water_level_cm || 0} cm</span></div>
+              ${p.notes ? `<div style="font-style: italic; color: #cbd5e1; font-size: 10.5px; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 4px; margin-top: 4px;">"${p.notes}"</div>` : ''}
             </div>
-            <div class="pt-2 border-t border-slate-800 flex justify-between items-center gap-2">
-              <a href="tel:${p.phone}" class="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black text-center no-underline shadow">📞 Gọi</a>
-              <button onclick="window.NorthStarRescue && window.NorthStarRescue.resolveSOS(${p.id})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-emerald-950 text-slate-200 hover:text-emerald-300 rounded-xl text-xs font-bold border border-slate-700 cursor-pointer">✓ Đã an toàn</button>
+            <div style="display: flex; gap: 8px; border-top: 1px solid rgba(51,65,85,0.7); padding-top: 8px;">
+              <a href="tel:${p.phone}" style="flex: 1; padding: 7px 10px; background: #059669; color: #ffffff; border-radius: 8px; font-size: 12px; font-weight: 800; text-align: center; text-decoration: none; display: block;">📞 Gọi cứu nạn</a>
+              <button onclick="window.NorthStarRescue && window.NorthStarRescue.resolveSOS(${p.id})" style="padding: 7px 10px; background: rgba(30,41,59,0.9); color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">✓ An toàn</button>
             </div>
           </div>
         `;
@@ -1791,12 +1802,12 @@ window.NorthStarMapLibre = (function () {
       `;
 
       const popupHtml = `
-        <div class="p-2.5 font-sans space-y-1 text-xs text-slate-100 select-none">
-          <div class="font-black text-amber-400 flex items-center gap-1 border-b border-amber-500/30 pb-1">
+        <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(245,158,11,0.5); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 260px; max-width: 300px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
+          <div style="font-weight: 900; color: #fbbf24; font-size: 13px; border-bottom: 1px solid rgba(245,158,11,0.3); padding-bottom: 6px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; padding-right: 20px;">
             <span>⚠️</span> ${h.name}
           </div>
-          <div class="text-[11px] text-slate-200">${h.desc}</div>
-          <div class="text-[10px] text-slate-400 font-mono">[${h.lat.toFixed(4)}, ${h.lng.toFixed(4)}]</div>
+          <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4; margin-bottom: 6px;">${h.desc}</div>
+          <div style="font-size: 10px; font-family: monospace; color: #64748b;">[${h.lat.toFixed(4)}, ${h.lng.toFixed(4)}]</div>
         </div>
       `;
 
@@ -1846,23 +1857,17 @@ window.NorthStarMapLibre = (function () {
         `;
 
         const popupHtml = `
-          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
-            <div class="font-black text-emerald-400 flex items-center gap-1.5 text-xs border-b border-emerald-500/30 pb-1 uppercase">
+          <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(16,185,129,0.4); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 275px; max-width: 320px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
+            <div style="font-weight: 900; color: #34d399; font-size: 13px; border-bottom: 1px solid rgba(16,185,129,0.3); padding-bottom: 6px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; padding-right: 20px;">
               <span>🛡️</span> ${p.name}
             </div>
-            <div class="text-[11px] text-slate-300">${p.address || ''}</div>
-            <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px]">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Sức chứa:</span>
-                <span class="font-bold text-white font-mono">${p.capacity || 500} người</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Còn trống:</span>
-                <span class="font-bold text-emerald-300 font-mono">${p.available_slots || 300} chỗ</span>
-              </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">${p.address || ''}</div>
+            <div style="background: rgba(2,6,23,0.85); border: 1px solid rgba(51,65,85,0.7); border-radius: 10px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; line-height: 1.6;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Sức chứa:</span><span style="font-weight: 800; color: #ffffff; font-family: monospace;">${p.capacity || 500} người</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Còn trống:</span><span style="font-weight: 800; color: #34d399; font-family: monospace;">${p.available_slots || 300} chỗ</span></div>
             </div>
-            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer">
-              <span>Sơ tán tới đây</span>
+            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" style="width: 100%; padding: 8px 12px; background: #059669; color: #ffffff; border: 1px solid #10b981; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+              <span>🛡️ Sơ tán tới đây</span>
             </button>
           </div>
         `;
@@ -2892,6 +2897,7 @@ window.NorthStarMapLibre = (function () {
       setupRainRadarVectorLayer();
       setupFloodCirclesVectorLayer();
       syncAllLayers();
+      document.querySelectorAll('.maplibregl-ctrl-attrib, .maplibregl-ctrl-bottom-right, .maplibregl-compact, .maplibregl-ctrl-attrib-button').forEach(el => el.remove());
 
       if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
         const names = {
@@ -2987,6 +2993,7 @@ window.NorthStarMapLibre = (function () {
     stopVehicleRouteAnimation,
     openStationPopupById,
     showProvinceWeatherPopup,
+    dismissViewportAlert,
     closeCurrentPopup,
     closePopup: closeCurrentPopup,
     renderHanoiDistrictMarkers,

@@ -47,7 +47,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=20261119_v20" />
+  <link rel="stylesheet" href="css/style.css?v=20261121_prod_v2" />
   <style>
     /* Command Interface Specific Overrides */
     .cmd-nav-item {
@@ -77,96 +77,72 @@
       pointer-events: auto !important;
       user-select: none;
     }
-    /* Giao diện Popup MapLibre GL Tác Chiến (Chuẩn C2 Dark Glass - Đồng bộ 100% với Leaflet) */
+    /* Giao diện Popup MapLibre GL Tác Chiến (Chuẩn C2 Dark Glass - Đồng bộ 100% với WebGL 3D) */
     .maplibregl-popup {
       z-index: 1000 !important;
       max-width: 360px !important;
+      filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.85));
     }
     .maplibregl-popup-content {
-      background: rgba(15, 23, 42, 0.96) !important;
-      backdrop-filter: blur(14px) !important;
-      -webkit-backdrop-filter: blur(14px) !important;
-      border: 1px solid rgba(51, 65, 85, 0.9) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      border: none !important;
       border-radius: 14px !important;
-      box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
-      color: #f1f5f9 !important;
-      padding: 12px 14px !important;
+      color: #f8fafc !important;
+      padding: 0 !important;
       font-family: inherit !important;
     }
-    .maplibregl-popup-content h1,
-    .maplibregl-popup-content h2,
-    .maplibregl-popup-content h3,
-    .maplibregl-popup-content h4,
-    .maplibregl-popup-content h5,
-    .maplibregl-popup-content .text-slate-900,
-    .maplibregl-popup-content .text-slate-800,
-    .maplibregl-popup-content [class*="text-slate-900"],
-    .maplibregl-popup-content [class*="text-slate-800"] {
-      color: #ffffff !important;
-    }
-    .maplibregl-popup-content .text-slate-700,
-    .maplibregl-popup-content .text-slate-600,
-    .maplibregl-popup-content .text-slate-500,
-    .maplibregl-popup-content [class*="text-slate-700"],
-    .maplibregl-popup-content [class*="text-slate-600"],
-    .maplibregl-popup-content [class*="text-slate-500"] {
-      color: #cbd5e1 !important;
-    }
-    .maplibregl-popup-content .bg-slate-50,
-    .maplibregl-popup-content .bg-slate-100,
-    .maplibregl-popup-content .bg-white,
-    .maplibregl-popup-content .bg-blue-50,
-    .maplibregl-popup-content .bg-amber-50,
-    .maplibregl-popup-content .bg-rose-50,
-    .maplibregl-popup-content [class*="bg-slate-50"],
-    .maplibregl-popup-content [class*="bg-white"],
-    .maplibregl-popup-content [class*="bg-blue-50"],
-    .maplibregl-popup-content [class*="bg-amber-50"],
-    .maplibregl-popup-content [class*="bg-rose-50"] {
-      background-color: rgba(2, 6, 23, 0.85) !important;
-      border-color: rgba(51, 65, 85, 0.85) !important;
-      color: #f8fafc !important;
-    }
-    .maplibregl-popup-content .border-slate-100,
-    .maplibregl-popup-content .border-slate-200,
-    .maplibregl-popup-content .border-blue-200,
-    .maplibregl-popup-content .border-amber-200,
-    .maplibregl-popup-content .border-rose-200,
-    .maplibregl-popup-content [class*="border-slate-100"],
-    .maplibregl-popup-content [class*="border-slate-200"] {
-      border-color: rgba(51, 65, 85, 0.85) !important;
-    }
-    .maplibregl-popup-tip {
-      border-top-color: rgba(15, 23, 42, 0.96) !important;
-      border-bottom-color: rgba(15, 23, 42, 0.96) !important;
-    }
-    .maplibregl-popup-anchor-top .maplibregl-popup-tip {
-      border-bottom-color: rgba(15, 23, 42, 0.96) !important;
-    }
-    .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-      border-top-color: rgba(15, 23, 42, 0.96) !important;
-    }
-    .maplibregl-popup-anchor-left .maplibregl-popup-tip {
-      border-right-color: rgba(15, 23, 42, 0.96) !important;
-    }
-    .maplibregl-popup-anchor-right .maplibregl-popup-tip {
-      border-left-color: rgba(15, 23, 42, 0.96) !important;
-    }
     .maplibregl-popup-close-button {
-      color: #94a3b8 !important;
+      color: #cbd5e1 !important;
       font-size: 16px !important;
-      font-weight: 700 !important;
+      font-weight: 800 !important;
       padding: 4px 8px !important;
-      right: 6px !important;
-      top: 6px !important;
+      right: 8px !important;
+      top: 8px !important;
       border-radius: 8px !important;
+      background: rgba(30, 41, 59, 0.7) !important;
+      border: 1px solid rgba(71, 85, 105, 0.4) !important;
       transition: all 0.2s ease !important;
       line-height: 1 !important;
       outline: none !important;
+      z-index: 30 !important;
     }
     .maplibregl-popup-close-button:hover {
       color: #ffffff !important;
-      background: rgba(239, 68, 68, 0.3) !important;
+      background: #ef4444 !important;
+      border-color: #f87171 !important;
+    }
+    .maplibregl-popup-tip {
+      border-top-color: #0b0f19 !important;
+      border-bottom-color: #0b0f19 !important;
+    }
+    .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+      border-bottom-color: #0b0f19 !important;
+    }
+    .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+      border-top-color: #0b0f19 !important;
+    }
+    .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+      border-right-color: #0b0f19 !important;
+    }
+    .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+      border-left-color: #0b0f19 !important;
+    }
+    /* Triệt tiêu 100% thanh attribution nổi của MapLibre để bảo toàn không gian hiển thị cho HUD Bar */
+    .maplibregl-ctrl-attrib,
+    .maplibregl-ctrl-attrib *,
+    .maplibregl-ctrl-bottom-right,
+    .maplibregl-compact,
+    .maplibregl-ctrl-attrib-button {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
     }
     .animated-marker-pulse {
       animation: markerPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
@@ -581,7 +557,7 @@
               <div class="flex-1 truncate text-[11px]" id="maplibre-viewport-alert-text">
                 Đang phân tích dữ liệu quan trắc trong khung nhìn...
               </div>
-              <button onclick="document.getElementById('maplibre-viewport-alert').classList.add('hidden')" class="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer transition shrink-0 text-xs ml-1" title="Đóng thông báo">
+              <button onclick="document.getElementById('maplibre-viewport-alert').classList.add('hidden'); window.NorthStarMapLibre && window.NorthStarMapLibre.dismissViewportAlert()" class="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer transition shrink-0 text-xs ml-1" title="Đóng thông báo">
                 ✕
               </button>
             </div>
@@ -3215,20 +3191,20 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261118_v17"></script>
-  <script src="js/offline_sync_manager.js?v=20261118_v17"></script>
-  <script src="js/command_ui_controller.js?v=20261120_clean_zen_v3"></script>
-  <script src="js/coordinator_command.js?v=20261118_v17"></script>
-  <script src="js/map_core.js?v=20261119_v25"></script>
-  <script src="js/provinces_weather_layer.js?v=20261118_v18"></script>
-  <script src="js/rescue_manager.js?v=20261119_v25"></script>
-  <script src="js/advanced_modules.js?v=20261118_v17"></script>
-  <script src="js/storm_simulator.js?v=20261118_v17"></script>
-  <script src="js/voice_sos.js?v=20261118_v17"></script>
+  <script src="js/config.js?v=20261121_prod_v2"></script>
+  <script src="js/offline_sync_manager.js?v=20261121_prod_v2"></script>
+  <script src="js/command_ui_controller.js?v=20261121_prod_v2"></script>
+  <script src="js/coordinator_command.js?v=20261121_prod_v2"></script>
+  <script src="js/map_core.js?v=20261121_prod_v2"></script>
+  <script src="js/provinces_weather_layer.js?v=20261121_prod_v2"></script>
+  <script src="js/rescue_manager.js?v=20261121_prod_v2"></script>
+  <script src="js/advanced_modules.js?v=20261121_prod_v2"></script>
+  <script src="js/storm_simulator.js?v=20261121_prod_v2"></script>
+  <script src="js/voice_sos.js?v=20261121_prod_v2"></script>
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261120_clean_zen_v3"></script>
+  <script src="js/maplibre_engine.js?v=20261121_prod_v2"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>
