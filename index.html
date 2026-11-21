@@ -47,7 +47,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=20261121_prod_v2" />
+  <link rel="stylesheet" href="css/style.css?v=20261121_prod_v3" />
   <style>
     /* Command Interface Specific Overrides */
     .cmd-nav-item {
@@ -595,14 +595,48 @@
                   <button id="ml-pitch-60" onclick="NorthStarMapLibre.setPitch(60)" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-bold cursor-pointer transition">60°</button>
                 </div>
 
-                <span class="w-px h-4 bg-slate-700/60 hidden xl:inline"></span>
+                <span class="w-px h-4 bg-slate-700/60 hidden sm:inline"></span>
 
-                <!-- Regional Focus Jump -->
-                <div class="hidden xl:flex items-center gap-0.5 bg-slate-900/80 p-0.5 rounded-xl border border-slate-800">
-                  <button id="ml-jump-all" onclick="NorthStarMapLibre.jumpToRegion('all')" class="px-2 py-1 bg-cyan-600 text-white rounded-lg text-[9.5px] font-bold cursor-pointer transition shadow" title="Toàn Miền Bắc">🌐 Miền Bắc</button>
-                  <button id="ml-jump-hanoi" onclick="NorthStarMapLibre.jumpToRegion('hanoi')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Thủ Đô Hà Nội">🏛️ HN</button>
-                  <button id="ml-jump-taybac" onclick="NorthStarMapLibre.jumpToRegion('taybac')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Tây Bắc (Lào Cai, Yên Bái)">⛰️ Tây Bắc</button>
-                  <button id="ml-jump-quangninh" onclick="NorthStarMapLibre.jumpToRegion('quangninh')" class="px-2 py-1 bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg text-[9.5px] font-medium cursor-pointer transition" title="Quảng Ninh - Hải Phòng">🏖️ Quảng Ninh</button>
+                <!-- Regional Focus Dropdown (Đủ 26 Tỉnh Thành Miền Bắc) -->
+                <div class="flex items-center bg-slate-900/90 rounded-xl border border-slate-700/80 hover:border-cyan-500/70 transition shadow-inner px-2 py-0.5">
+                  <span class="text-xs mr-1 select-none">📍</span>
+                  <select id="ml-province-selector" onchange="NorthStarMapLibre.onProvinceDropdownChange(this.value)" class="bg-transparent text-cyan-300 font-bold text-[11px] focus:outline-none cursor-pointer pr-1 py-1 max-w-[150px] sm:max-w-[190px] truncate" title="Chọn tiêu điểm tỉnh thành miền Bắc">
+                    <option value="all" class="bg-slate-900 text-cyan-300 font-bold">🌐 Toàn Miền Bắc (26 Tỉnh)</option>
+                    <optgroup label="── Đồng Bằng Sông Hồng & Duyên Hải ──" class="bg-slate-950 text-slate-400 font-semibold text-[10px]">
+                      <option value="Hà Nội" class="bg-slate-900 text-white font-medium">🏛️ Hà Nội (Thủ Đô)</option>
+                      <option value="Hải Phòng" class="bg-slate-900 text-white font-medium">⚓ Hải Phòng</option>
+                      <option value="Quảng Ninh" class="bg-slate-900 text-white font-medium">🌊 Quảng Ninh</option>
+                      <option value="Bắc Ninh" class="bg-slate-900 text-white font-medium">🏭 Bắc Ninh</option>
+                      <option value="Hải Dương" class="bg-slate-900 text-white font-medium">🌾 Hải Dương</option>
+                      <option value="Hưng Yên" class="bg-slate-900 text-white font-medium">🍊 Hưng Yên</option>
+                      <option value="Vĩnh Phúc" class="bg-slate-900 text-white font-medium">🏔️ Vĩnh Phúc</option>
+                      <option value="Hà Nam" class="bg-slate-900 text-white font-medium">🌾 Hà Nam</option>
+                      <option value="Nam Định" class="bg-slate-900 text-white font-medium">⛪ Nam Định</option>
+                      <option value="Thái Bình" class="bg-slate-900 text-white font-medium">🌾 Thái Bình</option>
+                      <option value="Ninh Bình" class="bg-slate-900 text-white font-medium">🛶 Ninh Bình</option>
+                    </optgroup>
+                    <optgroup label="── Đông Bắc Bộ & Trung Du ──" class="bg-slate-950 text-slate-400 font-semibold text-[10px]">
+                      <option value="Thái Nguyên" class="bg-slate-900 text-white font-medium">🍵 Thái Nguyên</option>
+                      <option value="Bắc Kạn" class="bg-slate-900 text-white font-medium">🌲 Bắc Kạn</option>
+                      <option value="Cao Bằng" class="bg-slate-900 text-white font-medium">🏞️ Cao Bằng</option>
+                      <option value="Lạng Sơn" class="bg-slate-900 text-white font-medium">⛰️ Lạng Sơn</option>
+                      <option value="Bắc Giang" class="bg-slate-900 text-white font-medium">🌳 Bắc Giang</option>
+                      <option value="Phú Thọ" class="bg-slate-900 text-white font-medium">👑 Phú Thọ</option>
+                      <option value="Tuyên Quang" class="bg-slate-900 text-white font-medium">🪵 Tuyên Quang</option>
+                      <option value="Hà Giang" class="bg-slate-900 text-white font-medium">🌸 Hà Giang</option>
+                    </optgroup>
+                    <optgroup label="── Tây Bắc Bộ ──" class="bg-slate-950 text-slate-400 font-semibold text-[10px]">
+                      <option value="Lào Cai" class="bg-slate-900 text-white font-medium">⛰️ Lào Cai (Làng Nủ, Sa Pa)</option>
+                      <option value="Yên Bái" class="bg-slate-900 text-white font-medium">🌾 Yên Bái (Sông Thao)</option>
+                      <option value="Hòa Bình" class="bg-slate-900 text-white font-medium">💧 Hòa Bình</option>
+                      <option value="Sơn La" class="bg-slate-900 text-white font-medium">🌄 Sơn La</option>
+                      <option value="Điện Biên" class="bg-slate-900 text-white font-medium">🎖️ Điện Biên</option>
+                      <option value="Lai Châu" class="bg-slate-900 text-white font-medium">🌿 Lai Châu</option>
+                    </optgroup>
+                    <optgroup label="── Bắc Trung Bộ ──" class="bg-slate-950 text-slate-400 font-semibold text-[10px]">
+                      <option value="Thanh Hóa" class="bg-slate-900 text-white font-medium">🏖️ Thanh Hóa</option>
+                    </optgroup>
+                  </select>
                 </div>
               </div>
 
@@ -3191,20 +3225,20 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261121_prod_v2"></script>
-  <script src="js/offline_sync_manager.js?v=20261121_prod_v2"></script>
-  <script src="js/command_ui_controller.js?v=20261121_prod_v2"></script>
-  <script src="js/coordinator_command.js?v=20261121_prod_v2"></script>
-  <script src="js/map_core.js?v=20261121_prod_v2"></script>
-  <script src="js/provinces_weather_layer.js?v=20261121_prod_v2"></script>
-  <script src="js/rescue_manager.js?v=20261121_prod_v2"></script>
-  <script src="js/advanced_modules.js?v=20261121_prod_v2"></script>
-  <script src="js/storm_simulator.js?v=20261121_prod_v2"></script>
-  <script src="js/voice_sos.js?v=20261121_prod_v2"></script>
+  <script src="js/config.js?v=20261121_prod_v3"></script>
+  <script src="js/offline_sync_manager.js?v=20261121_prod_v3"></script>
+  <script src="js/command_ui_controller.js?v=20261121_prod_v3"></script>
+  <script src="js/coordinator_command.js?v=20261121_prod_v3"></script>
+  <script src="js/map_core.js?v=20261121_prod_v3"></script>
+  <script src="js/provinces_weather_layer.js?v=20261121_prod_v3"></script>
+  <script src="js/rescue_manager.js?v=20261121_prod_v3"></script>
+  <script src="js/advanced_modules.js?v=20261121_prod_v3"></script>
+  <script src="js/storm_simulator.js?v=20261121_prod_v3"></script>
+  <script src="js/voice_sos.js?v=20261121_prod_v3"></script>
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261121_prod_v2"></script>
+  <script src="js/maplibre_engine.js?v=20261121_prod_v3"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>

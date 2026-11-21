@@ -614,6 +614,16 @@ window.NorthStarMapLibre = (function () {
     const popup = new maplibregl.Popup({ offset: 12, maxWidth: '340px' })
       .setHTML(html);
     openActivePopup(popup, lngLat);
+
+    // Đồng bộ giá trị Dropdown Chọn Tỉnh Thành Miền Bắc
+    try {
+      const provSel = document.getElementById('ml-province-selector');
+      if (provSel && provinceName && provSel.value !== provinceName) {
+        if (Array.from(provSel.options).some(o => o.value === provinceName)) {
+          provSel.value = provinceName;
+        }
+      }
+    } catch (e) {}
   }
 
   /**
@@ -2810,6 +2820,75 @@ window.NorthStarMapLibre = (function () {
         }
       }
     });
+
+    if (regionKey === 'all') {
+      const provSel = document.getElementById('ml-province-selector');
+      if (provSel) provSel.value = 'all';
+    }
+  }
+
+  // Tọa độ & mức phóng tối ưu cho 26 Tỉnh Thành Miền Bắc
+  const NORTHERN_PROVINCE_TARGETS = {
+    'Hà Nội': { center: [105.8542, 21.0285], zoom: 11.2 },
+    'Quảng Ninh': { center: [107.1800, 21.1500], zoom: 10.0 },
+    'Hải Phòng': { center: [106.6800, 20.8600], zoom: 10.8 },
+    'Hải Dương': { center: [106.3330, 20.9409], zoom: 10.5 },
+    'Hưng Yên': { center: [106.0511, 20.6464], zoom: 10.5 },
+    'Bắc Ninh': { center: [106.0700, 21.1800], zoom: 11.0 },
+    'Bắc Giang': { center: [106.2000, 21.2800], zoom: 10.2 },
+    'Vĩnh Phúc': { center: [105.5900, 21.3100], zoom: 10.5 },
+    'Phú Thọ': { center: [105.2200, 21.3200], zoom: 10.0 },
+    'Thái Nguyên': { center: [105.8450, 21.5940], zoom: 10.5 },
+    'Bắc Kạn': { center: [105.8300, 22.1400], zoom: 10.2 },
+    'Cao Bằng': { center: [106.2600, 22.6700], zoom: 10.0 },
+    'Lạng Sơn': { center: [106.7600, 21.8500], zoom: 10.2 },
+    'Hà Giang': { center: [104.9800, 22.8200], zoom: 9.8 },
+    'Tuyên Quang': { center: [105.2200, 21.8200], zoom: 10.0 },
+    'Lào Cai': { center: [103.9700, 22.4800], zoom: 10.0 },
+    'Yên Bái': { center: [104.8700, 21.7200], zoom: 10.0 },
+    'Hòa Bình': { center: [105.3400, 20.8100], zoom: 10.0 },
+    'Sơn La': { center: [103.9148, 21.3283], zoom: 9.6 },
+    'Điện Biên': { center: [103.0188, 21.3857], zoom: 9.6 },
+    'Lai Châu': { center: [103.4582, 22.3964], zoom: 9.6 },
+    'Hà Nam': { center: [105.9200, 20.5400], zoom: 10.8 },
+    'Nam Định': { center: [106.1700, 20.4300], zoom: 10.6 },
+    'Thái Bình': { center: [106.3400, 20.4500], zoom: 10.6 },
+    'Ninh Bình': { center: [105.9700, 20.2500], zoom: 10.6 },
+    'Thanh Hóa': { center: [105.7852, 19.8067], zoom: 9.8 }
+  };
+
+  /**
+   * BỘ CHỌN TIÊU ĐIỂM TỈNH THÀNH (DROPDOWN SELECTOR ĐỦ 26 TỈNH MIỀN BẮC)
+   */
+  function onProvinceDropdownChange(val) {
+    if (!mapInstance) return;
+    if (!val || val === 'all') {
+      jumpToRegion('all');
+      closeCurrentPopup();
+      const provSel = document.getElementById('ml-province-selector');
+      if (provSel) provSel.value = 'all';
+      return;
+    }
+
+    const tgt = NORTHERN_PROVINCE_TARGETS[val] || (window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.metadata && window.ProvinceWeatherLayer.metadata[val]);
+    if (tgt) {
+      const center = tgt.center || [tgt.lng, tgt.lat];
+      const zoom = tgt.zoom || 10.2;
+      mapInstance.flyTo({
+        center: center,
+        zoom: zoom,
+        pitch: currentPitch > 20 ? currentPitch : 0,
+        bearing: currentBearing,
+        duration: 1200,
+        essential: true
+      });
+      setTimeout(() => {
+        showProvinceWeatherPopup(center, val);
+      }, 650);
+
+      const provSel = document.getElementById('ml-province-selector');
+      if (provSel && provSel.value !== val) provSel.value = val;
+    }
   }
 
   /**
@@ -2993,6 +3072,7 @@ window.NorthStarMapLibre = (function () {
     stopVehicleRouteAnimation,
     openStationPopupById,
     showProvinceWeatherPopup,
+    onProvinceDropdownChange,
     dismissViewportAlert,
     closeCurrentPopup,
     closePopup: closeCurrentPopup,
