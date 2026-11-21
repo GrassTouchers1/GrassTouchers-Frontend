@@ -728,7 +728,6 @@ const NorthStarRescue = (function () {
     if (resultCard) resultCard.classList.add('hidden');
     if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
   }
-  }
 
   async function resolveSOS(sosId) {
     if (!confirm('Xác nhận nạn nhân này đã được cứu hộ an toàn?')) return;
