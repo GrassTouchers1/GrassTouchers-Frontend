@@ -511,16 +511,18 @@
           attributionControl: true
         }).setView([21.0285, 105.8030], 13);
 
-        // Sử dụng CartoDB Voyager mượt mà, ổn định cao và fallback tự động sang OSM France
-        const baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // Sử dụng OpenStreetMap France (CDN châu Âu tốc độ cao, không cần API key, không bị watermark)
+        const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          subdomains: ['a', 'b', 'c'],
+          attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
+        // Fallback tự động sang Esri World Topo Map nếu đường truyền quốc tế trục trặc
         baseLayer.on('tileerror', function(error) {
-          if (error && error.tile && error.coords) {
-            error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${error.coords.z}/${error.coords.x}/${error.coords.y}.png`;
+          if (error && error.tile && error.coords && !error.tile.dataset.fallbackTried) {
+            error.tile.dataset.fallbackTried = 'true';
+            error.tile.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${error.coords.z}/${error.coords.y}/${error.coords.x}`;
           }
         });
 
