@@ -600,11 +600,21 @@
                 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
               ],
               tileSize: 256,
+              maxzoom: 16,
               attribution: '&copy; Esri &copy; HERE, Garmin'
+            },
+            'esri-dark-ref': {
+              type: 'raster',
+              tiles: [
+                'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+              ],
+              tileSize: 256,
+              maxzoom: 16
             }
           },
           layers: [
-            { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 19 }
+            { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 22 },
+            { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 22 }
           ]
         },
         topo: {
@@ -616,11 +626,12 @@
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
               ],
               tileSize: 256,
+              maxzoom: 18,
               attribution: '&copy; Esri &copy; OpenStreetMap contributors'
             }
           },
           layers: [
-            { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 19 }
+            { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 22 }
           ]
         },
         satellite: {
@@ -632,11 +643,21 @@
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
               ],
               tileSize: 256,
+              maxzoom: 19,
               attribution: '&copy; Esri, Maxar, Earthstar Geographics'
+            },
+            'esri-sat-labels': {
+              type: 'raster',
+              tiles: [
+                'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+              ],
+              tileSize: 256,
+              maxzoom: 19
             }
           },
           layers: [
-            { id: 'base-sat-layer', type: 'raster', source: 'esri-sat', minzoom: 0, maxzoom: 19 }
+            { id: 'base-sat-layer', type: 'raster', source: 'esri-sat', minzoom: 0, maxzoom: 22 },
+            { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 22 }
           ]
         }
       };
@@ -657,6 +678,8 @@
           style: CITIZEN_BASEMAPS.dark,
           center: [105.8030, 21.0285],
           zoom: 13,
+          minZoom: 6.0,
+          maxZoom: 18.0,
           pitch: 0,
           bearing: 0,
           antialias: true,
