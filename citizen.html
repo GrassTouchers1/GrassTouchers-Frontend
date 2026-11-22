@@ -136,60 +136,13 @@
   <!-- ========================================================================= -->
   <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-    <!-- 2.1. BẢN ĐỒ TÁC CHIẾN DÂN SỰ (MAPLIBRE 3D ENGINE) -->
-    <div id="citizen-map-wrapper" class="w-full md:w-3/5 lg:w-[68%] h-[48vh] sm:h-[55vh] md:h-full relative shrink-0 transition-all duration-300">
-      <div id="map" class="w-full h-full z-0 bg-slate-950"></div>
-
-      <!-- Thanh chọn Lớp Bản Đồ Tác Chiến (Ban Ngày / Ban Đêm / Địa Hình / Vệ Tinh) -->
-      <div class="absolute top-3 left-3 z-10 flex items-center gap-1 p-1 bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-xl max-w-[calc(100%-80px)] overflow-x-auto no-scrollbar">
-        <button onclick="CitizenPortalApp.switchBaseMap('day')" id="citizen-btn-base-day" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Bản đồ đường phố ban ngày sáng rõ">
-          <i data-lucide="sun" class="w-3 h-3 text-amber-400"></i>
-          <span>Ban Ngày</span>
-        </button>
-        <button onclick="CitizenPortalApp.switchBaseMap('dark')" id="citizen-btn-base-dark" class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0" title="Bản đồ ban đêm nền tối dịu mắt">
-          <i data-lucide="moon" class="w-3 h-3"></i>
-          <span>Ban Đêm</span>
-        </button>
-        <button onclick="CitizenPortalApp.switchBaseMap('topo')" id="citizen-btn-base-topo" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Bản đồ địa hình cao độ vùng lũ">
-          <i data-lucide="map" class="w-3 h-3 text-emerald-400"></i>
-          <span>Địa Hình</span>
-        </button>
-        <button onclick="CitizenPortalApp.switchBaseMap('satellite')" id="citizen-btn-base-sat" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Ảnh chụp vệ tinh quang học thực địa">
-          <i data-lucide="satellite" class="w-3 h-3 text-sky-400"></i>
-          <span>Vệ Tinh</span>
-        </button>
-      </div>
-
-      <!-- Nút mở rộng/thu gọn toàn màn hình bản đồ -->
-      <div class="absolute top-3 right-12 z-10 hidden sm:flex items-center">
-        <button onclick="CitizenPortalApp.toggleMapMaximize()" class="p-2 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-xl transition cursor-pointer active:scale-95" title="Mở rộng / Thu nhỏ bản đồ toàn màn hình">
-          <i data-lucide="maximize-2" id="citizen-map-max-icon" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- Lớp phủ điều khiển nhanh trên bản đồ: Vị trí của tôi -->
-      <div class="absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-auto">
-        <button onclick="CitizenPortal.locateGPSWithAccuracy()" class="p-2.5 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl transition cursor-pointer active:scale-95 flex items-center gap-1.5 text-xs font-bold" title="Định vị GPS vị trí của tôi">
-          <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
-          <span class="hidden sm:inline text-[11px] text-slate-200">Vị trí của tôi</span>
-        </button>
-      </div>
-
-      <!-- Chú giải bản đồ nhanh C2 Glassmorphism -->
-      <div class="absolute bottom-3 right-3 z-10 hidden sm:flex items-center gap-3 px-3 py-1.5 bg-slate-950/85 border border-slate-800/90 backdrop-blur-xl rounded-2xl text-[11px] font-medium text-slate-300 shadow-xl">
-        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]"></span> Điểm ngập sâu</span>
-        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span> Báo ngập dân sự</span>
-        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span> Trạm sơ tán</span>
-      </div>
-    </div>
-
-    <!-- 2.2. KHU VỰC THAO TÁC NGƯỜI DÂN (CITIZEN ACTION PORTAL) -->
-    <div id="citizen-panel-wrapper" class="flex-1 w-full md:w-2/5 lg:w-[32%] flex flex-col bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800/80 overflow-hidden transition-all duration-300">
+    <!-- 2.1. KHU VỰC THAO TÁC NGƯỜI DÂN (CITIZEN ACTION PORTAL - BÊN TRÁI) -->
+    <div id="citizen-panel-wrapper" class="order-2 md:order-1 flex-1 w-full md:w-2/5 lg:w-[32%] flex flex-col bg-slate-950 border-t md:border-t-0 md:border-r border-slate-800/80 overflow-hidden transition-all duration-300">
 
       <!-- Thanh thu gọn / mở rộng bảng thao tác để tối đa hóa bản đồ giống bên Command -->
       <div class="p-1.5 shrink-0 bg-slate-950 border-b border-slate-800/80 select-none">
         <button onclick="CitizenPortalApp.toggleMapMaximize()" id="citizen-btn-toggle-map" class="w-full py-1.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/40 text-[11px] font-extrabold text-sky-400 hover:text-sky-300 flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-98">
-          <i data-lucide="chevrons-right" id="citizen-toggle-icon" class="w-3.5 h-3.5"></i>
+          <i data-lucide="chevrons-left" id="citizen-toggle-icon" class="w-3.5 h-3.5"></i>
           <span id="citizen-toggle-text">Thu gọn bảng thao tác để tối đa hóa bản đồ</span>
         </button>
       </div>
@@ -587,6 +540,59 @@
 
       </div>
     </div>
+
+    <!-- 2.2. BẢN ĐỒ TÁC CHIẾN DÂN SỰ (MAPLIBRE 3D ENGINE - BÊN PHẢI) -->
+    <div id="citizen-map-wrapper" class="order-1 md:order-2 w-full md:w-3/5 lg:w-[68%] h-[48vh] sm:h-[55vh] md:h-full relative shrink-0 transition-all duration-300">
+      <div id="map" class="w-full h-full z-0 bg-slate-950"></div>
+
+      <!-- Nút nổi mở lại bảng thao tác khi bị thu gọn (ở mép trái bản đồ) -->
+      <button id="citizen-floating-expand-btn" onclick="CitizenPortalApp.toggleMapMaximize()" class="hidden absolute top-16 left-3 z-20 bg-slate-900/95 hover:bg-slate-800 text-sky-400 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group" title="Mở lại bảng thao tác người dân">
+        <i data-lucide="chevrons-right" class="w-4 h-4 text-sky-400"></i>
+        <span class="text-xs font-bold text-slate-200">Bảng thao tác</span>
+      </button>
+
+      <!-- Thanh chọn Lớp Bản Đồ Tác Chiến (Ban Ngày / Ban Đêm / Địa Hình / Vệ Tinh) -->
+      <div class="absolute top-3 left-3 z-10 flex items-center gap-1 p-1 bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-xl max-w-[calc(100%-80px)] overflow-x-auto no-scrollbar">
+        <button onclick="CitizenPortalApp.switchBaseMap('day')" id="citizen-btn-base-day" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Bản đồ đường phố ban ngày sáng rõ">
+          <i data-lucide="sun" class="w-3 h-3 text-amber-400"></i>
+          <span>Ban Ngày</span>
+        </button>
+        <button onclick="CitizenPortalApp.switchBaseMap('dark')" id="citizen-btn-base-dark" class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0" title="Bản đồ ban đêm nền tối dịu mắt">
+          <i data-lucide="moon" class="w-3 h-3"></i>
+          <span>Ban Đêm</span>
+        </button>
+        <button onclick="CitizenPortalApp.switchBaseMap('topo')" id="citizen-btn-base-topo" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Bản đồ địa hình cao độ vùng lũ">
+          <i data-lucide="map" class="w-3 h-3 text-emerald-400"></i>
+          <span>Địa Hình</span>
+        </button>
+        <button onclick="CitizenPortalApp.switchBaseMap('satellite')" id="citizen-btn-base-sat" class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0" title="Ảnh chụp vệ tinh quang học thực địa">
+          <i data-lucide="satellite" class="w-3 h-3 text-sky-400"></i>
+          <span>Vệ Tinh</span>
+        </button>
+      </div>
+
+      <!-- Nút mở rộng/thu gọn toàn màn hình bản đồ -->
+      <div class="absolute top-3 right-12 z-10 hidden sm:flex items-center">
+        <button onclick="CitizenPortalApp.toggleMapMaximize()" class="p-2 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-xl transition cursor-pointer active:scale-95" title="Mở rộng / Thu nhỏ bản đồ toàn màn hình">
+          <i data-lucide="maximize-2" id="citizen-map-max-icon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Lớp phủ điều khiển nhanh trên bản đồ: Vị trí của tôi -->
+      <div class="absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-auto">
+        <button onclick="CitizenPortal.locateGPSWithAccuracy()" class="p-2.5 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl transition cursor-pointer active:scale-95 flex items-center gap-1.5 text-xs font-bold" title="Định vị GPS vị trí của tôi">
+          <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
+          <span class="hidden sm:inline text-[11px] text-slate-200">Vị trí của tôi</span>
+        </button>
+      </div>
+
+      <!-- Chú giải bản đồ nhanh C2 Glassmorphism (đặt cách mép phải để không đè nút Chatbot) -->
+      <div class="absolute bottom-3 right-20 z-10 hidden sm:flex items-center gap-3 px-3 py-1.5 bg-slate-950/85 border border-slate-800/90 backdrop-blur-xl rounded-2xl text-[11px] font-medium text-slate-300 shadow-xl">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]"></span> Điểm ngập sâu</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span> Báo ngập dân sự</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span> Trạm sơ tán</span>
+      </div>
+    </div>
   </main>
 
   <!-- ========================================================================= -->
@@ -970,24 +976,27 @@
         const toggleText = document.getElementById('citizen-toggle-text');
         const toggleIcon = document.getElementById('citizen-toggle-icon');
         const maxIcon = document.getElementById('citizen-map-max-icon');
+        const floatExpandBtn = document.getElementById('citizen-floating-expand-btn');
 
         if (!mapWrapper || !panelWrapper) return;
         isMapMaximized = !isMapMaximized;
 
         if (isMapMaximized) {
           panelWrapper.classList.add('hidden');
+          if (floatExpandBtn) floatExpandBtn.classList.remove('hidden');
           mapWrapper.classList.remove('md:w-3/5', 'lg:w-[68%]');
           mapWrapper.classList.add('w-full', 'h-full');
           if (toggleText) toggleText.textContent = 'Mở rộng bảng thao tác người dân';
-          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-left');
+          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-right');
           if (maxIcon) maxIcon.setAttribute('data-lucide', 'minimize-2');
           showToast('🗺️ Đã mở rộng bản đồ toàn màn hình!', 'info');
         } else {
           panelWrapper.classList.remove('hidden');
+          if (floatExpandBtn) floatExpandBtn.classList.add('hidden');
           mapWrapper.classList.add('md:w-3/5', 'lg:w-[68%]');
           mapWrapper.classList.remove('w-full');
           if (toggleText) toggleText.textContent = 'Thu gọn bảng thao tác để tối đa hóa bản đồ';
-          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-right');
+          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-left');
           if (maxIcon) maxIcon.setAttribute('data-lucide', 'maximize-2');
           showToast('📱 Đã hiển thị lại bảng thao tác người dân', 'info');
         }
