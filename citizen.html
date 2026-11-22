@@ -956,15 +956,68 @@
         return aiPredictionsData;
       }
 
-      function getStationDistrictHelper(name, lat, lng) {
-        if (!name) return 'Hà Nội';
+      function getStationZone(pt) {
+        if (!pt) return 'Khu vực Hà Nội';
+        const name = (pt.name || '').trim();
+        const nameClean = name.toLowerCase();
+        const lat = pt.lat;
+        const lng = pt.lng;
+
         const match = name.match(/\((.*?)\)/);
-        if (match && match[1]) return match[1];
-        if (lat > 21.05) return 'Bắc Từ Liêm / Tây Hồ';
-        if (lat < 20.98) return 'Hoàng Mai / Hà Đông';
-        if (lng > 105.85) return 'Hoàn Kiếm / Hai Bà Trưng';
-        if (lng < 105.79) return 'Nam Từ Liêm / Cầu Giấy';
-        return 'Nội thành Hà Nội';
+        const raw = match && match[1] ? match[1].trim().toLowerCase() : '';
+
+        // 1. Các tỉnh ngoài Hà Nội
+        if (lat > 22.0 || /cao bằng/i.test(nameClean)) return 'Tỉnh Cao Bằng';
+        if (lat > 21.6 || /lào cai|sa pa/i.test(nameClean)) return 'Tỉnh Lào Cai';
+        if (/quảng ninh|cẩm phả|hạ long/i.test(nameClean) || lng > 106.8) return 'Tỉnh Quảng Ninh';
+        if (/hải phòng/i.test(nameClean) || (lng > 106.5 && lat < 21.0)) return 'TP Hải Phòng';
+        if (/thái nguyên/i.test(nameClean) || (lat > 21.4 && lng > 105.7)) return 'Tỉnh Thái Nguyên';
+        if (/phú thọ|việt trì/i.test(nameClean) || (lat > 21.2 && lng < 105.5)) return 'Tỉnh Phú Thọ';
+        if (/bắc giang|đa mai/i.test(nameClean)) return 'Tỉnh Bắc Giang';
+
+        // 2. Các quận/huyện Hà Nội theo từ khóa (trong ngoặc hoặc trong tên đường)
+        const districtRules = [
+          { name: 'Quận Cầu Giấy', kw: ['cầu giấy', 'phạm văn đồng', 'trần quốc hoàn', 'phan văn trường', 'nghĩa tân', 'dịch vọng', 'mai dịch'] },
+          { name: 'Quận Đống Đa', kw: ['đống đa', 'chùa bộc', 'thái hà', 'huỳnh thúc kháng', 'tôn thất tùng', 'nguyễn lương bằng', 'la thành', 'xã đàn', 'khâm thiên', 'văn miếu'] },
+          { name: 'Quận Ba Đình', kw: ['ba đình', 'liễu giai', 'đội cấn', 'kim mã', 'giảng võ', 'ngọc khánh', 'núi trúc'] },
+          { name: 'Quận Hoàn Kiếm', kw: ['hoàn kiếm', 'tràng tiền', 'đinh tiên hoàng', 'bát đàn', 'hàng bài', 'chợ gạo', 'lý thường kiệt'] },
+          { name: 'Quận Hai Bà Trưng', kw: ['hai bà trưng', 'bạch mai', 'phố huế', 'thanh nhàn', 'đại la', 'trần đại nghĩa', 'tạ quang bửu', 'bà triệu', 'minh khai'] },
+          { name: 'Quận Thanh Xuân', kw: ['thanh xuân', 'nguyễn trãi', 'triều khúc', 'khương đình', 'bùi xương trạch', 'vương thừa vũ', 'khuất duy tiến', 'lê trọng tấn'] },
+          { name: 'Quận Hoàng Mai', kw: ['hoàng mai', 'định công', 'tân mai', 'thịnh liệt', 'giải phóng', 'linh đàm', 'vĩnh hưng', 'tam trinh', 'yên sở'] },
+          { name: 'Quận Nam Từ Liêm', kw: ['nam từ liêm', 'mỹ đình', 'mễ trì', 'lê đức thọ', 'tố hữu', 'trung văn', 'đại mỗ', 'tây mỗ', 'phùng khoang'] },
+          { name: 'Quận Bắc Từ Liêm', kw: ['bắc từ liêm', 'cổ nhuế', 'tân xuân', 'xuân đỉnh', 'nhổn', 'phúc diễn', 'liên mạc'] },
+          { name: 'Quận Tây Hồ', kw: ['tây hồ', 'lạc long quân', 'âu cơ', 'thụy khuê', 'yên phụ', 'quảng an', 'xuân la'] },
+          { name: 'Quận Hà Đông', kw: ['hà đông', 'quang trung', 'văn quán', 'văn phú', 'ba la', 'la khê', 'yên nghĩa', 'chiến thắng'] },
+          { name: 'Quận Long Biên', kw: ['long biên', 'ngọc lâm', 'nguyễn văn cừ', 'bồ đề', 'sài đồng', 'thạch bàn'] },
+          { name: 'Huyện Gia Lâm', kw: ['gia lâm', 'trâu quỳ', 'yên viên'] },
+          { name: 'Huyện Thanh Trì', kw: ['thanh trì', 'ngọc hồi', 'tả thanh oai', 'tam hiệp'] },
+          { name: 'Huyện Hoài Đức / Quốc Oai', kw: ['hoài đức', 'an khánh', 'bảo sơn', 'quốc oai'] },
+          { name: 'Huyện Chương Mỹ', kw: ['chương mỹ', 'xuân mai', 'chúc sơn'] }
+        ];
+
+        for (const r of districtRules) {
+          for (const kw of r.kw) {
+            if ((raw && raw.includes(kw)) || nameClean.includes(kw)) {
+              return r.name;
+            }
+          }
+        }
+
+        // 3. Phân vùng dự phòng theo tọa độ địa lý Hà Nội
+        if (lat >= 21.05 && lng <= 105.79) return 'Quận Bắc Từ Liêm';
+        if (lat >= 21.05 && lng > 105.80 && lng < 105.85) return 'Quận Tây Hồ';
+        if (lat < 20.97 && lng < 105.80) return 'Quận Hà Đông';
+        if (lat < 20.98 && lng >= 105.80) return 'Quận Hoàng Mai';
+        if (lng > 105.86) return 'Quận Long Biên';
+        if (lat >= 21.00 && lat < 21.04 && lng < 105.80) return 'Quận Cầu Giấy';
+        if (lat >= 21.00 && lat < 21.04 && lng >= 105.80 && lng <= 105.84) return 'Quận Đống Đa';
+        if (lat >= 21.02 && lng > 105.84) return 'Quận Hoàn Kiếm';
+
+        return 'Khu vực Hà Nội';
+      }
+
+      function getStationDistrictHelper(name, lat, lng) {
+        return getStationZone({ name, lat, lng });
       }
 
       async function loadOfficialFloodPoints(targetMap) {
@@ -1013,7 +1066,7 @@
           window.floodPoints = points;
 
           renderFloodPointsWithClustering(m);
-          console.info(`[CitizenPortal] Đã nạp thành công ${cachedFloodPoints.length} điểm trạm quan trắc & kích hoạt gom cụm AI.`);
+          console.info(`[CitizenPortal] Đã nạp thành công ${cachedFloodPoints.length} điểm trạm quan trắc & kích hoạt phân cấp đa tầng.`);
         } catch (err) {
           console.warn('[CitizenPortal] Lỗi tải điểm ngập chính thức:', err);
         }
@@ -1030,111 +1083,219 @@
         if (!validPoints || !validPoints.length) return;
 
         const currentZoom = m.getZoom();
-        const CLUSTER_THRESHOLD_ZOOM = 11.5;
 
-        if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
-          // Gom cụm thông minh động theo cấp độ zoom
-          let clusterDist = 0.75;
-          if (currentZoom >= 10.0) {
-            clusterDist = 0.22;
-          } else if (currentZoom >= 8.5) {
-            clusterDist = 0.45;
-          }
-
-          const clusters = [];
-          const visited = new Set();
-
-          for (let i = 0; i < validPoints.length; i++) {
-            if (visited.has(i)) continue;
-            const group = [validPoints[i]];
-            visited.add(i);
-
-            for (let j = i + 1; j < validPoints.length; j++) {
-              if (visited.has(j)) continue;
-              const dLat = validPoints[i].lat - validPoints[j].lat;
-              const dLng = validPoints[i].lng - validPoints[j].lng;
-              const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-
-              if (dist < clusterDist) {
-                group.push(validPoints[j]);
-                visited.add(j);
-              }
-            }
-            clusters.push(group);
-          }
-
-          clusters.forEach(group => {
-            let avgLat = 0;
-            let avgLng = 0;
-            group.forEach(pt => {
-              avgLat += pt.lat;
-              avgLng += pt.lng;
-            });
-            avgLat /= group.length;
-            avgLng /= group.length;
-
-            if (group.length > 1) {
-              createClusterMarker(m, group, avgLng, avgLat);
-            } else {
-              createIndividualFloodMarker(m, group[0]);
-            }
-          });
+        // PHÂN CẤP GOM CỤM 3 TẦNG:
+        // Tầng 1 (Zoom < 10.5): Gom Cụm Cấp Tỉnh/Thành Phố (Hà Nội: 136 trạm, Thái Nguyên, Lào Cai...)
+        // Tầng 2 (10.5 <= Zoom < 13.5): Gom Cụm Theo Phân Vùng Khu Vực / Quận Huyện (Cầu Giấy, Đống Đa, Hà Đông...)
+        // Tầng 3 (Zoom >= 13.5): Tách bung chi tiết từng trạm đo ngập trên từng tuyến đường phố
+        if (currentZoom < 10.5) {
+          renderProvinceClusters(m, validPoints);
+        } else if (currentZoom < 13.5) {
+          renderDistrictZoneClusters(m, validPoints);
         } else {
-          // Phóng to chi tiết (zoom >= 11.5): Tách thành từng điểm đo riêng lẻ
           validPoints.forEach(pt => createIndividualFloodMarker(m, pt));
         }
       }
 
-      function createClusterMarker(m, group, avgLng, avgLat) {
+      function renderProvinceClusters(m, validPoints) {
+        // Tách riêng nhóm trạm Hà Nội mở rộng (134-136 trạm) và các tỉnh khác
+        const hanoiPoints = [];
+        const otherPoints = [];
+
+        validPoints.forEach(pt => {
+          if (pt.lat >= 20.80 && pt.lat <= 21.35 && pt.lng >= 105.45 && pt.lng <= 106.10) {
+            hanoiPoints.push(pt);
+          } else {
+            otherPoints.push(pt);
+          }
+        });
+
+        // 1. Cụm Hà Nội lớn (136 trạm)
+        if (hanoiPoints.length > 0) {
+          let avgLat = 0, avgLng = 0;
+          hanoiPoints.forEach(p => { avgLat += p.lat; avgLng += p.lng; });
+          avgLat /= hanoiPoints.length;
+          avgLng /= hanoiPoints.length;
+
+          createProvinceClusterMarker(m, 'Hà Nội', hanoiPoints, avgLng, avgLat);
+        }
+
+        // 2. Gom các tỉnh khác theo khoảng cách
+        const clusters = [];
+        const visited = new Set();
+        const clusterDist = 0.55;
+
+        for (let i = 0; i < otherPoints.length; i++) {
+          if (visited.has(i)) continue;
+          const group = [otherPoints[i]];
+          visited.add(i);
+
+          for (let j = i + 1; j < otherPoints.length; j++) {
+            if (visited.has(j)) continue;
+            const dLat = otherPoints[i].lat - otherPoints[j].lat;
+            const dLng = otherPoints[i].lng - otherPoints[j].lng;
+            const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+            if (dist < clusterDist) {
+              group.push(otherPoints[j]);
+              visited.add(j);
+            }
+          }
+          clusters.push(group);
+        }
+
+        clusters.forEach(group => {
+          let avgLat = 0, avgLng = 0;
+          group.forEach(pt => { avgLat += pt.lat; avgLng += pt.lng; });
+          avgLat /= group.length;
+          avgLng /= group.length;
+
+          if (group.length > 1) {
+            createProvinceClusterMarker(m, getStationZone(group[0]), group, avgLng, avgLat);
+          } else {
+            createIndividualFloodMarker(m, group[0]);
+          }
+        });
+      }
+
+      function createProvinceClusterMarker(m, provinceName, group, avgLng, avgLat) {
         const count = group.length;
         const hasDanger = group.some(pt => pt.depth_cm >= 20 || pt.status === 'danger');
         const hasWarning = group.some(pt => pt.depth_cm >= 5 || pt.status === 'warning');
 
         let clusterBg = 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)';
-        let ringColor = 'rgba(6, 182, 212, 0.4)';
+        let ringColor = 'rgba(6, 182, 212, 0.45)';
         if (hasDanger) {
           clusterBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)';
-          ringColor = 'rgba(239, 68, 68, 0.5)';
+          ringColor = 'rgba(239, 68, 68, 0.6)';
         } else if (hasWarning) {
           clusterBg = 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
-          ringColor = 'rgba(245, 158, 11, 0.45)';
+          ringColor = 'rgba(245, 158, 11, 0.5)';
         }
 
-        const size = count >= 20 ? 42 : (count >= 8 ? 36 : 30);
+        const size = count >= 50 ? 46 : (count >= 15 ? 40 : 34);
 
         const el = document.createElement('div');
-        el.className = 'c2-maplibre-cluster flex items-center justify-center cursor-pointer select-none group';
+        el.className = 'c2-province-cluster flex items-center justify-center cursor-pointer select-none group';
         el.style.cssText = `position: relative; width: ${size}px; height: ${size}px; z-index: 30;`;
         el.innerHTML = `
-          <span class="absolute rounded-full pointer-events-none animate-ping" style="width: ${size + 6}px; height: ${size + 6}px; background: ${ringColor}; opacity: 0.75; animation-duration: 2s;"></span>
-          <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white/80 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Bấm để phóng to bung điểm chi tiết)">
+          <span class="absolute rounded-full pointer-events-none animate-ping" style="width: ${size + 8}px; height: ${size + 8}px; background: ${ringColor}; opacity: 0.8; animation-duration: 2s;"></span>
+          <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white/80 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${provinceName} (${count} trạm quan trắc) - Bấm để phóng to bung phân vùng Quận / Huyện">
             ${count}
           </div>
         `;
 
-        // Click cụm: Phóng to mượt mà để bung cụm ra các điểm chi tiết
+        // Click cụm lớn: Bay thẳng vào zoom 11.6 để kích hoạt Tầng 2 (Gom nhóm theo Quận Huyện)
+        el.onclick = (e) => {
+          e.stopPropagation();
+          m.flyTo({
+            center: [avgLng, avgLat],
+            zoom: 11.6,
+            duration: 650
+          });
+        };
+
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([avgLng, avgLat])
+          .addTo(m);
+
+        officialFloodMarkers.push(marker);
+      }
+
+      function renderDistrictZoneClusters(m, validPoints) {
+        // Gom các điểm theo Zone (Quận / Huyện)
+        const zoneMap = new Map();
+
+        validPoints.forEach(pt => {
+          const zone = getStationZone(pt);
+          if (!zoneMap.has(zone)) {
+            zoneMap.set(zone, []);
+          }
+          zoneMap.get(zone).push(pt);
+        });
+
+        zoneMap.forEach((pts, zoneName) => {
+          let avgLat = 0, avgLng = 0;
+          pts.forEach(p => {
+            avgLat += p.lat;
+            avgLng += p.lng;
+          });
+          avgLat /= pts.length;
+          avgLng /= pts.length;
+
+          createDistrictZoneMarker(m, zoneName, pts, avgLng, avgLat);
+        });
+      }
+
+      function createDistrictZoneMarker(m, zoneName, pts, avgLng, avgLat) {
+        const count = pts.length;
+        const hasDanger = pts.some(pt => pt.depth_cm >= 20 || pt.status === 'danger');
+        const hasWarning = pts.some(pt => pt.depth_cm >= 5 || pt.status === 'warning');
+
+        // Rút gọn tên quận/huyện để hiển thị gọn gàng trên badge
+        const shortName = zoneName
+          .replace(/^(Quận|Huyện|Tỉnh|TP)\s+/i, '')
+          .replace(/\s*\/\s*.*$/, ''); // Ví dụ: 'Hoài Đức / Quốc Oai' -> 'Hoài Đức'
+
+        let bgGradient = 'linear-gradient(135deg, rgba(3, 105, 161, 0.95), rgba(14, 116, 144, 0.95))';
+        let borderColor = 'rgba(56, 189, 248, 0.7)';
+        let shadowColor = 'rgba(14, 165, 233, 0.45)';
+        let dotColor = 'bg-cyan-400';
+        let countBg = 'bg-cyan-950 text-cyan-200 border-cyan-500/50';
+        let pulseHtml = '';
+
+        if (hasDanger) {
+          bgGradient = 'linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(220, 38, 38, 0.95))';
+          borderColor = 'rgba(248, 113, 113, 0.85)';
+          shadowColor = 'rgba(239, 68, 68, 0.55)';
+          dotColor = 'bg-rose-300';
+          countBg = 'bg-rose-950 text-rose-200 border-rose-500/60';
+          pulseHtml = '<span class="absolute -inset-1 rounded-full bg-rose-500/40 animate-ping pointer-events-none" style="animation-duration: 1.8s;"></span>';
+        } else if (hasWarning) {
+          bgGradient = 'linear-gradient(135deg, rgba(180, 83, 9, 0.95), rgba(217, 119, 6, 0.95))';
+          borderColor = 'rgba(251, 191, 36, 0.85)';
+          shadowColor = 'rgba(245, 158, 11, 0.5)';
+          dotColor = 'bg-amber-300';
+          countBg = 'bg-amber-950 text-amber-200 border-amber-500/60';
+          pulseHtml = '<span class="absolute -inset-1 rounded-full bg-amber-500/35 animate-ping pointer-events-none" style="animation-duration: 2.2s;"></span>';
+        }
+
+        const el = document.createElement('div');
+        el.className = 'c2-district-zone-marker group flex items-center cursor-pointer select-none';
+        el.style.cssText = 'position: relative; z-index: 28;';
+        el.innerHTML = `
+          ${pulseHtml}
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-bold shadow-xl border transition-all duration-200 group-hover:scale-110 pointer-events-auto"
+               style="background: ${bgGradient}; border-color: ${borderColor}; box-shadow: 0 4px 18px ${shadowColor}; backdrop-filter: blur(8px);"
+               title="Khu vực ${zoneName}: ${count} trạm quan trắc (Bấm để phóng to xem trạm chi tiết)">
+            <span class="inline-block w-2 h-2 rounded-full ${dotColor}"></span>
+            <span class="tracking-tight text-[11.5px] font-semibold whitespace-nowrap">${shortName}</span>
+            <span class="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black border ${countBg}">${count}</span>
+          </div>
+        `;
+
         el.onclick = (e) => {
           e.stopPropagation();
 
           let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
-          group.forEach(p => {
+          pts.forEach(p => {
             minLng = Math.min(minLng, p.lng);
             maxLng = Math.max(maxLng, p.lng);
             minLat = Math.min(minLat, p.lat);
             maxLat = Math.max(maxLat, p.lat);
           });
 
-          const currentZ = m.getZoom();
-          if (maxLng - minLng > 0.002 || maxLat - minLat > 0.002) {
+          // Bấm vào Cụm Quận: Zoom thẳng vào mức zoom 14.3 để bung Tầng 3 (các trạm chi tiết trên đường phố)
+          if (maxLng - minLng > 0.003 || maxLat - minLat > 0.003) {
             m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
-              padding: { top: 80, bottom: 80, left: 80, right: 80 },
-              maxZoom: 14.5,
+              padding: { top: 90, bottom: 90, left: 90, right: 90 },
+              maxZoom: 14.8,
               duration: 650
             });
           } else {
             m.flyTo({
               center: [avgLng, avgLat],
-              zoom: Math.min(currentZ + 2.5, 14.5),
+              zoom: 14.3,
               duration: 650
             });
           }
