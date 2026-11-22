@@ -76,6 +76,9 @@ const AIAssistant = (function () {
       panel.classList.remove('hidden');
       if (badge) badge.classList.add('hidden');
       fetchStatus();
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
       const input = document.getElementById('ai-assistant-input');
       if (input) input.focus();
     } else {
@@ -190,11 +193,17 @@ const AIAssistant = (function () {
   }
 
   function handleAction(action, tab) {
-    if (action === 'open_sos') {
-      if (window.openSOSModal) window.openSOSModal();
-      else if (window.switchTab) window.switchTab('sos');
-    } else if (action === 'switch_tab' && tab) {
-      if (window.switchTab) window.switchTab(tab);
+    let targetTab = tab;
+    if (action === 'open_sos' || tab === 'sos' || tab === 'rescue') {
+      targetTab = 'rescue';
+      if (typeof window.openSOSModal === 'function') {
+        window.openSOSModal();
+      }
+    }
+    if (window.CitizenPortalApp && typeof window.CitizenPortalApp.switchTab === 'function') {
+      window.CitizenPortalApp.switchTab(targetTab || 'rescue');
+    } else if (typeof window.switchTab === 'function') {
+      window.switchTab(targetTab || 'rescue');
     }
     const panel = document.getElementById('ai-assistant-panel');
     if (panel && window.innerWidth < 640) toggle();
