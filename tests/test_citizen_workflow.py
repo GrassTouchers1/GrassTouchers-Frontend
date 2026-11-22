@@ -176,6 +176,46 @@ class TestCitizenWorkflow(unittest.TestCase):
         deserialized = json.loads(serialized)
         self.assertEqual(deserialized["local_id"], offline_sos_draft["local_id"])
 
+    def test_07_citizen_html_redesign_components(self):
+        """Kiểm tra các thành phần UI/UX Neo-Glassmorphism mới trong citizen.html."""
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        html_path = os.path.join(base_dir, "citizen.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+
+        # 1. Header & Nút 114
+        self.assertIn("citizen-glass-header", html, "Phải có citizen-glass-header")
+        self.assertIn("citizen-hotline-114", html, "Phải có nút Hotline 114 siêu nổi bật")
+
+        # 2. Bộ chuyển đổi bản đồ (Dark, Topo, Satellite)
+        self.assertIn("citizen-btn-base-dark", html, "Phải có nút Bản Đồ Đêm")
+        self.assertIn("citizen-btn-base-topo", html, "Phải có nút Bản Đồ Địa Hình")
+        self.assertIn("citizen-btn-base-sat", html, "Phải có nút Bản Đồ Vệ Tinh")
+
+        # 3. Thẻ chọn độ sâu trực quan & Nút SOS khẩn cấp
+        self.assertIn("citizen-depth-card", html, "Phải có thẻ chọn độ sâu trực quan")
+        self.assertIn("citizen-sos-primary-btn", html, "Phải có nút SOS khẩn cấp phát sáng")
+
+        # 4. Điều hướng phân đoạn hiện đại (Segmented Navigation)
+        self.assertIn("citizen-segmented-nav", html, "Phải có thanh điều hướng segmented")
+        self.assertIn("citizen-tab-item", html, "Phải có class citizen-tab-item")
+
+    def test_08_css_neo_glassmorphism_styling(self):
+        """Kiểm tra các quy tắc CSS Neo-Glassmorphism mới trong css/style.css."""
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        css_path = os.path.join(base_dir, "css", "style.css")
+        with open(css_path, "r", encoding="utf-8") as f:
+            css = f.read()
+
+        self.assertIn(".citizen-glass-header", css)
+        self.assertIn(".citizen-glass-card", css)
+        self.assertIn(".citizen-hotline-114", css)
+        self.assertIn(".citizen-sos-primary-btn", css)
+        self.assertIn(".citizen-depth-card", css)
+        self.assertIn(".citizen-segmented-nav", css)
+
 
 if __name__ == "__main__":
     unittest.main()

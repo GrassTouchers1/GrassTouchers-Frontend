@@ -26,6 +26,15 @@ Phân hệ **Người dân / Nạn nhân (Victim Portal)** là thành phần c�
 - **Phân định độc lập:** Tách biệt hoàn toàn khỏi Bảng điều hành tác chiến Chỉ huy (`index.html`), bảo vệ luồng chỉ huy nghiệp vụ và tối ưu hóa băng thông mạng cho người dân vùng bão lũ.
 - **Tiêu chuẩn mã nguồn mở:** 100% tuân thủ giấy phép **Apache-2.0**, sử dụng bản đồ mở OpenStreetMap và API dữ liệu mở.
 
+### 1.1. Kiến Trúc Thiết Kế UI/UX Cứu Nạn Hiện Đại (Emergency Neo-Glassmorphism)
+Giao diện phân hệ người dân được thiết kế chuyên sâu theo tiêu chuẩn giao diện cứu nạn thời gian thực:
+1. **Neo-Glassmorphism UI:** Sự kết hợp giữa nền tối giảm mỏi mắt (Deep Slate `#020617`), hiệu ứng kính mờ (Backdrop Blur `16px-24px`), đường viền phản quang (`border-white/10`) và các khối màu sắc nhận diện cấp độ khẩn cấp.
+2. **Nút Hotline Cứu Nạn 114 Siêu Nổi Bật:** Nút gọi khẩn cấp 114 được bố trí cố định trên thanh tiêu đề với viền phát sáng dạng nhịp tim (Pulse Glow), hỗ trợ bấm 1-chạm kết nối điện thoại ngay lập tức khi đối mặt nguy hiểm.
+3. **Bộ Chuyển Đổi Bản Đồ Tác Chiến (Dark / Topo / Satellite):** Tích hợp MapLibre GL JS 3D Engine với 3 lớp bản đồ chuẩn quốc tế (Bản Đồ Đêm chống chói, Bản Đồ Địa Hình khảo sát độ cao lũ, Bản Đồ Vệ Tinh quan sát mái nhà ngập) với zero API key.
+4. **Thước Đo Nguy Cơ Thiên Tai Trực Quan (Visual Risk Meter):** Thanh đo 4 cấp độ màu (Xanh: An toàn -> Vàng: Chú ý -> Cam: Ngập úng -> Đỏ: Khẩn cấp) tự động tính toán dựa trên lượng mưa và bản tin thủy văn NCHMF.
+5. **Bộ Chọn Độ Sâu Ngập Trực Quan (Visual Depth Selector):** Cho phép người dân chọn mức ngập qua 3 thẻ minh họa trực quan (🚲 < 0.5m Xe chết máy, 🚶 0.5-1.5m Ngập ngực, 🏠 > 1.5m Nóc nhà cần xuồng ca nô) thay vì phải ước tính số centimet trừu tượng.
+6. **Nút SOS Khẩn Cấp Hào Quang Nhịp Đập (Pulse Glow Button):** Nút gửi báo động to bản, nằm trọn trong vùng ngón tay cái (Mobile Thumb Zone), kích thích phản xạ gửi cứu hộ nhanh chóng.
+
 ```
 +-------------------------------------------------------------------------+
 |                  NORTHSTAR CITIZEN PORTAL (citizen.html)                |
@@ -113,6 +122,8 @@ python -m unittest tests/test_citizen_workflow.py
 - `test_04_crowdsourced_flood_report`: Kiểm tra gửi báo ngập cộng đồng kèm trạng thái xác thực.
 - `test_05_reports_geojson_layer_rendering`: Kiểm tra chuyển đổi và kết xuất điểm báo ngập chuẩn GeoJSON FeatureCollection.
 - `test_06_offline_first_storage_schema`: Kiểm tra khả năng đóng gói JSON ngoại tuyến an toàn khi ngắt mạng.
+- `test_07_citizen_html_redesign_components`: Kiểm tra cấu trúc HTML Neo-Glassmorphism, Nút 114, Bộ đổi MapLibre và Bộ chọn độ sâu trực quan.
+- `test_08_css_neo_glassmorphism_styling`: Kiểm tra bộ định kiểu CSS mạ kính, hiệu ứng nhịp đập Pulse và thanh điều hướng Segmented.
 
 ---
 
