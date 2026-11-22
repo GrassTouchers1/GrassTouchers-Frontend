@@ -128,67 +128,130 @@ const CitizenPortal = (function () {
       badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
     }
 
+    // Xác định cấp độ rủi ro thiên tai (Risk Level 1-4)
+    let riskLevel = 1;
+    let riskText = 'Cấp 1: Bình thường';
+    let riskColor = 'text-emerald-400';
+    let riskBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    let riskBarWidth = '25%';
+    let riskBarColor = 'bg-emerald-500';
+
+    if (rain > 15) {
+      riskLevel = 4;
+      riskText = 'Cấp 4: Khẩn cấp (Nguy cơ ngập úng & lũ lụt)';
+      riskColor = 'text-rose-400';
+      riskBadge = 'bg-rose-500/25 text-rose-300 border-rose-500/50 animate-pulse';
+      riskBarWidth = '100%';
+      riskBarColor = 'bg-gradient-to-r from-amber-500 via-rose-500 to-red-600';
+    } else if (rain > 5) {
+      riskLevel = 3;
+      riskText = 'Cấp 3: Nguy cơ ngập úng cục bộ';
+      riskColor = 'text-orange-400';
+      riskBadge = 'bg-orange-500/25 text-orange-300 border-orange-500/40';
+      riskBarWidth = '75%';
+      riskBarColor = 'bg-gradient-to-r from-amber-400 to-orange-500';
+    } else if (rain > 0) {
+      riskLevel = 2;
+      riskText = 'Cấp 2: Chú ý quan sát hiện trường';
+      riskColor = 'text-amber-300';
+      riskBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      riskBarWidth = '50%';
+      riskBarColor = 'bg-amber-400';
+    }
+
     container.innerHTML = `
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
-        <!-- Tiêu đề & Nguồn dữ liệu (Tiêu chí V-01) -->
-        <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
-          <div class="flex items-center gap-1.5 font-bold text-slate-200">
-            <i data-lucide="cloud-sun" class="w-4 h-4 text-amber-400"></i>
-            <span>Thời Tiết Thường Ngày & Cảnh Báo Khí Tượng</span>
+      <div class="citizen-glass-card rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 border border-white/10 relative overflow-hidden">
+        <!-- Ánh sáng hào quang nền công nghệ -->
+        <div class="absolute -top-12 -right-12 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Tiêu đề & Cấp độ rủi ro -->
+        <div class="flex items-center justify-between pb-2.5 border-b border-slate-800/80 text-xs">
+          <div class="flex items-center gap-2 font-black text-white">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_#38bdf8]"></span>
+            <span class="tracking-wide">KHÍ TƯỢNG & RỦI RO THIÊN TAI</span>
           </div>
-          <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold ${badgeColor}">
-            ${rain > 5 ? 'CẢNH BÁO MƯA' : 'BÌNH THƯỜNG'}
+          <span class="text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider ${riskBadge}">
+            ${riskLevel === 1 ? 'BÌNH THƯỜNG' : `CẢNH BÁO CẤP ${riskLevel}`}
           </span>
         </div>
 
-        <!-- Chỉ số thời tiết chính -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div class="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
-            <div class="text-[10.5px] text-slate-400 flex items-center gap-1">
-              <i data-lucide="thermometer" class="w-3.5 h-3.5 text-rose-400"></i> Nhiệt độ
-            </div>
-            <div class="text-lg font-black text-white mt-1">${temp}°C</div>
-          </div>
-
-          <div class="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
-            <div class="text-[10.5px] text-slate-400 flex items-center gap-1">
-              <i data-lucide="cloud-rain" class="w-3.5 h-3.5 text-cyan-400"></i> Lượng mưa
-            </div>
-            <div class="text-lg font-black ${rain > 5 ? 'text-rose-400' : 'text-cyan-300'} mt-1">
-              ${rain} <span class="text-xs font-normal text-slate-400">mm/h</span>
+        <!-- Thẻ Hero: Nhiệt độ lớn + Trạng thái khí tượng -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-baseline gap-2">
+            <span class="text-4xl sm:text-5xl font-black text-white tracking-tight">${temp}°</span>
+            <span class="text-sm font-semibold text-slate-400">C</span>
+            <div class="ml-2">
+              <div class="text-xs font-bold text-slate-100">${weatherStatusText}</div>
+              <div class="text-[10.5px] text-slate-400">Hà Nội & Vùng lân cận</div>
             </div>
           </div>
-
-          <div class="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
-            <div class="text-[10.5px] text-slate-400 flex items-center gap-1">
-              <i data-lucide="droplets" class="w-3.5 h-3.5 text-blue-400"></i> Độ ẩm
-            </div>
-            <div class="text-lg font-black text-white mt-1">${humidity}%</div>
-          </div>
-
-          <div class="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
-            <div class="text-[10.5px] text-slate-400 flex items-center gap-1">
-              <i data-lucide="wind" class="w-3.5 h-3.5 text-emerald-400"></i> Tốc độ gió
-            </div>
-            <div class="text-lg font-black text-white mt-1">${wind} <span class="text-xs font-normal text-slate-400">km/h</span></div>
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-600/30 border border-sky-400/30 flex items-center justify-center shadow-lg shadow-sky-500/10 shrink-0">
+            <i data-lucide="${weatherIcon}" class="w-8 h-8 text-sky-400"></i>
           </div>
         </div>
 
-        <div class="p-2.5 bg-blue-950/30 border border-blue-900/40 rounded-xl text-xs text-blue-200 flex items-center gap-2">
-          <i data-lucide="${weatherIcon}" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
-          <span class="flex-1">${weatherStatusText}</span>
-          <button onclick="CitizenPortal.loadWeatherAndAlerts()" title="Làm mới thời tiết" class="p-1 hover:bg-blue-900/50 rounded text-blue-300 transition">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          </button>
+        <!-- Thước đo rủi ro thiên tai trực quan (Visual Risk Meter) -->
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400 font-medium">Thước đo nguy cơ thiên tai:</span>
+            <span class="font-bold ${riskColor}">${riskText}</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-800/90 overflow-hidden relative">
+            <div class="h-full rounded-full transition-all duration-700 ease-out ${riskBarColor}" style="width: ${riskBarWidth};"></div>
+          </div>
+          <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+            <span>An toàn</span>
+            <span>Chú ý</span>
+            <span>Ngập úng</span>
+            <span>Khẩn cấp</span>
+          </div>
+        </div>
+
+        <!-- 4 Chỉ số khí tượng mạ kính (Glass Metric Chips) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 transition">
+            <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <i data-lucide="thermometer" class="w-3 h-3 text-rose-400"></i> Nhiệt độ
+            </div>
+            <div class="text-base font-black text-white mt-0.5">${temp}°C</div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 transition">
+            <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <i data-lucide="cloud-rain" class="w-3 h-3 text-sky-400"></i> Lượng mưa
+            </div>
+            <div class="text-base font-black ${rain > 5 ? 'text-rose-400' : 'text-sky-300'} mt-0.5">
+              ${rain} <span class="text-[10px] font-normal text-slate-400">mm/h</span>
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 transition">
+            <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <i data-lucide="droplets" class="w-3 h-3 text-blue-400"></i> Độ ẩm
+            </div>
+            <div class="text-base font-black text-white mt-0.5">${humidity}%</div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 transition">
+            <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <i data-lucide="wind" class="w-3 h-3 text-emerald-400"></i> Tốc độ gió
+            </div>
+            <div class="text-base font-black text-white mt-0.5">${wind} <span class="text-[10px] font-normal text-slate-400">km/h</span></div>
+          </div>
         </div>
 
         <!-- Chân trang chứa Nguồn & Thời điểm cập nhật bắt buộc theo thể lệ -->
-        <div class="pt-1 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-400 gap-1 border-t border-slate-800/60">
-          <div>
-            <span class="text-slate-500">Nguồn:</span> <strong class="text-slate-300">${state.weatherSource}</strong>
+        <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-400 gap-1.5 border-t border-slate-800/80">
+          <div class="flex items-center gap-1">
+            <span class="text-slate-500">Nguồn:</span>
+            <strong class="text-slate-300">${state.weatherSource}</strong>
           </div>
-          <div>
-            <span class="text-slate-500">Cập nhật lúc:</span> <span class="text-slate-300 font-mono">${timeStr} ngày ${dateStr}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500">Cập nhật:</span>
+            <span class="text-slate-300 font-mono">${timeStr} ${dateStr}</span>
+            <button onclick="CitizenPortal.loadWeatherAndAlerts()" title="Làm mới dữ liệu" class="p-1 hover:bg-slate-800 rounded-md text-sky-400 hover:text-sky-300 transition cursor-pointer">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -299,28 +362,28 @@ const CitizenPortal = (function () {
       const source = p.source || 'Trung tâm Dự báo KTTV Quốc gia (NCHMF)';
 
       html += `
-        <div class="p-3 rounded-xl border ${borderClass} space-y-2 transition hover:bg-slate-900/40">
+        <div class="citizen-glass-card p-3.5 rounded-2xl border ${borderClass} space-y-2.5 transition hover:bg-slate-900/60 shadow-lg">
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-center gap-2">
-              <i data-lucide="alert-octagon" class="w-4 h-4 ${iconColor} flex-shrink-0 mt-0.5"></i>
-              <h4 class="text-xs font-extrabold text-white">${p.title || 'Cảnh báo thời tiết nguy hiểm'}</h4>
+              <span class="w-2.5 h-2.5 rounded-full ${severity === 'danger' || severity === 'critical' ? 'bg-rose-500 animate-ping' : 'bg-amber-400'} shrink-0 mt-0.5"></span>
+              <h4 class="text-xs font-black text-white tracking-wide">${p.title || 'Cảnh báo thời tiết nguy hiểm'}</h4>
             </div>
-            <span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${badgeClass} uppercase">
+            <span class="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full border ${badgeClass} uppercase tracking-wider">
               ${levelLabel}
             </span>
           </div>
 
-          <p class="text-[11px] text-slate-300 leading-relaxed">${p.description || 'Không có mô tả chi tiết.'}</p>
+          <p class="text-[11.5px] text-slate-300 leading-relaxed font-normal">${p.description || 'Không có mô tả chi tiết.'}</p>
 
-          <div class="pt-1.5 flex flex-wrap items-center justify-between text-[10px] text-slate-400 gap-1 border-t border-slate-800/60">
-            <span class="flex items-center gap-1">
-              <i data-lucide="map-pin" class="w-3 h-3 text-slate-500"></i> ${p.location_name || 'Miền Bắc'}
+          <div class="pt-2 flex flex-wrap items-center justify-between text-[10px] text-slate-400 gap-1.5 border-t border-slate-800/80">
+            <span class="flex items-center gap-1 text-slate-300 font-medium">
+              <i data-lucide="map-pin" class="w-3 h-3 text-sky-400"></i> ${p.location_name || 'Miền Bắc'}
             </span>
-            <span class="flex items-center gap-1">
+            <span class="flex items-center gap-1 text-slate-400">
               <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i> ${timeStr}
             </span>
-            <span class="w-full text-slate-500 pt-0.5">
-              Nguồn phát hành: <strong class="text-slate-400">${source}</strong>
+            <span class="w-full text-slate-400 pt-0.5">
+              Nguồn: <strong class="text-slate-300 font-semibold">${source}</strong>
             </span>
           </div>
         </div>`;
