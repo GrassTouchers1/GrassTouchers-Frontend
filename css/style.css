@@ -933,7 +933,7 @@ body.command-mode-active .floating-header {
  * C2 DARK GLASS NAVIGATION & SCALE CONTROLS (MAPLIBRE GL JS)
  * ========================================================================= */
 .maplibregl-ctrl-top-right {
-  top: 84px !important;
+  top: 68px !important;
   right: 16px !important;
   margin: 0 !important;
   z-index: 25 !important;

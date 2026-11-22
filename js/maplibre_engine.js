@@ -295,7 +295,11 @@ window.NorthStarMapLibre = (function () {
         ],
         pitch: currentPitch,
         bearing: currentBearing,
-        antialias: true,
+        antialias: false, // Tối ưu hiệu năng rendering 60 FPS mượt mà
+        maxTileCacheSize: 100, // Bộ nhớ đệm tile vector/raster mở rộng
+        fadeDuration: 100, // Giảm độ trễ chuyển tiếp giữa các mức zoom
+        trackResize: true,
+        collectResourceTiming: false, // Tắt logging tài nguyên dư thừa
         attributionControl: false
       });
 
@@ -356,13 +360,21 @@ window.NorthStarMapLibre = (function () {
         try {
           const ctrlTopRight = document.querySelector('.maplibregl-ctrl-top-right');
           if (ctrlTopRight) {
-            ctrlTopRight.style.setProperty('top', '84px', 'important');
+            ctrlTopRight.style.setProperty('top', '68px', 'important');
             ctrlTopRight.style.setProperty('right', '16px', 'important');
             ctrlTopRight.style.setProperty('margin', '0', 'important');
             ctrlTopRight.style.setProperty('z-index', '25', 'important');
           }
+          const ctrlGroup = document.querySelector('.maplibregl-ctrl-top-right .maplibregl-ctrl-group');
+          if (ctrlGroup) {
+            ctrlGroup.style.setProperty('background', 'rgba(11, 15, 25, 0.95)', 'important');
+            ctrlGroup.style.setProperty('border', '1px solid rgba(56, 189, 248, 0.5)', 'important');
+            ctrlGroup.style.setProperty('border-radius', '14px', 'important');
+            ctrlGroup.style.setProperty('overflow', 'hidden', 'important');
+          }
         } catch (_) {}
       };
+      enforceNavCtrlPosition();
       mapInstance.on('load', enforceNavCtrlPosition);
       mapInstance.on('resize', enforceNavCtrlPosition);
       setTimeout(enforceNavCtrlPosition, 50);
@@ -382,9 +394,9 @@ window.NorthStarMapLibre = (function () {
       stripMapLibreAttribution();
       mapInstance.on('load', stripMapLibreAttribution);
       mapInstance.on('idle', stripMapLibreAttribution);
-      mapInstance.on('render', stripMapLibreAttribution);
-      const stripTimer = setInterval(stripMapLibreAttribution, 300);
-      setTimeout(() => clearInterval(stripTimer), 5000);
+      // Tối ưu: Loại bỏ listener render liên tục trên mỗi frame 60FPS để triệt tiêu hiện tượng sụt khung hình
+      const stripTimer = setInterval(stripMapLibreAttribution, 500);
+      setTimeout(() => clearInterval(stripTimer), 3000);
 
       mapInstance.on('load', () => {
         isInitialized = true;
@@ -416,7 +428,6 @@ window.NorthStarMapLibre = (function () {
 
       mapInstance.on('zoom', () => {
         updateTelemetryBadge();
-        updateDeepZoomHUD();
       });
 
       // Lắng nghe sự kiện click trên bản đồ MapLibre
@@ -427,56 +438,57 @@ window.NorthStarMapLibre = (function () {
         handleMapLibreClick(e);
       });
 
-      // Lắng nghe di chuột để cập nhật telemetry con trỏ
+      // Lắng nghe di chuột để cập nhật telemetry con trỏ (throttled RAF)
       mapInstance.on('mousemove', (e) => {
         handleMapLibreMouseMove(e);
       });
 
-      // Tự động gom cụm hoặc mở rộng điểm đo ngập khi zoom / di chuyển
-      mapInstance.on('zoomend', () => {
-        updateDeepZoomHUD();
-        if (layerVisibility.floodPoints) {
-          if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
-            renderClusteredFloodMarkers();
-          } else {
-            syncFloodPointMarkers();
+      // Tối ưu hiệu năng: Debounce 90ms gom các sự kiện zoomend và moveend
+      let viewportDebounceTimer = null;
+      function onViewportChangeDebounced() {
+        if (viewportDebounceTimer) clearTimeout(viewportDebounceTimer);
+        viewportDebounceTimer = setTimeout(() => {
+          updateDeepZoomHUD();
+          if (layerVisibility.floodPoints) {
+            if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
+              renderClusteredFloodMarkers();
+            } else {
+              syncFloodPointMarkers();
+            }
           }
-        }
-        syncFloodCirclesData();
-        updateMapLibreViewportAlert();
-        renderHanoiDistrictMarkers();
-      });
-      mapInstance.on('moveend', () => {
-        if (layerVisibility.floodPoints) {
-          if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
-            renderClusteredFloodMarkers();
-          } else {
-            syncFloodPointMarkers();
-          }
-        }
-        syncFloodCirclesData();
-        updateMapLibreViewportAlert();
-        renderHanoiDistrictMarkers();
-      });
+          syncFloodCirclesData();
+          updateMapLibreViewportAlert();
+          renderHanoiDistrictMarkers();
+        }, 90);
+      }
+
+      mapInstance.on('zoomend', onViewportChangeDebounced);
+      mapInstance.on('moveend', onViewportChangeDebounced);
 
     } catch (err) {
       console.error('[NorthStar MapLibre] Lỗi khởi tạo maplibregl:', err);
     }
   }
 
+  let mouseMoveRaf = null;
   function handleMapLibreMouseMove(e) {
-    const lng = e.lngLat.lng;
-    const lat = e.lngLat.lat;
-    const badge = document.getElementById('maplibre-coords-badge');
-    if (badge) badge.innerText = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`;
+    if (mouseMoveRaf) return;
+    mouseMoveRaf = requestAnimationFrame(() => {
+      mouseMoveRaf = null;
+      if (!mapInstance || !e || !e.lngLat) return;
+      const lng = e.lngLat.lng;
+      const lat = e.lngLat.lat;
+      const badge = document.getElementById('maplibre-coords-badge');
+      if (badge) badge.innerText = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`;
 
-    const elevBadge = document.getElementById('maplibre-elevation-badge');
-    if (elevBadge) {
-      let estElev = 12;
-      if (lat > 22.0) estElev = Math.round(150 + (lat - 22.0) * 800 + (105.0 - lng) * 120);
-      else if (lat > 21.4) estElev = Math.round(35 + (lat - 21.4) * 200);
-      elevBadge.innerText = `Độ cao: +${Math.max(4, estElev)}m ASL`;
-    }
+      const elevBadge = document.getElementById('maplibre-elevation-badge');
+      if (elevBadge) {
+        let estElev = 12;
+        if (lat > 22.0) estElev = Math.round(150 + (lat - 22.0) * 800 + (105.0 - lng) * 120);
+        else if (lat > 21.4) estElev = Math.round(35 + (lat - 21.4) * 200);
+        elevBadge.innerText = `Độ cao: +${Math.max(4, estElev)}m ASL`;
+      }
+    });
   }
 
   function updateTelemetryBadge() {
@@ -892,6 +904,7 @@ window.NorthStarMapLibre = (function () {
         id: 'buildings-3d-extrusion',
         type: 'fill-extrusion',
         source: 'buildings-3d-source',
+        minzoom: 14.0, // Tối ưu hiệu năng: Chỉ tính toán và render khối nhà 3D khi zoom cận cảnh đô thị Z >= 14
         layout: {
           'visibility': layerVisibility.buildings ? 'visible' : 'none'
         },
@@ -1204,7 +1217,13 @@ window.NorthStarMapLibre = (function () {
     const zoom = mapInstance.getZoom();
     if (zoom < 10.2 || zoom > 16.0) return;
 
-    HANOI_DISTRICTS_DATA.forEach(d => {
+    // Viewport Culling: Chỉ tạo marker cho các quận huyện nằm trong khung nhìn
+    const bounds = mapInstance.getBounds();
+    const visibleDistricts = bounds 
+      ? HANOI_DISTRICTS_DATA.filter(d => bounds.contains(d.coords))
+      : HANOI_DISTRICTS_DATA;
+
+    visibleDistricts.forEach(d => {
       const el = document.createElement('div');
       el.className = 'text-[11px] font-bold text-slate-300 pointer-events-none select-none whitespace-nowrap px-1.5 py-0.5 rounded';
       el.style.cssText = 'text-shadow: 0 0 5px #020617, 0 0 8px #020617; letter-spacing: 0.3px; color: rgba(226, 232, 240, 0.85);';
@@ -2188,8 +2207,19 @@ window.NorthStarMapLibre = (function () {
       });
     } else {
       // CẤP ĐỘ 2: PHÓNG TO CHI TIẾT ĐÔ THỊ / QUẬN HUYỆN (ZOOM >= 11.0)
-      // Tự động bung toàn bộ các điểm đo riêng lẻ kèm mực nước cm, sóng phản xạ radar và popup cứu hộ
-      validPoints.forEach(pt => createIndividualFloodMarker(pt));
+      // Tối ưu hóa Viewport Culling: Chỉ tạo DOM marker cho các điểm ngập trong khung nhìn (+25% lề an toàn)
+      const bounds = mapInstance.getBounds();
+      let ptsToRender = validPoints;
+      if (bounds) {
+        const lngSpan = bounds.getEast() - bounds.getWest();
+        const latSpan = bounds.getNorth() - bounds.getSouth();
+        const minLng = bounds.getWest() - lngSpan * 0.25;
+        const maxLng = bounds.getEast() + lngSpan * 0.25;
+        const minLat = bounds.getSouth() - latSpan * 0.25;
+        const maxLat = bounds.getNorth() + latSpan * 0.25;
+        ptsToRender = validPoints.filter(pt => pt.lng >= minLng && pt.lng <= maxLng && pt.lat >= minLat && pt.lat <= maxLat);
+      }
+      ptsToRender.forEach(pt => createIndividualFloodMarker(pt));
     }
   }
 

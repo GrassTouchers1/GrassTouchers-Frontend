@@ -590,7 +590,7 @@ const CommandUIController = (function () {
 
     // 4. Cập nhật toàn bộ COP
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
 
     // 5. Bật cảnh báo Toast màu đỏ
     showToast('🚨 TÍN HIỆU SOS MỚI', `Đã tiếp nhận yêu cầu từ [${intakeItem.contact_name} - ${intakeItem.phone}] vào Trung tâm tiếp nhận!`, 'error');
@@ -615,7 +615,7 @@ const CommandUIController = (function () {
     }
 
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
   }
 
   // ĐỒNG BỘ NỀN THỜI GIAN THỰC (REAL-TIME POLLING CHỐNG BỎ SÓT TIN)
@@ -3849,7 +3849,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
 
     // 7. Render lại toàn bộ hệ thống
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
 
     // 8. Tự động chuyển màn hình sang Kho Hồ Sơ Đã Xử Lý Thành Công
     switchView('cmd_resolved_archive');
@@ -3910,14 +3910,20 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     }
 
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
     showToast('✅ ĐÃ HOÀN TẤT GIẢI CỨU', `Hồ sơ [${item.id}] đã chuyển vào kho dữ liệu thành công.`, 'success');
   }
 
   // =========================================================================
   // 5. BẢN ĐỒ TÁC CHIẾN GIS TƯƠNG TÁC (TACTICAL GIS INTEGRATION)
   // =========================================================================
-  function renderTacticalMapLayers() {
+  let lastTacticalDataSignature = '';
+  function renderTacticalMapLayers(force = false) {
+    const currentSig = `${sosData.length}_${reportData.length}_${shelterData.length}_${intakeData.length}_${intakeData[0] ? (intakeData[0].status + '_' + intakeData[0].id) : ''}`;
+    if (!force && currentSig === lastTacticalDataSignature) {
+      return; // Dữ liệu không đổi: Không hủy và vẽ lại DOM markers nhằm bảo toàn 60 FPS
+    }
+    lastTacticalDataSignature = currentSig;
     if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
       window.NorthStarMapLibre.syncAllLayers();
     }
@@ -4473,7 +4479,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
 
     closeDispatchModal();
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
 
     showToast('🚀 PHÁT LỆNH THÀNH CÔNG', `Đã điều động [${unit.name}] ứng cứu [${incident.contact_name}]`, 'success');
   }
@@ -4598,7 +4604,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       const nextStatus = { ready: 'en_route', en_route: 'on_scene', on_scene: 'standby', standby: 'ready' };
       unit.status = nextStatus[unit.status] || 'ready';
       renderAllComponents();
-      renderTacticalMapLayers();
+      renderTacticalMapLayers(true);
       showToast('🔄 ĐỔI TRẠNG THÁI XE', `${unit.name}: Trạng thái mới -> ${unit.status.toUpperCase()}`, 'info');
     }
   }
@@ -4649,7 +4655,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     }
 
     renderAllComponents();
-    renderTacticalMapLayers();
+    renderTacticalMapLayers(true);
     showToast('📋 CẬP NHẬT TIẾN ĐỘ', `Nhiệm vụ [${missionId}]: ${newStatus.toUpperCase()}`, 'success');
   }
 
