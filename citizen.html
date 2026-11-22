@@ -137,7 +137,7 @@
   <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
     <!-- 2.1. BẢN ĐỒ TÁC CHIẾN DÂN SỰ (MAPLIBRE 3D ENGINE) -->
-    <div class="w-full md:w-1/2 lg:w-3/5 h-56 sm:h-72 md:h-full relative shrink-0">
+    <div id="citizen-map-wrapper" class="w-full md:w-3/5 lg:w-[68%] h-[48vh] sm:h-[55vh] md:h-full relative shrink-0 transition-all duration-300">
       <div id="map" class="w-full h-full z-0 bg-slate-950"></div>
 
       <!-- Thanh chọn Lớp Bản Đồ Tác Chiến (Ban Ngày / Ban Đêm / Địa Hình / Vệ Tinh) -->
@@ -160,6 +160,13 @@
         </button>
       </div>
 
+      <!-- Nút mở rộng/thu gọn toàn màn hình bản đồ -->
+      <div class="absolute top-3 right-12 z-10 hidden sm:flex items-center">
+        <button onclick="CitizenPortalApp.toggleMapMaximize()" class="p-2 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-xl transition cursor-pointer active:scale-95" title="Mở rộng / Thu nhỏ bản đồ toàn màn hình">
+          <i data-lucide="maximize-2" id="citizen-map-max-icon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
       <!-- Lớp phủ điều khiển nhanh trên bản đồ: Vị trí của tôi -->
       <div class="absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-auto">
         <button onclick="CitizenPortal.locateGPSWithAccuracy()" class="p-2.5 bg-slate-950/90 hover:bg-slate-800 text-sky-400 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl transition cursor-pointer active:scale-95 flex items-center gap-1.5 text-xs font-bold" title="Định vị GPS vị trí của tôi">
@@ -177,7 +184,15 @@
     </div>
 
     <!-- 2.2. KHU VỰC THAO TÁC NGƯỜI DÂN (CITIZEN ACTION PORTAL) -->
-    <div class="flex-1 w-full md:w-1/2 lg:w-2/5 flex flex-col bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800/80 overflow-hidden">
+    <div id="citizen-panel-wrapper" class="flex-1 w-full md:w-2/5 lg:w-[32%] flex flex-col bg-slate-950 border-t md:border-t-0 md:border-l border-slate-800/80 overflow-hidden transition-all duration-300">
+
+      <!-- Thanh thu gọn / mở rộng bảng thao tác để tối đa hóa bản đồ giống bên Command -->
+      <div class="p-1.5 shrink-0 bg-slate-950 border-b border-slate-800/80 select-none">
+        <button onclick="CitizenPortalApp.toggleMapMaximize()" id="citizen-btn-toggle-map" class="w-full py-1.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/40 text-[11px] font-extrabold text-sky-400 hover:text-sky-300 flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-98">
+          <i data-lucide="chevrons-right" id="citizen-toggle-icon" class="w-3.5 h-3.5"></i>
+          <span id="citizen-toggle-text">Thu gọn bảng thao tác để tối đa hóa bản đồ</span>
+        </button>
+      </div>
 
       <!-- Thanh điều hướng Segmented Navigation Cao Cấp (VIC-01) -->
       <div class="p-2.5 shrink-0 bg-slate-950 border-b border-slate-800/70 select-none">
@@ -722,6 +737,14 @@
           }
         });
 
+        // Tự động gom cụm hoặc tách điểm khi người dùng phóng to / thu nhỏ bản đồ
+        map.on('zoomend', () => {
+          renderFloodPointsWithClustering(map);
+        });
+        map.on('moveend', () => {
+          renderFloodPointsWithClustering(map);
+        });
+
         setTimeout(() => {
           map.resize();
         }, 300);
@@ -869,38 +892,115 @@
         }
       }
 
+      // =====================================================================
+      // ĐIỂM TRẠM QUAN TRẮC NGẬP LỤT, GOM CỤM ĐỘNG & DỰ BÁO AI (C2 / MapLibre)
+      // =====================================================================
+      let aiPredictionsData = {};
+      let aiPredictionsLoaded = false;
+      let cachedFloodPoints = [];
       let officialFloodMarkers = [];
+      let isMapMaximized = false;
+
+      function toggleMapMaximize() {
+        const mapWrapper = document.getElementById('citizen-map-wrapper');
+        const panelWrapper = document.getElementById('citizen-panel-wrapper');
+        const toggleText = document.getElementById('citizen-toggle-text');
+        const toggleIcon = document.getElementById('citizen-toggle-icon');
+        const maxIcon = document.getElementById('citizen-map-max-icon');
+
+        if (!mapWrapper || !panelWrapper) return;
+        isMapMaximized = !isMapMaximized;
+
+        if (isMapMaximized) {
+          panelWrapper.classList.add('hidden');
+          mapWrapper.classList.remove('md:w-3/5', 'lg:w-[68%]');
+          mapWrapper.classList.add('w-full', 'h-full');
+          if (toggleText) toggleText.textContent = 'Mở rộng bảng thao tác người dân';
+          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-left');
+          if (maxIcon) maxIcon.setAttribute('data-lucide', 'minimize-2');
+          showToast('🗺️ Đã mở rộng bản đồ toàn màn hình!', 'info');
+        } else {
+          panelWrapper.classList.remove('hidden');
+          mapWrapper.classList.add('md:w-3/5', 'lg:w-[68%]');
+          mapWrapper.classList.remove('w-full');
+          if (toggleText) toggleText.textContent = 'Thu gọn bảng thao tác để tối đa hóa bản đồ';
+          if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevrons-right');
+          if (maxIcon) maxIcon.setAttribute('data-lucide', 'maximize-2');
+          showToast('📱 Đã hiển thị lại bảng thao tác người dân', 'info');
+        }
+
+        if (window.lucide) lucide.createIcons();
+        setTimeout(() => {
+          if (window.map) window.map.resize();
+        }, 250);
+      }
+
+      async function ensureAiPredictionsLoaded() {
+        if (aiPredictionsLoaded && Object.keys(aiPredictionsData).length > 0) return aiPredictionsData;
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/predictions');
+          if (res.ok) {
+            const list = await res.json();
+            if (Array.isArray(list)) {
+              list.forEach(item => {
+                if (item && item.point_id !== undefined) {
+                  aiPredictionsData[item.point_id] = item;
+                }
+              });
+              aiPredictionsLoaded = true;
+            }
+          }
+        } catch (e) {
+          console.warn('[CitizenPortal] Lỗi tải dữ liệu AI Predictions:', e);
+        }
+        return aiPredictionsData;
+      }
+
+      function getStationDistrictHelper(name, lat, lng) {
+        if (!name) return 'Hà Nội';
+        const match = name.match(/\((.*?)\)/);
+        if (match && match[1]) return match[1];
+        if (lat > 21.05) return 'Bắc Từ Liêm / Tây Hồ';
+        if (lat < 20.98) return 'Hoàng Mai / Hà Đông';
+        if (lng > 105.85) return 'Hoàn Kiếm / Hai Bà Trưng';
+        if (lng < 105.79) return 'Nam Từ Liêm / Cầu Giấy';
+        return 'Nội thành Hà Nội';
+      }
 
       async function loadOfficialFloodPoints(targetMap) {
         const m = targetMap || window.map;
         if (!m || typeof maplibregl === 'undefined') return;
 
-        officialFloodMarkers.forEach(marker => marker.remove());
-        officialFloodMarkers = [];
-
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/flood-points');
-          if (!res.ok) {
-            console.warn('[CitizenPortal] Không thể tải /api/flood-points, HTTP:', res.status);
+          const [resPoints] = await Promise.all([
+            fetch('http://127.0.0.1:8000/api/flood-points'),
+            ensureAiPredictionsLoaded()
+          ]);
+
+          if (!resPoints.ok) {
+            console.warn('[CitizenPortal] Không thể nạp /api/flood-points, HTTP:', resPoints.status);
             return;
           }
-          const geojson = await res.json();
+
+          const geojson = await resPoints.json();
           let points = [];
           if (geojson && Array.isArray(geojson.features)) {
             points = geojson.features.map(f => {
               const p = f.properties || {};
               const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : [105.8, 21.0];
+              const depth = parseFloat(p.depth_cm !== undefined && p.depth_cm !== null ? p.depth_cm : (p.current_depth_cm || 0));
               return {
                 id: p.id,
                 name: p.name || 'Trạm quan trắc ngập',
-                sensor_id: p.sensor_id || '',
+                sensor_id: p.sensor_id || 'SENSOR-001',
                 source: p.source || 'sensor',
                 lng: coords[0],
                 lat: coords[1],
-                depth_cm: p.depth_cm,
+                depth_cm: depth,
+                depth: depth,
                 threshold_cm: p.threshold_cm || 20,
-                status: p.status || 'safe',
-                water_trend: p.water_trend || 'stable',
+                status: p.status || (depth >= 20 ? 'danger' : (depth >= 5 ? 'warning' : 'safe')),
+                water_trend: p.water_trend || 'falling',
                 estimated_drainage_time: p.estimated_drainage_time || '',
                 last_reading_at: p.last_reading_at
               };
@@ -909,114 +1009,366 @@
             points = geojson;
           }
 
+          cachedFloodPoints = points;
           window.floodPoints = points;
 
-          points.forEach(fp => {
-            const lat = parseFloat(fp.lat);
-            const lng = parseFloat(fp.lng);
-            if (isNaN(lat) || isNaN(lng)) return;
-
-            const hasValidDepth = (fp.depth_cm !== null && fp.depth_cm !== undefined && !isNaN(Number(fp.depth_cm)));
-            const depth = hasValidDepth ? Number(fp.depth_cm) : null;
-            const status = fp.status;
-
-            let bgColor = 'bg-emerald-600';
-            let borderColor = 'border-white';
-            let shadowColor = 'shadow-[0_0_8px_rgba(16,185,129,0.5)]';
-            let markerText = hasValidDepth ? `${Math.round(depth)}cm` : '💧';
-            let statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-600">Bình thường</span>';
-            let zIdx = '10';
-
-            if (status === 'no_data' || depth === null) {
-              bgColor = 'bg-slate-600';
-              borderColor = 'border-slate-400';
-              shadowColor = '';
-              markerText = '--';
-              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-600">Chờ tín hiệu</span>';
-              zIdx = '5';
-            } else if (status === 'offline') {
-              bgColor = 'bg-slate-700';
-              borderColor = 'border-slate-500';
-              shadowColor = '';
-              markerText = 'OFF';
-              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-400 border border-slate-700">Mất kết nối</span>';
-              zIdx = '5';
-            } else if (status === 'danger' || (depth !== null && depth >= 20)) {
-              bgColor = 'bg-rose-600';
-              borderColor = 'border-white';
-              shadowColor = 'shadow-[0_0_12px_rgba(244,63,94,0.9)]';
-              markerText = `${Math.round(depth)}cm`;
-              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-950 text-rose-300 border border-rose-500 animate-pulse">NGẬP SÂU > 20CM</span>';
-              zIdx = '30';
-            } else if (status === 'warning' || (depth !== null && depth >= 5) || status === 'stale') {
-              bgColor = 'bg-amber-500';
-              borderColor = 'border-white';
-              shadowColor = 'shadow-[0_0_10px_rgba(245,158,11,0.7)]';
-              markerText = `${Math.round(depth)}cm`;
-              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600">CẢNH BÁO NGẬP</span>';
-              zIdx = '20';
-            }
-
-            const el = document.createElement('div');
-            el.className = 'official-flood-marker cursor-pointer transition transform hover:scale-125';
-            el.style.zIndex = zIdx;
-            el.innerHTML = `
-              <div class="px-1.5 py-0.5 rounded-full ${bgColor} border-2 ${borderColor} ${shadowColor} flex items-center justify-center text-white text-[10px] font-black tracking-tight select-none shadow-md">
-                ${markerText}
-              </div>
-            `;
-
-            const readingTimeStr = fp.last_reading_at ? new Date(fp.last_reading_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong';
-            const trendText = fp.water_trend === 'falling' ? '↘ Đang rút dần' : (fp.water_trend === 'rising' ? '↗ Đang dâng' : '→ Ổn định');
-
-            const popup = new maplibregl.Popup({ offset: 15, closeButton: true })
-              .setHTML(`
-                <div class="p-3 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl text-slate-100 text-xs space-y-2" style="min-width: 220px;">
-                  <div class="font-bold text-slate-100 border-b border-slate-800 pb-1.5 flex items-center justify-between gap-2">
-                    <span class="truncate">${fp.name}</span>
-                    ${statusBadge}
-                  </div>
-                  <div class="space-y-1 text-[11px] text-slate-300">
-                    <div class="flex items-center justify-between">
-                      <span>Mực nước quan trắc:</span>
-                      <b class="text-sm font-black ${depth >= 20 ? 'text-rose-400' : (depth >= 5 ? 'text-amber-400' : 'text-emerald-400')}">${depth !== null ? depth + ' cm' : 'Chưa có'}</b>
-                    </div>
-                    <div class="flex items-center justify-between text-slate-400">
-                      <span>Xu hướng nước:</span>
-                      <span class="font-medium text-slate-200">${trendText}</span>
-                    </div>
-                    ${fp.sensor_id ? `<div class="flex items-center justify-between text-slate-400 text-[10.5px]">
-                      <span>Mã cảm biến:</span>
-                      <span class="font-mono text-sky-400 font-semibold">${fp.sensor_id}</span>
-                    </div>` : ''}
-                    <div class="flex items-center justify-between text-slate-400 text-[10px]">
-                      <span>Cập nhật:</span>
-                      <span>${readingTimeStr}</span>
-                    </div>
-                  </div>
-                  <div class="pt-2 border-t border-slate-800 flex items-center gap-1.5">
-                    <button onclick="CitizenPortalApp.setRoutePoint('origin', ${lat}, ${lng}, '${encodeURIComponent(fp.name)}')" class="flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-sky-300 transition text-center cursor-pointer">
-                      🟢 Điểm đi
-                    </button>
-                    <button onclick="CitizenPortalApp.setRoutePoint('destination', ${lat}, ${lng}, '${encodeURIComponent(fp.name)}')" class="flex-1 py-1 px-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-[10px] font-bold text-white transition text-center cursor-pointer">
-                      🏁 Điểm đến
-                    </button>
-                  </div>
-                </div>
-              `);
-
-            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-              .setLngLat([lng, lat])
-              .setPopup(popup)
-              .addTo(m);
-
-            officialFloodMarkers.push(marker);
-          });
-
-          console.info(`[CitizenPortal] Đã hiển thị ${officialFloodMarkers.length} điểm quan trắc ngập lụt chính thức trên MapLibre.`);
+          renderFloodPointsWithClustering(m);
+          console.info(`[CitizenPortal] Đã nạp thành công ${cachedFloodPoints.length} điểm trạm quan trắc & kích hoạt gom cụm AI.`);
         } catch (err) {
           console.warn('[CitizenPortal] Lỗi tải điểm ngập chính thức:', err);
         }
+      }
+
+      function renderFloodPointsWithClustering(targetMap) {
+        const m = targetMap || window.map;
+        if (!m || typeof maplibregl === 'undefined') return;
+
+        officialFloodMarkers.forEach(marker => marker.remove());
+        officialFloodMarkers = [];
+
+        const validPoints = cachedFloodPoints;
+        if (!validPoints || !validPoints.length) return;
+
+        const currentZoom = m.getZoom();
+        const CLUSTER_THRESHOLD_ZOOM = 11.5;
+
+        if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
+          // Gom cụm thông minh động theo cấp độ zoom
+          let clusterDist = 0.75;
+          if (currentZoom >= 10.0) {
+            clusterDist = 0.22;
+          } else if (currentZoom >= 8.5) {
+            clusterDist = 0.45;
+          }
+
+          const clusters = [];
+          const visited = new Set();
+
+          for (let i = 0; i < validPoints.length; i++) {
+            if (visited.has(i)) continue;
+            const group = [validPoints[i]];
+            visited.add(i);
+
+            for (let j = i + 1; j < validPoints.length; j++) {
+              if (visited.has(j)) continue;
+              const dLat = validPoints[i].lat - validPoints[j].lat;
+              const dLng = validPoints[i].lng - validPoints[j].lng;
+              const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+              if (dist < clusterDist) {
+                group.push(validPoints[j]);
+                visited.add(j);
+              }
+            }
+            clusters.push(group);
+          }
+
+          clusters.forEach(group => {
+            let avgLat = 0;
+            let avgLng = 0;
+            group.forEach(pt => {
+              avgLat += pt.lat;
+              avgLng += pt.lng;
+            });
+            avgLat /= group.length;
+            avgLng /= group.length;
+
+            if (group.length > 1) {
+              createClusterMarker(m, group, avgLng, avgLat);
+            } else {
+              createIndividualFloodMarker(m, group[0]);
+            }
+          });
+        } else {
+          // Phóng to chi tiết (zoom >= 11.5): Tách thành từng điểm đo riêng lẻ
+          validPoints.forEach(pt => createIndividualFloodMarker(m, pt));
+        }
+      }
+
+      function createClusterMarker(m, group, avgLng, avgLat) {
+        const count = group.length;
+        const hasDanger = group.some(pt => pt.depth_cm >= 20 || pt.status === 'danger');
+        const hasWarning = group.some(pt => pt.depth_cm >= 5 || pt.status === 'warning');
+
+        let clusterBg = 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)';
+        let ringColor = 'rgba(6, 182, 212, 0.4)';
+        if (hasDanger) {
+          clusterBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)';
+          ringColor = 'rgba(239, 68, 68, 0.5)';
+        } else if (hasWarning) {
+          clusterBg = 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
+          ringColor = 'rgba(245, 158, 11, 0.45)';
+        }
+
+        const size = count >= 20 ? 42 : (count >= 8 ? 36 : 30);
+
+        const el = document.createElement('div');
+        el.className = 'c2-maplibre-cluster flex items-center justify-center cursor-pointer select-none group';
+        el.style.cssText = `position: relative; width: ${size}px; height: ${size}px; z-index: 30;`;
+        el.innerHTML = `
+          <span class="absolute rounded-full pointer-events-none animate-ping" style="width: ${size + 6}px; height: ${size + 6}px; background: ${ringColor}; opacity: 0.75; animation-duration: 2s;"></span>
+          <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white/80 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Bấm để phóng to bung điểm chi tiết)">
+            ${count}
+          </div>
+        `;
+
+        // Click cụm: Phóng to mượt mà để bung cụm ra các điểm chi tiết
+        el.onclick = (e) => {
+          e.stopPropagation();
+
+          let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
+          group.forEach(p => {
+            minLng = Math.min(minLng, p.lng);
+            maxLng = Math.max(maxLng, p.lng);
+            minLat = Math.min(minLat, p.lat);
+            maxLat = Math.max(maxLat, p.lat);
+          });
+
+          const currentZ = m.getZoom();
+          if (maxLng - minLng > 0.002 || maxLat - minLat > 0.002) {
+            m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+              padding: { top: 80, bottom: 80, left: 80, right: 80 },
+              maxZoom: 14.5,
+              duration: 650
+            });
+          } else {
+            m.flyTo({
+              center: [avgLng, avgLat],
+              zoom: Math.min(currentZ + 2.5, 14.5),
+              duration: 650
+            });
+          }
+        };
+
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([avgLng, avgLat])
+          .addTo(m);
+
+        officialFloodMarkers.push(marker);
+      }
+
+      function createIndividualFloodMarker(m, pt) {
+        const depthVal = Math.round(pt.depth_cm !== null && pt.depth_cm !== undefined ? pt.depth_cm : 0);
+        const depthText = (pt.status === 'offline') ? 'OFF' : (pt.status === 'no_data' || pt.depth_cm === null ? '--' : `${depthVal}cm`);
+
+        let badgeBg = '#10b981'; // Xanh lá: an toàn
+        let pulseHtml = '';
+        if (pt.status === 'danger' || depthVal >= 20) {
+          badgeBg = '#ef4444'; // Đỏ: nguy hiểm
+          pulseHtml = '<span class="absolute w-8 h-8 rounded-full bg-rose-500/40 animate-ping pointer-events-none" style="animation-duration: 1.5s;"></span>';
+        } else if (pt.status === 'warning' || depthVal >= 5) {
+          badgeBg = '#f59e0b'; // Vàng cam
+        } else if (pt.status === 'stale') {
+          badgeBg = '#d97706'; // Vàng cam hổ phách
+        } else if (pt.status === 'offline' || pt.status === 'no_data') {
+          badgeBg = '#64748b'; // Xám
+        }
+
+        const el = document.createElement('div');
+        el.className = 'c2-maplibre-pin flex items-center justify-center cursor-pointer select-none group';
+        el.style.cssText = 'position: relative; width: 34px; height: 34px; z-index: 25;';
+        el.innerHTML = `
+          ${pulseHtml}
+          <div class="px-2 py-0.5 rounded-full text-white text-[10px] font-mono font-black shadow-xl border border-white/70 relative z-10 flex items-center justify-center transition-transform duration-200 group-hover:scale-125" style="background: ${badgeBg}; min-width: 28px; height: 22px;" title="${pt.name}: ${depthVal}cm">
+            ${depthText}
+          </div>
+        `;
+
+        const popupHtml = buildStationPopupHtml(pt);
+        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '350px', closeButton: true }).setHTML(popupHtml);
+
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([pt.lng, pt.lat])
+          .setPopup(popup)
+          .addTo(m);
+
+        officialFloodMarkers.push(marker);
+      }
+
+      function buildStationPopupHtml(pt) {
+        const depthVal = Math.round(pt.depth_cm !== null && pt.depth_cm !== undefined ? pt.depth_cm : 0);
+        const status = pt.status;
+        const threshold_cm = pt.threshold_cm || 20;
+        const location = pt.name || 'Điểm quan trắc';
+        const districtName = getStationDistrictHelper(location, pt.lat, pt.lng);
+        const sensor_id = pt.sensor_id || 'SENSOR-001';
+        const sourceDisplay = pt.source === 'sensor' || sensor_id ? `Cảm biến IoT (${sensor_id})` : 'Cảm biến quan trắc';
+
+        let statusLabel = 'An toàn';
+        let centerBoxHtml = '';
+
+        if (status === 'danger' || depthVal >= 20) {
+          statusLabel = 'Nguy hiểm';
+          centerBoxHtml = `
+            <div style="background: #1a080d; border: 1px solid #991b1b; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #fca5a5; font-size: 10px; font-weight: 800; text-transform: uppercase;">🚨 Mực Nước Báo Động</span>
+                <span style="color: #f87171; background: #450a0a; border: 1px solid #7f1d1d; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-family: monospace; font-weight: 800;">Vượt ngưỡng</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                <div style="display: flex; align-items: baseline; gap: 4px;">
+                  <span style="color: #f87171; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+                  <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
+                </div>
+                <span style="color: #cbd5e1; font-size: 11px;">Ngưỡng: <b style="color: #ffffff;">${threshold_cm} cm</b></span>
+              </div>
+              <p style="color: #fca5a5; font-size: 10px; font-style: italic; margin-top: 4px;">Mực nước ngập sâu, phương tiện gầm thấp không thể qua lại.</p>
+            </div>
+          `;
+        } else if (status === 'warning' || depthVal >= 5) {
+          statusLabel = 'Chú ý';
+          centerBoxHtml = `
+            <div style="background: #1a1204; border: 1px solid #92400e; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #fde68a; font-size: 10px; font-weight: 800; text-transform: uppercase;">⚠️ Mực Nước Cảnh Báo</span>
+                <span style="color: #fbbf24; background: #451a03; border: 1px solid #78350f; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-family: monospace; font-weight: 800;">Cần theo dõi</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                <div style="display: flex; align-items: baseline; gap: 4px;">
+                  <span style="color: #fbbf24; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+                  <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
+                </div>
+                <span style="color: #cbd5e1; font-size: 11px;">Ngưỡng: <b style="color: #ffffff;">${threshold_cm} cm</b></span>
+              </div>
+              <p style="color: #fde68a; font-size: 10px; font-style: italic; margin-top: 4px;">Mực nước xấp xỉ ngưỡng, di chuyển cẩn thận.</p>
+            </div>
+          `;
+        } else if (status === 'offline') {
+          statusLabel = 'Mất kết nối';
+          centerBoxHtml = `
+            <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+              <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase;">Trạng thái trạm</span>
+              <div style="color: #cbd5e1; font-weight: 700; font-size: 12px; margin-top: 4px;">📡 Cảm biến mất kết nối</div>
+              <p style="color: #94a3b8; font-size: 10.5px; margin-top: 4px;">Số đo gần nhất: <b style="color: #fbbf24;">${depthVal} cm</b></p>
+            </div>
+          `;
+        } else {
+          statusLabel = 'An toàn';
+          centerBoxHtml = `
+            <div style="background: #04190e; border: 1px solid #065f46; border-radius: 10px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #6ee7b7; font-size: 10px; font-weight: 800; text-transform: uppercase;">✓ Tuyến Đường An Toàn</span>
+                <div style="display: flex; align-items: baseline; gap: 4px;">
+                  <span style="color: #34d399; font-size: 26px; font-weight: 900; font-family: monospace; line-height: 1;">${depthVal}</span>
+                  <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">cm</span>
+                </div>
+              </div>
+              <p style="color: #a7f3d0; font-size: 10.5px; margin-top: 4px;">Phương tiện lưu thông hoàn toàn bình thường.</p>
+            </div>
+          `;
+        }
+
+        const aiPred = (aiPredictionsData && aiPredictionsData[pt.id]) ? aiPredictionsData[pt.id] : null;
+        let aiHtml = '';
+        if (aiPred && aiPred.forecast_30m && aiPred.forecast_60m) {
+          const f30 = aiPred.forecast_30m;
+          const f60 = aiPred.forecast_60m;
+          const d30 = Math.round(f30.predicted_depth_cm);
+          const d60 = Math.round(f60.predicted_depth_cm);
+          const r30Color = d30 >= 20 ? '#f87171' : (d30 >= 5 ? '#fbbf24' : '#34d399');
+          const r60Color = d60 >= 20 ? '#f87171' : (d60 >= 5 ? '#fbbf24' : '#34d399');
+
+          aiHtml = `
+            <div style="background: #0b0f2a; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; padding: 8px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(99,102,241,0.3); padding-bottom: 4px; margin-bottom: 6px;">
+                <span style="color: #a5b4fc; font-size: 10px; font-weight: 800; text-transform: uppercase;">🤖 DỰ BÁO NGẬP BẰNG AI</span>
+                <span style="color: #c7d2fe; font-size: 9px; font-family: monospace; background: rgba(67,56,202,0.6); padding: 1px 6px; border-radius: 4px;">Tự động</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center;">
+                <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+                  <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 30 phút</span>
+                  <span style="color: ${r30Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">${d30} cm</span>
+                  <span style="color: #94a3b8; font-size: 9px; display: block;">${d30 >= 20 ? 'Nguy hiểm' : d30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+                </div>
+                <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+                  <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 60 phút</span>
+                  <span style="color: ${r60Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">${d60} cm</span>
+                  <span style="color: #94a3b8; font-size: 9px; display: block;">${d60 >= 20 ? 'Nguy hiểm' : d60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          const est30 = Math.max(0, Math.round(depthVal + (pt.water_trend === 'rising' ? 3 : -2)));
+          const est60 = Math.max(0, Math.round(depthVal + (pt.water_trend === 'rising' ? 5 : -4)));
+          const r30Color = est30 >= 20 ? '#f87171' : (est30 >= 5 ? '#fbbf24' : '#34d399');
+          const r60Color = est60 >= 20 ? '#f87171' : (est60 >= 5 ? '#fbbf24' : '#34d399');
+
+          aiHtml = `
+            <div style="background: #0b0f2a; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; padding: 8px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(99,102,241,0.3); padding-bottom: 4px; margin-bottom: 6px;">
+                <span style="color: #a5b4fc; font-size: 10px; font-weight: 800; text-transform: uppercase;">🤖 DỰ BÁO NGẬP BẰNG AI</span>
+                <span style="color: #c7d2fe; font-size: 9px; font-family: monospace; background: rgba(67,56,202,0.6); padding: 1px 6px; border-radius: 4px;">Hồi quy</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center;">
+                <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+                  <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 30 phút</span>
+                  <span style="color: ${r30Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">~${est30} cm</span>
+                  <span style="color: #94a3b8; font-size: 9px; display: block;">${est30 >= 20 ? 'Nguy hiểm' : est30 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+                </div>
+                <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 6px;">
+                  <span style="color: #94a3b8; font-size: 9.5px; display: block;">Sau 60 phút</span>
+                  <span style="color: ${r60Color}; font-size: 16px; font-weight: 900; font-family: monospace; display: block; margin: 2px 0;">~${est60} cm</span>
+                  <span style="color: #94a3b8; font-size: 9px; display: block;">${est60 >= 20 ? 'Nguy hiểm' : est60 >= 5 ? 'Chú ý' : 'An toàn'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        const trendText = pt.water_trend === 'rising' ? 'Nước đang dâng 📈' : (pt.water_trend === 'falling' ? 'Nước đang rút ↘' : 'Mực nước ổn định ➡️');
+        const drainEst = pt.estimated_drainage_time || (depthVal >= 20 ? '~ 2 - 3 giờ' : (depthVal >= 5 ? '~ 45 - 60 phút' : 'Đã cạn / Bình thường'));
+        const safeLocationName = location.replace(/'/g, "\\'");
+
+        return `
+          <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(56,189,248,0.3); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 295px; max-width: 340px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
+            <!-- Header -->
+            <div style="border-bottom: 1px solid rgba(51,65,85,0.7); padding-bottom: 8px; margin-bottom: 8px; padding-right: 20px;">
+              <div style="display: flex; align-items: start; justify-content: space-between; gap: 6px;">
+                <h4 style="font-weight: 800; color: #ffffff; font-size: 13px; line-height: 1.3; margin: 0; flex: 1;">🌊 ${location}</h4>
+                <span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800; border: 1px solid ${status === 'danger' || depthVal >= 20 ? 'rgba(239,68,68,0.6)' : (status === 'warning' || depthVal >= 5 ? 'rgba(245,158,11,0.6)' : 'rgba(16,185,129,0.6)')}; background: ${status === 'danger' || depthVal >= 20 ? 'rgba(69,10,10,0.8)' : (status === 'warning' || depthVal >= 5 ? 'rgba(69,26,3,0.8)' : 'rgba(4,25,14,0.8)')}; color: ${status === 'danger' || depthVal >= 20 ? '#fca5a5' : (status === 'warning' || depthVal >= 5 ? '#fde68a' : '#6ee7b7')}; flex-shrink: 0;">
+                  ${statusLabel}
+                </span>
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px;">
+                <span style="color: #38bdf8; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 ${districtName}</span>
+                <span style="font-family: monospace; color: #64748b; font-size: 10px; flex-shrink: 0;">${pt.lat.toFixed(4)}°B, ${pt.lng.toFixed(4)}°Đ</span>
+              </div>
+            </div>
+
+            <!-- Khối hiển thị trung tâm -->
+            ${centerBoxHtml}
+
+            <!-- Thông tin cập nhật & nguồn -->
+            <div style="font-size: 10.5px; color: #cbd5e1; border-bottom: 1px solid rgba(51,65,85,0.7); padding-bottom: 6px; margin-bottom: 6px; line-height: 1.6;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #94a3b8;">Nguồn trạm:</span>
+                <span style="font-family: monospace; color: #38bdf8; font-weight: 700;">${sourceDisplay}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #94a3b8;">Xu hướng:</span>
+                <span style="font-weight: 700; color: #ffffff;">${trendText}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #94a3b8;">Dự kiến cạn:</span>
+                <span style="font-weight: 600; color: #fde047; font-family: monospace;">${drainEst}</span>
+              </div>
+            </div>
+
+            <!-- Dự báo AI -->
+            ${aiHtml}
+
+            <!-- 2 Nút thao tác lộ trình cứu hộ -->
+            <div style="padding-top: 8px; display: flex; gap: 8px; border-top: 1px solid rgba(51,65,85,0.7);">
+              <button onclick="CitizenPortalApp.setRoutePoint('origin', ${pt.lat}, ${pt.lng}, '${safeLocationName}')" style="flex: 1; padding: 7px 10px; background: linear-gradient(135deg, #059669, #0d9488); color: #ffffff; border: 1px solid rgba(16,185,129,0.5); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
+                <span>🟢</span> Điểm Đi
+              </button>
+              <button onclick="CitizenPortalApp.setRoutePoint('destination', ${pt.lat}, ${pt.lng}, '${safeLocationName}')" style="flex: 1; padding: 7px 10px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #ffffff; border: 1px solid rgba(59,130,246,0.5); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+                <span>🏁</span> Điểm Đến
+              </button>
+            </div>
+          </div>
+        `;
       }
 
       function selectDepth(depthVal, btnEl) {
@@ -1707,6 +2059,7 @@
         init,
         switchTab,
         switchBaseMap,
+        toggleMapMaximize,
         selectDepth,
         showToast,
         trackTicket,
