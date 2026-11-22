@@ -1504,132 +1504,136 @@ window.NorthStarMapLibre = (function () {
     }
   }
 
-  function renderClusteredFloodMarkers() {
-    if (!mapInstance || !layerVisibility.floodPoints) return;
+    // =========================================================================
+  // GPU-ACCELERATED CLUSTERED FLOOD POINTS (PURE WEBGL 60 FPS)
+  // =========================================================================
+  function setupFloodPointsGeoJsonLayer() {
+    if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
-    markersRegistry.floodPoints.forEach(m => m.remove());
-    markersRegistry.floodPoints = [];
+    if (!mapInstance.getSource('ml-flood-points')) {
+      mapInstance.addSource('ml-flood-points', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterRadius: 45,
+        clusterMaxZoom: 14
+      });
 
-    const validPoints = cachedRawFloodPoints;
-    if (!validPoints.length) return;
-
-    const currentZoom = mapInstance.getZoom();
-    const CLUSTER_THRESHOLD_ZOOM = 11.5;
-
-    if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
-      // Gom cụm thông minh động theo cấp độ zoom để chống đè chữ và giữ bản đồ thoáng đãng
-      let clusterDist = 0.75;
-      if (currentZoom >= 10.0) {
-        clusterDist = 0.22;
-      } else if (currentZoom >= 8.5) {
-        clusterDist = 0.45;
-      }
-
-      const clusters = [];
-      const visited = new Set();
-
-      for (let i = 0; i < validPoints.length; i++) {
-        if (visited.has(i)) continue;
-        const group = [validPoints[i]];
-        visited.add(i);
-
-        for (let j = i + 1; j < validPoints.length; j++) {
-          if (visited.has(j)) continue;
-          const dLat = validPoints[i].lat - validPoints[j].lat;
-          const dLng = validPoints[i].lng - validPoints[j].lng;
-          const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-
-          if (dist < clusterDist) {
-            group.push(validPoints[j]);
-            visited.add(j);
-          }
-        }
-        clusters.push(group);
-      }
-
-      clusters.forEach(group => {
-        let avgLat = 0;
-        let avgLng = 0;
-        group.forEach(pt => {
-          avgLat += pt.lat;
-          avgLng += pt.lng;
-        });
-        avgLat /= group.length;
-        avgLng /= group.length;
-
-        if (group.length > 1) {
-          createClusterMarker(group, avgLng, avgLat);
-        } else {
-          createIndividualFloodMarker(group[0]);
+      mapInstance.addLayer({
+        id: 'ml-flood-clusters',
+        type: 'circle',
+        source: 'ml-flood-points',
+        filter: ['has', 'point_count'],
+        layout: {
+          'visibility': layerVisibility.floodPoints ? 'visible' : 'none'
+        },
+        paint: {
+          'circle-color': [
+            'step',
+            ['get', 'point_count'],
+            '#0284c7',
+            5, '#d97706',
+            15, '#e11d48'
+          ],
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            18,
+            5, 23,
+            15, 28
+          ],
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#ffffff'
         }
       });
-    } else {
-      // Phóng to chi tiết (zoom >= 11.5): Hiển thị từng điểm đo riêng lẻ
-      validPoints.forEach(pt => createIndividualFloodMarker(pt));
+
+      mapInstance.addLayer({
+        id: 'ml-flood-cluster-count',
+        type: 'symbol',
+        source: 'ml-flood-points',
+        filter: ['has', 'point_count'],
+        layout: {
+          'visibility': layerVisibility.floodPoints ? 'visible' : 'none',
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-flood-unclustered',
+        type: 'circle',
+        source: 'ml-flood-points',
+        filter: ['!', ['has', 'point_count']],
+        layout: {
+          'visibility': layerVisibility.floodPoints ? 'visible' : 'none'
+        },
+        paint: {
+          'circle-color': [
+            'case',
+            ['>=', ['get', 'depth'], 20], '#ef4444',
+            ['>=', ['get', 'depth'], 5], '#f59e0b',
+            '#10b981'
+          ],
+          'circle-radius': 7.5,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      });
+
+      mapInstance.on('click', 'ml-flood-clusters', (e) => {
+        const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ml-flood-clusters'] });
+        if (!features.length) return;
+        const clusterId = features[0].properties.cluster_id;
+        mapInstance.getSource('ml-flood-points').getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          mapInstance.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+        });
+      });
+
+      mapInstance.on('click', 'ml-flood-unclustered', (e) => {
+        if (!e.features || !e.features.length) return;
+        const p = e.features[0].properties;
+        openStationPopupById(p.id || p.sensor_id);
+      });
+
+      mapInstance.on('mouseenter', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+      mapInstance.on('mouseleave', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = ''; });
+      mapInstance.on('mouseenter', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+      mapInstance.on('mouseleave', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = ''; });
     }
   }
 
-  function createClusterMarker(group, avgLng, avgLat) {
-    const count = group.length;
-    const hasDanger = group.some(pt => pt.depth >= 20 || pt.status === 'danger');
-    const hasWarning = group.some(pt => pt.depth >= 5 || pt.status === 'warning');
-
-    let clusterBg = 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)';
-    let ringColor = 'rgba(6, 182, 212, 0.35)';
-    if (hasDanger) {
-      clusterBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)';
-      ringColor = 'rgba(239, 68, 68, 0.45)';
-    } else if (hasWarning) {
-      clusterBg = 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
-      ringColor = 'rgba(245, 158, 11, 0.4)';
+  function renderClusteredFloodMarkers() {
+    if (!mapInstance) return;
+    if (!mapInstance.getSource('ml-flood-points')) {
+      setupFloodPointsGeoJsonLayer();
     }
+    const source = mapInstance.getSource('ml-flood-points');
+    if (!source) return;
 
-    const size = count >= 20 ? 40 : (count >= 8 ? 36 : 30);
-
-    const el = document.createElement('div');
-    el.className = 'c2-maplibre-cluster flex items-center justify-center cursor-pointer select-none group';
-    el.style.cssText = `position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: ${size}px; height: ${size}px; pointer-events: auto !important; z-index: 30;`;
-    el.innerHTML = `
-      <span class="absolute rounded-full pointer-events-none ${hasDanger ? 'animated-marker-pulse' : ''}" style="width: ${size + 8}px; height: ${size + 8}px; background: ${ringColor};"></span>
-      <div class="rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Click để phóng to)">
-        ${count}
-      </div>
-    `;
-
-    // Click cluster: Tính bounds và phóng to mượt mà để bung cụm ra chi tiết
-    el.onclick = (e) => {
-      e.stopPropagation();
-      closeCurrentPopup();
-
-      let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
-      group.forEach(p => {
-        minLng = Math.min(minLng, p.lng);
-        maxLng = Math.max(maxLng, p.lng);
-        minLat = Math.min(minLat, p.lat);
-        maxLat = Math.max(maxLat, p.lat);
-      });
-
-      const currentZ = mapInstance.getZoom();
-      if (maxLng - minLng > 0.002 || maxLat - minLat > 0.002) {
-        mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
-          padding: { top: 90, bottom: 90, left: 90, right: 90 },
-          maxZoom: 14.5,
-          duration: 650
-        });
-      } else {
-        mapInstance.flyTo({
-          center: [avgLng, avgLat],
-          zoom: Math.min(currentZ + 2.2, 14.5),
-          duration: 650
-        });
+    const features = cachedRawFloodPoints.map(pt => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [pt.lng, pt.lat]
+      },
+      properties: {
+        id: pt.sensor_id || pt.id,
+        sensor_id: pt.sensor_id || pt.id,
+        depth: pt.depth,
+        location: pt.location,
+        status: pt.status
       }
-    };
+    }));
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
-      .setLngLat([avgLng, avgLat])
-      .addTo(mapInstance);
-
-    markersRegistry.floodPoints.push(marker);
+    source.setData({
+      type: 'FeatureCollection',
+      features: features
+    });
   }
 
   function createIndividualFloodMarker(pt) {

@@ -1099,3 +1099,25 @@ body.command-mode-active .floating-header {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
+
+/* MapLibre GL JS Popup Close Button C2 Dark Glass */
+.maplibregl-popup-close-button {
+  color: #94a3b8 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  padding: 4px 8px !important;
+  right: 8px !important;
+  top: 8px !important;
+  border-radius: 8px !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  border: 1px solid rgba(71, 85, 105, 0.4) !important;
+  transition: all 0.2s ease !important;
+  line-height: 1 !important;
+  outline: none !important;
+  z-index: 30 !important;
+}
+.maplibregl-popup-close-button:hover {
+  color: #ffffff !important;
+  background: #ef4444 !important;
+  border-color: #f87171 !important;
+}
