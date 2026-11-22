@@ -37,6 +37,7 @@ window.NorthStarMapLibre = (function () {
   // Quản lý các nhóm markers động
   const markersRegistry = {
     sos: [],
+    intake: [],
     shelters: [],
     floodPoints: [],
     hazards: [],
@@ -44,6 +45,9 @@ window.NorthStarMapLibre = (function () {
     waypoints: [],
     measure: []
   };
+
+  // Tra cứu nhanh marker tiếp nhận theo ID sự cố
+  const intakeMarkersMap = new Map();
 
   // Trạng thái hiển thị các lớp dữ liệu tác chiến
   const layerVisibility = {
@@ -1537,13 +1541,13 @@ window.NorthStarMapLibre = (function () {
   }
 
   /**
-   * 8. ĐỒNG BỘ TOÀN BỘ CÁC LỚP MARKERS
+   * 8. ĐỒNG BỘ TOÀN BỘ CÁC LỚP MARKERS TÁC CHIẾN
    */
   async function syncAllLayers() {
     if (!mapInstance) return;
     clearAllMarkers();
 
-    if (layerVisibility.sos) await syncSOSMarkers();
+    if (layerVisibility.sos) await syncIntakeMarkers();
     if (layerVisibility.floodPoints) await syncFloodPointMarkers();
     if (layerVisibility.shelters) await syncShelterMarkers();
     if (layerVisibility.units) syncRescueUnitsMarkers();
@@ -1557,90 +1561,443 @@ window.NorthStarMapLibre = (function () {
       markersRegistry[k].forEach(m => m.remove());
       markersRegistry[k] = [];
     });
+    if (intakeMarkersMap) intakeMarkersMap.clear();
   }
 
   /**
-   * Đồng bộ Tín Hiệu Kêu Cứu SOS Khẩn Cấp (Radar Animate-Ping)
+   * ĐỒNG BỘ 1:1 TOÀN BỘ DÒNG TIN TIẾP NHẬN ĐA NGUỒN (INTAKE FEED) LÊN BẢN ĐỒ MAPLIBRE
+   * Hợp nhất tuyệt đối giữa Bảng Tiếp Nhận (#pane-cmd_intake) và Bản Đồ COP:
+   * 1. 🆘 SOS Cứu nạn khẩn cấp (Radar animate-ping đỏ)
+   * 2. 📢 Báo cáo thực địa người dân (REP-* Animate-ping vàng cam)
+   * 3. ☎️ Điều phối Hotline 114 (Animate-ping xanh dương tác chiến)
+   * 4. 🌊 Cảm biến thủy văn IoT viễn trắc (Cyan Telemetry)
+   * 5. 🛰️ Viễn thám vệ tinh Radar SAR Sentinel-1 (Tím vũ trụ)
+   */
+  async function syncIntakeMarkers() {
+    if (!mapInstance) return;
+
+    // Dọn sạch markers cũ
+    markersRegistry.sos.forEach(m => m.remove());
+    markersRegistry.sos = [];
+    if (markersRegistry.intake) {
+      markersRegistry.intake.forEach(m => m.remove());
+      markersRegistry.intake = [];
+    }
+    intakeMarkersMap.clear();
+
+    // 1. Lấy dữ liệu trực tiếp từ CommandUIController để đồng bộ 100% với Bảng Tiếp Nhận
+    let intakeItems = [];
+    if (window.CommandUIController && typeof window.CommandUIController.getIntakeData === 'function') {
+      intakeItems = window.CommandUIController.getIntakeData();
+    }
+
+    // 2. Dự phòng nạp qua API nếu Controller chưa sẵn sàng
+    if (!intakeItems || intakeItems.length === 0) {
+      try {
+        const [sosRes, repRes] = await Promise.all([
+          fetch(resolveApi('/api/sos')).catch(() => null),
+          fetch(resolveApi('/api/reports')).catch(() => null)
+        ]);
+
+        if (sosRes && sosRes.ok) {
+          const sosGeo = await sosRes.json();
+          (sosGeo.features || []).forEach(feat => {
+            const p = feat.properties;
+            const c = feat.geometry.coordinates;
+            intakeItems.push({
+              id: `SOS-${p.id}`,
+              raw_id: p.id,
+              source: 'sos_beacon',
+              source_label: '🆘 Tín Hiệu SOS',
+              source_badge_color: 'bg-rose-600 text-white',
+              contact_name: p.contact_name || 'Người dân kêu cứu',
+              phone: p.phone || '098xxxxxxx',
+              people_count: Number(p.people_count || 1),
+              has_vulnerable: !!p.has_elderly_or_children,
+              water_level_cm: Number(p.water_level_cm || 0),
+              priority: p.priority || 'critical',
+              status: p.status || 'pending',
+              lat: Number(c[1]),
+              lng: Number(c[0]),
+              description: p.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
+              created_at: p.created_at || new Date().toISOString(),
+              is_verified: p.priority === 'critical' || p.status !== 'pending'
+            });
+          });
+        }
+
+        let repFeatures = [];
+        if (repRes && repRes.ok) {
+          try {
+            const repGeo = await repRes.json();
+            repFeatures = repGeo.features || [];
+          } catch (_) {}
+        }
+
+        if (repFeatures.length > 0) {
+          repFeatures.forEach(feat => {
+            const p = feat.properties || {};
+            const c = (feat.geometry && feat.geometry.coordinates) || [105.85, 21.02];
+            intakeItems.push({
+              id: `REP-${p.id}`,
+              raw_id: p.id,
+              source: 'citizen_report',
+              source_label: '📢 Dân Báo Ngập',
+              source_badge_color: 'bg-amber-600 text-white',
+              contact_name: `Báo cáo thực địa #${p.id}`,
+              phone: 'GPS Đối soát tự động',
+              people_count: 0,
+              has_vulnerable: false,
+              water_level_cm: Number(p.estimated_depth_cm || 25),
+              priority: p.level === 'heavy' ? 'high' : 'medium',
+              status: p.confirmed ? 'verified' : 'pending',
+              lat: Number(c[1]),
+              lng: Number(c[0]),
+              description: p.description || 'Báo cáo sự cố ngập úng hoặc sạt lở.',
+              created_at: p.created_at || new Date().toISOString(),
+              is_verified: !!p.confirmed
+            });
+          });
+        } else {
+          // Hạt giống 8 điểm báo cáo thực địa miền Bắc đồng bộ 100% với CommandUIController
+          const seedReps = [
+            { id: 'REP-HN-101', raw_id: 101, lat: 20.9850, lng: 105.8180, contact_name: 'Báo cáo: Ngõ 207 Bùi Xương Trạch, Thanh Xuân, Hà Nội', depth: 35, confirmed: true, desc: 'Nước ngập tràn vào nhà dân ~35cm, xe máy không thể di chuyển, rác tràn nghẽn cống tiêu thoát nước.' },
+            { id: 'REP-LC-102', raw_id: 102, lat: 22.3150, lng: 104.3820, contact_name: 'Báo cáo: Km 78 Quốc lộ 4D, Đèo Ô Quy Hồ, Sa Pa, Lào Cai', depth: 90, confirmed: false, desc: 'Sạt lở vách núi đất đá dài 40m chia cắt hoàn toàn tuyến Sa Pa - Lai Châu. 2 xe tải kẹt giữa đoạn sạt lở nguy hiểm.' },
+            { id: 'REP-YB-103', raw_id: 103, lat: 21.7230, lng: 104.8980, contact_name: 'Báo cáo: Phường Hồng Hà, TP. Yên Bái (Ven sông Thao)', depth: 80, confirmed: true, desc: 'Nước sông Thao dâng vượt báo động 3, tràn qua mặt đê tràn vào tầng 1 các hộ dân khu phố Thanh Niên.' },
+            { id: 'REP-TN-104', raw_id: 104, lat: 21.5930, lng: 105.8450, contact_name: 'Báo cáo: Đường Hoàng Văn Thụ, TP. Thái Nguyên', depth: 65, confirmed: false, desc: 'Mưa to xối xả ngập sâu 65cm, 1 cây phượng vĩ bật gốc đè vào đường dây điện trung thế, nguy cơ rò điện.' },
+            { id: 'REP-HN-105', raw_id: 105, lat: 20.8935, lng: 105.6590, contact_name: 'Báo cáo: Thôn Nhân Lý, Xã Nam Phương Tiến, Chương Mỹ, Hà Nội', depth: 120, confirmed: true, desc: 'Nước sông Bùi tràn đê Bùi 2, toàn thôn ngập sâu 1.2m đến 1.5m, 120 hộ dân bị cô lập cần thuyền tiếp tế.' },
+            { id: 'REP-QN-106', raw_id: 106, lat: 20.9510, lng: 107.0850, contact_name: 'Báo cáo: Khu vực Cột 5, Phường Hồng Hà, TP. Hạ Long, Quảng Ninh', depth: 30, confirmed: false, desc: 'Triều cường dâng kết hợp mưa lớn làm ngập cục bộ 30cm tuyến bao biểu, các xe ô tô gầm thấp phải quay đầu.' },
+            { id: 'REP-HG-107', raw_id: 107, lat: 22.7520, lng: 104.9850, contact_name: 'Báo cáo: Km 12 Quốc lộ 2, Huyện Vị Xuyên, Hà Giang', depth: 75, confirmed: false, desc: 'Lũ ống quét qua ngầm tràn cuốn trôi 1 phần kè taluy âm, đất đá đang sạt trượt tiếp, khuyến cáo không đi qua.' },
+            { id: 'REP-CB-108', raw_id: 108, lat: 22.8250, lng: 106.5280, contact_name: 'Báo cáo: Thị trấn Trùng Khánh, Tỉnh Cao Bằng', depth: 40, confirmed: true, desc: 'Nước sông Quây Sơn dâng nhanh làm ngập 40cm các diện tích lúa và hoa màu ven bãi bồi.' }
+          ];
+          seedReps.forEach(s => {
+            intakeItems.push({
+              id: s.id,
+              raw_id: s.raw_id,
+              source: 'citizen_report',
+              source_label: '📢 Dân Báo Ngập',
+              source_badge_color: 'bg-amber-600 text-white',
+              contact_name: s.contact_name,
+              phone: 'GPS Đối soát tự động',
+              people_count: 0,
+              has_vulnerable: false,
+              water_level_cm: s.depth,
+              priority: s.depth >= 60 ? 'high' : 'medium',
+              status: s.confirmed ? 'verified' : 'pending',
+              lat: s.lat,
+              lng: s.lng,
+              description: s.desc,
+              created_at: new Date(Date.now() - 30 * 60000).toISOString(),
+              is_verified: s.confirmed
+            });
+          });
+        }
+
+        intakeItems.push(
+          {
+            id: 'HOTLINE-114',
+            raw_id: 114,
+            source: 'hotline_114',
+            source_label: '☎️ Hotline 114',
+            source_badge_color: 'bg-blue-600 text-white',
+            contact_name: 'Trực ban PCCC & CNCH Hà Nội',
+            phone: '114 (Đường dây nóng)',
+            people_count: 4,
+            has_vulnerable: true,
+            water_level_cm: 65,
+            priority: 'critical',
+            status: 'pending',
+            lat: 20.8940,
+            lng: 105.6595,
+            description: 'Người dân thôn Nhân Lý báo nước tràn vào ngõ sâu 1.2m, xe máy và máy phát điện đã ngập, có người già 82 tuổi.',
+            created_at: new Date(Date.now() - 15 * 60000).toISOString(),
+            is_verified: true
+          },
+          {
+            id: 'IOT-201',
+            raw_id: 201,
+            source: 'iot_sensor',
+            source_label: '🌊 Trạm Quan Trắc',
+            source_badge_color: 'bg-cyan-700 text-white',
+            contact_name: 'Trạm Quan Trắc Tự Động Sông Bùi',
+            phone: 'Telemetry IoT Sensor',
+            people_count: 0,
+            has_vulnerable: false,
+            water_level_cm: 145,
+            priority: 'critical',
+            status: 'verified',
+            lat: 20.8930,
+            lng: 105.6590,
+            description: 'Mực nước dâng 1.45m trong 2 giờ qua, đê Bùi 2 có nguy cơ tràn bãi tả ngạn Nam Phương Tiến.',
+            created_at: new Date(Date.now() - 20 * 60000).toISOString(),
+            is_verified: true
+          },
+          {
+            id: 'SAR-S1-01',
+            raw_id: 501,
+            source: 'satellite_sar',
+            source_label: '🛰️ Vệ Tinh Sentinel-1',
+            source_badge_color: 'bg-purple-700 text-white',
+            contact_name: 'Viễn thám Radar Khẩu độ Tổng hợp ESA',
+            phone: 'Copernicus SAR Feed',
+            people_count: 0,
+            has_vulnerable: false,
+            water_level_cm: 100,
+            priority: 'high',
+            status: 'verified',
+            lat: 22.3120,
+            lng: 104.3800,
+            description: 'Ảnh viễn thám radar xuyên mây phát hiện mặt nước mở rộng 4.2 km² tại thung lũng sông Chảy, Bảo Yên.',
+            created_at: new Date(Date.now() - 45 * 60000).toISOString(),
+            is_verified: true
+          }
+        );
+      } catch (err) {
+        console.warn('[MapLibre] Lỗi tự nạp Intake dự phòng:', err);
+      }
+    }
+
+    const validDrawerSosList = [];
+    const usedCoords = new Map(); // Xử lý vi phân tán ~25m nếu 2 tin trùng khít tọa độ
+
+    intakeItems.forEach(item => {
+      let lat = Number(item.lat);
+      let lng = Number(item.lng);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      // Khóa chặt phạm vi tác chiến 26 Tỉnh Miền Bắc
+      if (!isWithinNorthernVietnam(lng, lat)) return;
+
+      // Vi phân tán (Micro-offset) nếu trùng tọa độ chuẩn xác để người dùng click chọn được cả 2 tin
+      const exactKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+      const overlapCount = usedCoords.get(exactKey) || 0;
+      usedCoords.set(exactKey, overlapCount + 1);
+      if (overlapCount > 0) {
+        const angle = (overlapCount * 60) * Math.PI / 180;
+        const offsetDist = 0.00035 * Math.min(overlapCount, 3);
+        lng += Math.cos(angle) * offsetDist;
+        lat += Math.sin(angle) * offsetDist;
+      }
+
+      const isResolved = item.status === 'resolved' || item.status === 'rescued';
+      const isDispatched = item.status === 'dispatched' || item.status === 'on_scene';
+      const isCritical = item.priority === 'critical';
+
+      // Thiết lập định dạng Icon & Màu sắc Tác chiến theo Nguồn Tiếp Nhận
+      let markerHtml = '';
+      let accentBorderColor = 'rgba(239, 68, 68, 0.5)';
+      let accentTextColor = '#f87171';
+      let accentDotColor = '#ef4444';
+
+      if (item.source === 'citizen_report' || (item.id && String(item.id).startsWith('REP-'))) {
+        accentBorderColor = 'rgba(245, 158, 11, 0.6)';
+        accentTextColor = '#fbbf24';
+        accentDotColor = '#f59e0b';
+        markerHtml = `
+          <span class="absolute w-7 h-7 rounded-full bg-amber-500/35 animate-ping pointer-events-none"></span>
+          <span class="absolute w-8 h-8 rounded-full bg-amber-500/15 pointer-events-none"></span>
+          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-black text-[9px] flex items-center justify-center shadow-lg border border-amber-200 relative z-10 pointer-events-auto">
+            📢
+          </div>
+        `;
+      } else if (item.source === 'hotline_114' || (item.id && String(item.id).startsWith('HOTLINE'))) {
+        accentBorderColor = 'rgba(59, 130, 246, 0.6)';
+        accentTextColor = '#60a5fa';
+        accentDotColor = '#3b82f6';
+        markerHtml = `
+          <span class="absolute w-7 h-7 rounded-full bg-blue-500/35 animate-ping pointer-events-none"></span>
+          <span class="absolute w-8 h-8 rounded-full bg-blue-500/15 pointer-events-none"></span>
+          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-blue-200 relative z-10 pointer-events-auto">
+            ☎️
+          </div>
+        `;
+      } else if (item.source === 'iot_sensor' || (item.id && String(item.id).startsWith('IOT'))) {
+        accentBorderColor = 'rgba(6, 182, 212, 0.6)';
+        accentTextColor = '#22d3ee';
+        accentDotColor = '#06b6d4';
+        markerHtml = `
+          <span class="absolute w-6 h-6 rounded-full bg-cyan-400/20 animate-ping pointer-events-none"></span>
+          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-600 to-teal-700 text-slate-950 font-black text-[9px] flex items-center justify-center shadow-lg border border-cyan-200 relative z-10 pointer-events-auto">
+            🌊
+          </div>
+        `;
+      } else if (item.source === 'satellite_sar' || (item.id && String(item.id).startsWith('SAR'))) {
+        accentBorderColor = 'rgba(168, 85, 247, 0.6)';
+        accentTextColor = '#c084fc';
+        accentDotColor = '#a855f7';
+        markerHtml = `
+          <span class="absolute w-6 h-6 rounded-full bg-purple-400/20 animate-ping pointer-events-none"></span>
+          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-violet-800 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-purple-200 relative z-10 pointer-events-auto">
+            🛰️
+          </div>
+        `;
+      } else {
+        // Mặc định: SOS Cứu nạn
+        if (isDispatched) {
+          accentBorderColor = 'rgba(59, 130, 246, 0.7)';
+          accentTextColor = '#93c5fd';
+          accentDotColor = '#3b82f6';
+          markerHtml = `
+            <span class="absolute w-7 h-7 rounded-full bg-blue-500/35 animate-ping pointer-events-none"></span>
+            <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-white relative z-10 pointer-events-auto">
+              🚑
+            </div>
+          `;
+        } else if (isResolved) {
+          accentBorderColor = 'rgba(16, 185, 129, 0.5)';
+          accentTextColor = '#34d399';
+          accentDotColor = '#10b981';
+          markerHtml = `
+            <div class="w-5 h-5 rounded-full bg-emerald-800 text-emerald-200 font-black text-[9px] flex items-center justify-center shadow-md border border-emerald-400 opacity-70 pointer-events-auto">
+              ✓
+            </div>
+          `;
+        } else {
+          markerHtml = `
+            <span class="absolute w-7 h-7 rounded-full bg-rose-500/35 animate-ping pointer-events-none"></span>
+            <span class="absolute w-8 h-8 rounded-full bg-rose-500/15 pointer-events-none"></span>
+            <div class="w-6 h-6 rounded-full bg-gradient-to-br from-rose-600 to-red-700 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-white relative z-10 pointer-events-auto">
+              SOS
+            </div>
+          `;
+        }
+      }
+
+      // Tạo DOM Marker Element
+      const el = document.createElement('div');
+      el.className = 'flex items-center justify-center cursor-pointer select-none';
+      el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 15;';
+      el.innerHTML = markerHtml;
+      el.setAttribute('data-incident-id', String(item.id));
+
+      // Badges Popup
+      const priorityBadgeHtml = isCritical
+        ? '<span style="font-size: 10px; font-weight: 900; background: rgba(159,18,57,0.85); color: #fda4af; border: 1px solid #e11d48; border-radius: 4px; padding: 2px 7px;">🔴 P1 Khẩn Cấp</span>'
+        : (item.priority === 'high'
+          ? '<span style="font-size: 10px; font-weight: 800; background: rgba(120,53,15,0.85); color: #fde68a; border: 1px solid #d97706; border-radius: 4px; padding: 2px 7px;">🟠 P2 Ưu Tiên</span>'
+          : '<span style="font-size: 10px; font-weight: 700; background: rgba(30,41,59,0.85); color: #cbd5e1; border: 1px solid #475569; border-radius: 4px; padding: 2px 7px;">⚪ Bình Thường</span>');
+
+      const statusBadgeHtml = isResolved
+        ? '<span style="font-size: 10px; font-weight: 800; background: rgba(6,78,59,0.85); color: #6ee7b7; border: 1px solid #059669; border-radius: 4px; padding: 2px 7px;">✅ Đã Hoàn Tất</span>'
+        : (isDispatched
+          ? '<span style="font-size: 10px; font-weight: 800; background: rgba(30,58,138,0.85); color: #93c5fd; border: 1px solid #2563eb; border-radius: 4px; padding: 2px 7px;">🚑 Đang Ứng Cứu</span>'
+          : (item.is_verified
+            ? '<span style="font-size: 10px; font-weight: 800; background: rgba(19,78,74,0.85); color: #5eead4; border: 1px solid #0d9488; border-radius: 4px; padding: 2px 7px;">✓ Đã Xác Minh</span>'
+            : '<span style="font-size: 10px; font-weight: 800; background: rgba(120,53,15,0.85); color: #fde68a; border: 1px solid #d97706; border-radius: 4px; padding: 2px 7px;">⏳ Chờ Duyệt</span>'));
+
+      const safeLatStr = lat.toFixed(4);
+      const safeLngStr = lng.toFixed(4);
+      const safeContactName = String(item.contact_name || 'Nạn nhân').replace(/'/g, "\\'");
+
+      const popupHtml = `
+        <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid ${accentBorderColor}; box-shadow: 0 16px 36px rgba(0,0,0,0.85); min-width: 290px; max-width: 325px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px; margin-bottom: 8px; padding-right: 20px;">
+            <span style="font-weight: 900; color: ${accentTextColor}; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${accentDotColor};"></span> ${item.source_label || 'SỰ CỐ TIẾP NHẬN'}
+            </span>
+            <span style="font-size: 10px; font-family: monospace; font-weight: 800; color: #cbd5e1; background: rgba(30,41,59,0.8); border: 1px solid #475569; border-radius: 4px; padding: 1px 6px;">#${item.id}</span>
+          </div>
+
+          <div style="margin-bottom: 8px;">
+            <h4 style="font-weight: 800; color: #ffffff; font-size: 13px; margin: 0; line-height: 1.35;">${item.contact_name || 'Người dân'}</h4>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 3px;">
+              <span style="font-size: 11px; font-family: monospace; font-weight: 700; color: #fbbf24;">📞 ${item.phone || 'Chưa có SĐT'}</span>
+              <span style="font-size: 10px; font-family: monospace; color: #94a3b8;">[${safeLatStr}, ${safeLngStr}]</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+            ${priorityBadgeHtml}
+            ${statusBadgeHtml}
+          </div>
+
+          <div style="background: rgba(2,6,23,0.85); border: 1px solid rgba(51,65,85,0.7); border-radius: 10px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; line-height: 1.6;">
+            ${item.people_count > 0 ? `<div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Số người:</span><span style="font-weight: 800; color: #ffffff; font-family: monospace;">${item.people_count} người</span></div>` : ''}
+            ${item.has_vulnerable ? '<div style="color: #fbbf24; font-weight: 800; font-size: 10.5px;">⚠️ Có trẻ nhỏ / người cao tuổi</div>' : ''}
+            ${item.water_level_cm > 0 ? `<div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Mực nước:</span><span style="font-weight: 800; color: #38bdf8; font-family: monospace;">~${item.water_level_cm} cm</span></div>` : ''}
+            ${item.description ? `<div style="font-style: italic; color: #cbd5e1; font-size: 11px; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 5px; margin-top: 5px; line-height: 1.4;">"${item.description}"</div>` : ''}
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(51,65,85,0.7); padding-top: 8px;">
+            <div style="display: flex; gap: 6px;">
+              ${(item.phone && String(item.phone).match(/\d/)) ? `<a href="tel:${item.phone}" style="flex: 1; padding: 6px 8px; background: #059669; color: #ffffff; border-radius: 7px; font-size: 11px; font-weight: 800; text-align: center; text-decoration: none; display: block;">📞 Gọi điện</a>` : ''}
+              <button onclick="CommandUIController.openIncidentDocket('${item.id}')" style="flex: 1; padding: 6px 8px; background: #1e293b; color: #38bdf8; border: 1px solid #334155; border-radius: 7px; font-size: 11px; font-weight: 800; cursor: pointer;">📋 Hồ Sơ</button>
+              <button onclick="CommandUIController.openDispatchModal('${item.id}')" style="flex: 1; padding: 6px 8px; background: #dc2626; color: #ffffff; border: none; border-radius: 7px; font-size: 11px; font-weight: 800; cursor: pointer;">⚡ Lệnh</button>
+            </div>
+            <button onclick="NorthStarMapLibre.openGroundReconViewer(${lng}, ${lat}, '${safeContactName}')" style="width: 100%; padding: 6px 10px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #ffffff; border: 1px solid rgba(167,139,250,0.5); border-radius: 7px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(124,58,237,0.35);">
+              <span>📸</span> Trinh Sát Hiện Trường & 3D
+            </button>
+          </div>
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({ offset: 25, maxWidth: '320px' }).setHTML(popupHtml);
+      el.onclick = (e) => {
+        e.stopPropagation();
+        openActivePopup(popup, [lng, lat]);
+      };
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
+        .setLngLat([lng, lat])
+        .addTo(mapInstance);
+
+      markersRegistry.sos.push(marker);
+      if (markersRegistry.intake) markersRegistry.intake.push(marker);
+      intakeMarkersMap.set(String(item.id), { marker, popup, item, el, lat, lng });
+
+      if (!isResolved) {
+        validDrawerSosList.push({ ...item, coords: [lng, lat] });
+      }
+    });
+
+    cachedDrawerData.sos = validDrawerSosList;
+    updateDrawerBadge('sos', validDrawerSosList.length);
+  }
+
+  /**
+   * Tương thích ngược: Đồng bộ SOS gọi trực tiếp syncIntakeMarkers
    */
   async function syncSOSMarkers() {
-    try {
-      const res = await fetch(resolveApi('/api/sos')).catch(() => null);
-      if (!res || !res.ok) return;
-      const data = await res.json();
-      const features = data.features || [];
+    return await syncIntakeMarkers();
+  }
 
-      markersRegistry.sos.forEach(m => m.remove());
-      markersRegistry.sos = [];
+  /**
+   * ĐỊNH VỊ TỨC THÌ SỰ CỐ TỪ BẢNG TIẾP NHẬN TRÊN BẢN ĐỒ MAPLIBRE (C2 FOCUS INCIDENT)
+   * Lia camera mượt mà, bật popup chi tiết và tạo hiệu ứng vòng xung điện quang
+   */
+  function focusIncident(id, lng, lat, itemData) {
+    if (!mapInstance) return;
 
-      const seenCoords = new Set();
-      const validSosList = [];
+    closeCurrentPopup();
 
-      features.forEach(feat => {
-        const p = feat.properties;
-        if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
-        const coords = feat.geometry.coordinates; // [Lng, Lat]
-        if (!coords || !coords[0] || !coords[1]) return;
-        if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm ngoài Miền Bắc (Lào, Thái Lan)
+    const targetLng = Number(lng);
+    const targetLat = Number(lat);
+    if (isNaN(targetLng) || isNaN(targetLat)) return;
 
-        const coordKey = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;
-        if (seenCoords.has(coordKey)) return;
-        seenCoords.add(coordKey);
+    // Lia góc nhìn chiến thuật
+    mapInstance.flyTo({
+      center: [targetLng, targetLat],
+      zoom: 15.8,
+      pitch: 45,
+      bearing: -10,
+      duration: 1200,
+      essential: true
+    });
 
-        validSosList.push({ ...p, coords });
-
-        const el = document.createElement('div');
-        el.className = 'flex items-center justify-center cursor-pointer select-none';
-        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 28px; height: 28px; pointer-events: auto !important; z-index: 15;';
-        el.innerHTML = `
-          <span class="absolute w-7 h-7 rounded-full bg-rose-500/35 animate-ping pointer-events-none"></span>
-          <span class="absolute w-8 h-8 rounded-full bg-rose-500/15 pointer-events-none"></span>
-          <div class="w-6 h-6 rounded-full bg-rose-600 text-white font-black text-[9px] flex items-center justify-center shadow-lg border border-white relative z-10 pointer-events-auto">
-            SOS
-          </div>
-        `;
-
-        const popupHtml = `
-          <div style="padding: 12px; background: #0b0f19; color: #f8fafc; border-radius: 14px; border: 1px solid rgba(239,68,68,0.4); box-shadow: 0 16px 36px rgba(0,0,0,0.8); min-width: 285px; max-width: 320px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; user-select: none;">
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(239,68,68,0.3); padding-bottom: 8px; margin-bottom: 8px; padding-right: 20px;">
-              <span style="font-weight: 900; color: #f87171; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span> SOS CỨU HỘ
-              </span>
-              <span style="font-size: 10px; font-family: monospace; color: #cbd5e1; background: rgba(30,41,59,0.8); border: 1px solid #475569; border-radius: 4px; padding: 1px 6px;">#${p.id || 'SOS'}</span>
-            </div>
-            <div style="margin-bottom: 8px;">
-              <h4 style="font-weight: 800; color: #ffffff; font-size: 13px; margin: 0; line-height: 1.3;">${p.contact_name || 'Nạn nhân'}</h4>
-              <div style="font-size: 12px; font-family: monospace; font-weight: 700; color: #fbbf24; margin-top: 2px;">📞 ${p.phone || 'Chưa có SĐT'}</div>
-            </div>
-            <div style="background: rgba(2,6,23,0.85); border: 1px solid rgba(51,65,85,0.7); border-radius: 10px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; line-height: 1.6;">
-              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Số người:</span><span style="font-weight: 800; color: #ffffff; font-family: monospace;">${p.people_count} người</span></div>
-              ${p.has_elderly_or_children ? '<div style="color: #fbbf24; font-weight: 800; font-size: 10.5px;">⚠️ Có trẻ nhỏ / người già</div>' : ''}
-              <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Mực nước:</span><span style="font-weight: 800; color: #f87171; font-family: monospace;">~${p.water_level_cm || 0} cm</span></div>
-              ${p.notes ? `<div style="font-style: italic; color: #cbd5e1; font-size: 10.5px; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 4px; margin-top: 4px;">"${p.notes}"</div>` : ''}
-            </div>
-            <div style="display: flex; gap: 8px; border-top: 1px solid rgba(51,65,85,0.7); padding-top: 8px;">
-              <a href="tel:${p.phone}" style="flex: 1; padding: 7px 10px; background: #059669; color: #ffffff; border-radius: 8px; font-size: 12px; font-weight: 800; text-align: center; text-decoration: none; display: block;">📞 Gọi cứu nạn</a>
-              <button onclick="window.NorthStarRescue && window.NorthStarRescue.resolveSOS(${p.id})" style="padding: 7px 10px; background: rgba(30,41,59,0.9); color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">✓ An toàn</button>
-            </div>
-          </div>
-        `;
-
-        const popup = new maplibregl.Popup({ offset: 25, maxWidth: '290px' }).setHTML(popupHtml);
-        el.onclick = (e) => {
-          e.stopPropagation();
-          openActivePopup(popup, [coords[0], coords[1]]);
-        };
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
-          .setLngLat([coords[0], coords[1]])
-          .addTo(mapInstance);
-
-        markersRegistry.sos.push(marker);
-      });
-
-      cachedDrawerData.sos = validSosList;
-      updateDrawerBadge('sos', validSosList.length);
-    } catch (e) {
-      console.warn('[MapLibre] Lỗi đồng bộ SOS:', e);
-    }
+    // Mở popup và tạo hiệu ứng nhấp nháy tiêu điểm tác chiến
+    setTimeout(() => {
+      const rec = intakeMarkersMap.get(String(id));
+      if (rec && rec.popup) {
+        openActivePopup(rec.popup, [rec.lng || targetLng, rec.lat || targetLat]);
+        if (rec.el) {
+          rec.el.classList.add('tactical-focus-pulse');
+          setTimeout(() => rec.el.classList.remove('tactical-focus-pulse'), 3500);
+        }
+      } else {
+        const title = itemData ? (itemData.contact_name || itemData.source_label) : `Sự cố #${id}`;
+        flyToTacticalItem(targetLng, targetLat, `🎯 ${title}`, `Mã sự cố: #${id}`);
+      }
+    }, 400);
   }
 
   let cachedRawFloodPoints = [];
@@ -2508,32 +2865,49 @@ window.NorthStarMapLibre = (function () {
         if (!q) return true;
         return (item.contact_name || '').toLowerCase().includes(q) ||
                (item.phone || '').includes(q) ||
-               (item.notes || '').toLowerCase().includes(q);
+               (item.description || item.notes || '').toLowerCase().includes(q) ||
+               (item.id || '').toLowerCase().includes(q);
       });
 
       if (!items.length) {
-        listContainer.innerHTML = '<div class="text-center text-slate-500 text-xs py-8">Không có tín hiệu SOS nào phù hợp.</div>';
+        listContainer.innerHTML = '<div class="text-center text-slate-500 text-xs py-8">Không có tin tiếp nhận nào phù hợp.</div>';
         return;
       }
 
       items.forEach(item => {
+        let icon = '🚨';
+        let badgeColor = 'bg-rose-950 text-rose-300 border-rose-800';
+        if (item.source === 'citizen_report' || (item.id && String(item.id).startsWith('REP-'))) {
+          icon = '📢';
+          badgeColor = 'bg-amber-950 text-amber-300 border-amber-800';
+        } else if (item.source === 'hotline_114' || (item.id && String(item.id).startsWith('HOTLINE'))) {
+          icon = '☎️';
+          badgeColor = 'bg-blue-950 text-blue-300 border-blue-800';
+        } else if (item.source === 'iot_sensor' || (item.id && String(item.id).startsWith('IOT'))) {
+          icon = '🌊';
+          badgeColor = 'bg-cyan-950 text-cyan-300 border-cyan-800';
+        } else if (item.source === 'satellite_sar' || (item.id && String(item.id).startsWith('SAR'))) {
+          icon = '🛰️';
+          badgeColor = 'bg-purple-950 text-purple-300 border-purple-800';
+        }
+
         const div = document.createElement('div');
-        div.className = 'p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-rose-500/60 transition space-y-1.5 text-xs';
+        div.className = 'p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-sky-500/60 transition space-y-1.5 text-xs';
         div.innerHTML = `
           <div class="flex items-center justify-between">
-            <span class="font-extrabold text-rose-400 flex items-center gap-1">
-              <span>🚨</span> ${item.contact_name || 'Nạn nhân'}
+            <span class="font-extrabold text-slate-100 flex items-center gap-1.5 truncate">
+              <span>${icon}</span> <span class="truncate">${item.contact_name || 'Nạn nhân'}</span>
             </span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800">
-              ${item.people_count} Người
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${badgeColor} border whitespace-nowrap">
+              ${item.id}
             </span>
           </div>
           <div class="text-[11px] text-slate-300">📞 SĐT: <b>${item.phone}</b></div>
-          ${item.notes ? `<div class="text-[10.5px] text-slate-400 italic">"${item.notes}"</div>` : ''}
+          ${(item.description || item.notes) ? `<div class="text-[10.5px] text-slate-400 italic line-clamp-2">"${item.description || item.notes}"</div>` : ''}
           <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
-            <a href="tel:${item.phone}" class="px-2 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded font-bold no-underline">Gọi Ngay</a>
-            <button onclick="NorthStarMapLibre.flyToTacticalItem(${item.coords[0]}, ${item.coords[1]}, 'SOS: ${item.contact_name || 'Nạn nhân'}', '${item.phone}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded font-bold cursor-pointer transition">
-              📍 Bay Tới
+            ${(item.phone && String(item.phone).match(/\d/)) ? `<a href="tel:${item.phone}" class="px-2 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded font-bold no-underline">Gọi Ngay</a>` : '<span class="text-slate-500">Kênh Nội Bộ</span>'}
+            <button onclick="NorthStarMapLibre.focusIncident('${item.id}', ${item.coords[0]}, ${item.coords[1]})" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold cursor-pointer transition">
+              📍 Định Vị
             </button>
           </div>
         `;
@@ -3774,6 +4148,9 @@ window.NorthStarMapLibre = (function () {
     resize,
     zoomToProvince,
     focusProvinceRegion,
+    focusIncident,
+    syncIntakeMarkers,
+    syncSOSMarkers,
     // Ground Reconnaissance & Deep Zoom Features
     openGroundReconViewer,
     openCurrentViewRecon,

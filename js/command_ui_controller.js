@@ -1537,8 +1537,8 @@ const CommandUIController = (function () {
               <span>📋 Hồ sơ</span>
             </button>
             <div class="flex items-center gap-1.5">
-              <button onclick="CommandUIController.flyToLocation(${item.lat}, ${item.lng}, '${item.id}')" class="text-[10.5px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer">
-                <span>🎯 Map</span>
+              <button onclick="CommandUIController.locateIncidentOnMap('${item.id}')" class="text-[10.5px] text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer" title="Định vị ngay trên bản đồ tác chiến">
+                <span>🎯 Bản Đồ</span>
               </button>
               ${dispatchButtonHtml}
             </div>
@@ -1644,7 +1644,7 @@ const CommandUIController = (function () {
           <td class="p-3">
             <div class="font-bold text-white">${item.contact_name || 'Người dân'}</div>
             <div class="text-[11px] text-slate-400">${item.phone || 'N/A'}</div>
-            <div class="text-[10px] text-slate-500 font-mono">[${safeLat}, ${safeLng}]</div>
+            <div class="text-[10px] text-sky-400 hover:text-sky-300 hover:underline font-mono cursor-pointer flex items-center gap-1 mt-0.5" onclick="CommandUIController.locateIncidentOnMap('${item.id}')" title="Nhấn để định vị ngay trên bản đồ tác chiến">📍 [${safeLat}, ${safeLng}]</div>
           </td>
           <td class="p-3 max-w-xs">
             <p class="text-[11px] text-slate-300 line-clamp-2">${item.description || 'Không có mô tả chi tiết'}</p>
@@ -1659,6 +1659,9 @@ const CommandUIController = (function () {
           </td>
           <td class="p-3 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
+              <button onclick="CommandUIController.locateIncidentOnMap('${item.id}')" title="Định vị ngay trên bản đồ tác chiến COP" class="px-2.5 py-1 bg-sky-600/30 hover:bg-sky-600/60 text-sky-300 border border-sky-500/50 rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1 shadow-xs active:scale-95">
+                <span>📍 Bản Đồ</span>
+              </button>
               <button onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Mở hồ sơ nhật ký" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded font-bold text-[10.5px] cursor-pointer transition">
                 📋
               </button>
@@ -1719,7 +1722,7 @@ const CommandUIController = (function () {
             "${s.notes}"
           </p>
           <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-            <button onclick="CommandUIController.flyToLocation(${s.lat}, ${s.lng}, '${s.id}')" class="text-blue-400 text-xs font-bold hover:underline cursor-pointer">
+            <button onclick="CommandUIController.locateIncidentOnMap('${s.id}')" class="text-sky-400 text-xs font-bold hover:underline cursor-pointer flex items-center gap-1">
               📍 Vị trí bản đồ
             </button>
             ${dispatchBtn}
@@ -1773,8 +1776,8 @@ const CommandUIController = (function () {
             ${rep.description}
           </p>
           <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-            <button onclick="CommandUIController.flyToLocation(${rep.lat}, ${rep.lng}, '${rep.id}')" class="text-blue-400 text-xs font-bold hover:underline cursor-pointer">
-              📍 Xem tọa độ
+            <button onclick="CommandUIController.locateIncidentOnMap('${rep.id}')" class="text-amber-400 text-xs font-bold hover:underline cursor-pointer flex items-center gap-1">
+              📍 Xem trên bản đồ
             </button>
             ${verifyBtns}
           </div>
@@ -4435,7 +4438,50 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     showToast('🧭 CẮM TUYẾN TÁC CHIẾN', `Đã hiển thị lộ trình [${mission.id}] trên bản đồ 3D`, 'info');
   }
 
+  /**
+   * Định vị trực tiếp sự cố từ bảng tiếp nhận lên bản đồ tác chiến COP
+   * Tự động chuyển view sang Dashboard, lia camera mượt mà và bật popup
+   */
+  function locateIncidentOnMap(id) {
+    let item = (intakeData || []).find(i => String(i.id) === String(id) || String(i.raw_id) === String(id));
+    if (!item) {
+      item = (sosData || []).find(s => String(s.id) === String(id) || String(s.raw_id) === String(id));
+    }
+    if (!item) {
+      item = (reportData || []).find(r => String(r.id) === String(id) || String(r.raw_id) === String(id));
+    }
+
+    if (!item) {
+      showToast('⚠️ KHÔNG TÌM THẤY', `Không tìm thấy thông tin sự cố #${id}`, 'warning');
+      return;
+    }
+
+    const lat = Number(item.lat);
+    const lng = Number(item.lng);
+    if (isNaN(lat) || isNaN(lng)) {
+      showToast('⚠️ TỌA ĐỘ LỖI', `Sự cố #${id} không có tọa độ hợp lệ.`, 'warning');
+      return;
+    }
+
+    // Tự động chuyển về COP Dashboard nếu đang ở màn hình khác để thấy bản đồ
+    if (state.currentView !== 'cmd_dashboard' && state.currentView !== 'cmd_disaster_map') {
+      switchView('cmd_dashboard');
+    }
+
+    setTimeout(() => {
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.focusIncident === 'function') {
+        window.NorthStarMapLibre.focusIncident(item.id, lng, lat, item);
+      } else if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
+        window.NorthStarMapLibre.map.flyTo({ center: [lng, lat], zoom: 15.8, pitch: 45, duration: 1200 });
+      }
+      showToast('🎯 ĐỊNH VỊ TÁC CHIẾN', `Đang lia bản đồ đến [${item.id}]: ${item.contact_name || ''}`, 'info');
+    }, 150);
+  }
+
   function flyToLocation(lat, lng, label) {
+    if (state.currentView !== 'cmd_dashboard' && state.currentView !== 'cmd_disaster_map') {
+      switchView('cmd_dashboard');
+    }
     if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
       window.NorthStarMapLibre.map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
       showToast('🎯 LIA BẢN ĐỒ', `Đã chuyển tâm bản đồ tới: ${label || 'Mục tiêu'}`, 'info');
@@ -4794,6 +4840,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     getMissionData: () => [...missionData],
     getShelterData: () => [...shelterData],
     flyToLocation,
+    locateIncidentOnMap,
     verifyIncident,
     rejectIncident,
     toggleUnitStatus,

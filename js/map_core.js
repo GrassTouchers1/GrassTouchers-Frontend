@@ -297,10 +297,6 @@ function initMap() {
   return map;
 }
 
-}
-
-
-
 // 2. Tải danh sách 8 điểm ngập và vẽ lên bản đồ
 async function loadFloodPoints() {
   const loadingEl = document.getElementById('summary-loading-view');
