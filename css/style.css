@@ -933,17 +933,17 @@ body.command-mode-active .floating-header {
  * C2 DARK GLASS NAVIGATION & SCALE CONTROLS (MAPLIBRE GL JS)
  * ========================================================================= */
 .maplibregl-ctrl-top-right {
-  top: 54px !important;
-  right: 12px !important;
+  top: 72px !important;
+  right: 14px !important;
   margin: 0 !important;
   z-index: 25 !important;
 }
 
 .maplibregl-ctrl-group {
-  background: rgba(11, 15, 25, 0.92) !important;
+  background: rgba(11, 15, 25, 0.94) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border: 1px solid rgba(56, 189, 248, 0.5) !important;
   border-radius: 14px !important;
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25) !important;
   overflow: hidden !important;
@@ -995,6 +995,120 @@ body.command-mode-active .floating-header {
   padding: 1px 6px !important;
   border-radius: 0 0 6px 6px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* =========================================================================
+ * C2 TACTICAL PROVINCE FLOOD CLUSTER BADGES (LEAFLET-STYLE MAPLIBRE CLUSTERING)
+ * ========================================================================= */
+.c2-province-cluster-badge {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  pointer-events: auto !important;
+  z-index: 35 !important;
+  cursor: pointer !important;
+  user-select: none;
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.c2-province-cluster-badge:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+  z-index: 45 !important;
+}
+
+.c2-province-cluster-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 9px;
+  background: rgba(11, 15, 25, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(56, 189, 248, 0.7);
+  border-radius: 9999px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.85), 0 0 18px rgba(56, 189, 248, 0.35);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.c2-province-cluster-badge:hover .c2-province-cluster-inner {
+  border-color: #38bdf8;
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.95), 0 0 25px rgba(56, 189, 248, 0.6);
+}
+
+.c2-province-cluster-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.c2-province-cluster-name {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.c2-province-cluster-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 900;
+  line-height: 1.2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.c2-province-cluster-count.danger {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: #fff;
+  border: 1px solid rgba(254, 202, 202, 0.5);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+}
+
+.c2-province-cluster-count.warning {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: #fff;
+  border: 1px solid rgba(254, 240, 138, 0.5);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+}
+
+.c2-province-cluster-count.safe {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  color: #fff;
+  border: 1px solid rgba(186, 230, 253, 0.5);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.c2-province-cluster-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: provinceClusterPulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.c2-province-cluster-pulse.danger {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.c2-province-cluster-pulse.warning {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+.c2-province-cluster-pulse.safe {
+  background: rgba(6, 182, 212, 0.25);
+}
+
+@keyframes provinceClusterPulse {
+  0% { transform: scale(0.92); opacity: 0.9; }
+  70% { transform: scale(1.25); opacity: 0; }
+  100% { transform: scale(1.28); opacity: 0; }
 }
 
 

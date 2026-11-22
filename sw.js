@@ -17,7 +17,7 @@
  */
 
 // Service Worker for NORTHSTAR (GrassTouchers Frontend)
-const CACHE_NAME = 'northstar-cache-v20261121_prod_v4';
+const CACHE_NAME = 'northstar-cache-v20261122_prod_v5';
 const STATIC_ASSETS = [
   './',
   './index.html',

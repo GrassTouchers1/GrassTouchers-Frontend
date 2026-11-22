@@ -54,7 +54,8 @@ window.NorthStarMapLibre = (function () {
     units: true,
     route: true,
     storm: true,
-    buildings: false,
+    terrain: true,     // Bật Địa hình 3D thực tế (DEM) nổi khối núi non
+    buildings: true,   // Bật Khối nhà đô thị 3D (3D Buildings Extrusion)
     rainRadar: false
   };
 
@@ -346,6 +347,24 @@ window.NorthStarMapLibre = (function () {
         'top-right'
       );
 
+      // Đảm bảo tuyệt đối NavigationControl nằm an toàn dưới thanh Top HUD (không bao giờ che nút Toàn Màn Hình)
+      const enforceNavCtrlPosition = () => {
+        try {
+          const ctrlTopRight = document.querySelector('.maplibregl-ctrl-top-right');
+          if (ctrlTopRight) {
+            ctrlTopRight.style.setProperty('top', '72px', 'important');
+            ctrlTopRight.style.setProperty('right', '14px', 'important');
+            ctrlTopRight.style.setProperty('margin', '0', 'important');
+            ctrlTopRight.style.setProperty('z-index', '25', 'important');
+          }
+        } catch (_) {}
+      };
+      mapInstance.on('load', enforceNavCtrlPosition);
+      mapInstance.on('resize', enforceNavCtrlPosition);
+      setTimeout(enforceNavCtrlPosition, 50);
+      setTimeout(enforceNavCtrlPosition, 300);
+      setTimeout(enforceNavCtrlPosition, 1000);
+
       // Thước đo tỉ lệ bản đồ (ScaleControl)
       mapInstance.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
@@ -365,6 +384,7 @@ window.NorthStarMapLibre = (function () {
 
       mapInstance.on('load', () => {
         isInitialized = true;
+        setup3DTerrainDEM();
         setupProvincesVectorLayer();
         setupStormSimulationVectorLayer();
         setupTacticalRouteVectorLayer();
@@ -409,13 +429,25 @@ window.NorthStarMapLibre = (function () {
 
       // Tự động gom cụm hoặc mở rộng điểm đo ngập khi zoom / di chuyển
       mapInstance.on('zoomend', () => {
-        if (layerVisibility.floodPoints) syncFloodPointMarkers();
+        if (layerVisibility.floodPoints) {
+          if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
+            renderClusteredFloodMarkers();
+          } else {
+            syncFloodPointMarkers();
+          }
+        }
         syncFloodCirclesData();
         updateMapLibreViewportAlert();
         renderHanoiDistrictMarkers();
       });
       mapInstance.on('moveend', () => {
-        if (layerVisibility.floodPoints) syncFloodPointMarkers();
+        if (layerVisibility.floodPoints) {
+          if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
+            renderClusteredFloodMarkers();
+          } else {
+            syncFloodPointMarkers();
+          }
+        }
         syncFloodCirclesData();
         updateMapLibreViewportAlert();
         renderHanoiDistrictMarkers();
@@ -803,7 +835,43 @@ window.NorthStarMapLibre = (function () {
   }
 
   /**
-   * 6. LỚP KHỐI NHÀ & CÔNG TRÌNH ĐÔ THỊ 3D (3D BUILDINGS EXTRUSION)
+   * 6. LỚP CAO ĐỘ ĐỊA HÌNH 3D NỔI KHỐI (3D TERRAIN DIGITAL ELEVATION MODEL - DEM)
+   * Nguồn mở toàn cầu: AWS Open Data Terrarium DEM (Phủ kín toàn bộ 26 tỉnh miền Bắc, Fansipan, Sa Pa, Ba Vì...)
+   */
+  function setup3DTerrainDEM() {
+    if (!mapInstance || !mapInstance.isStyleLoaded()) return;
+
+    if (!mapInstance.getSource('terrain-dem-source')) {
+      try {
+        mapInstance.addSource('terrain-dem-source', {
+          type: 'raster-dem',
+          tiles: [
+            'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
+          ],
+          encoding: 'terrarium',
+          tileSize: 256,
+          maxzoom: 14
+        });
+      } catch (e) {
+        console.warn('[MapLibre 3D Terrain] Lỗi addSource:', e);
+      }
+    }
+
+    if (layerVisibility.terrain) {
+      try {
+        mapInstance.setTerrain({ source: 'terrain-dem-source', exaggeration: 1.6 });
+      } catch (e) {
+        console.warn('[MapLibre 3D Terrain] Lỗi setTerrain:', e);
+      }
+    } else {
+      try {
+        mapInstance.setTerrain(null);
+      } catch (_) {}
+    }
+  }
+
+  /**
+   * 7. LỚP KHỐI NHÀ & CÔNG TRÌNH ĐÔ THỊ 3D (3D BUILDINGS EXTRUSION)
    */
   function setup3DBuildingsVectorLayer() {
     if (!mapInstance || !mapInstance.isStyleLoaded()) return;
@@ -827,12 +895,13 @@ window.NorthStarMapLibre = (function () {
             25, '#0284c7',
             50, '#06b6d4',
             80, '#38bdf8',
-            120, '#f59e0b',
-            180, '#ef4444'
+            140, '#f59e0b',
+            220, '#f43f5e',
+            350, '#ef4444'
           ],
           'fill-extrusion-height': ['get', 'height'],
           'fill-extrusion-base': 0,
-          'fill-extrusion-opacity': 0.85
+          'fill-extrusion-opacity': 0.88
         }
       });
     }
@@ -840,22 +909,56 @@ window.NorthStarMapLibre = (function () {
 
   function generate3DBuildingsGeoJSON() {
     const landmarks = [
-      // Hà Nội C2 Center & Ba Đình
-      { center: [105.834, 21.033], w: 0.003, h: 0.003, height: 65, name: 'Sở Chỉ Huy Trung Ương Ba Đình' },
-      { center: [105.854, 21.028], w: 0.0025, h: 0.0025, height: 45, name: 'BCH PCTT Hoàn Kiếm' },
-      { center: [105.764, 21.020], w: 0.004, h: 0.004, height: 50, name: 'Sân Vận Động Mỹ Đình (Trú Ẩn)' },
-      { center: [105.784, 21.016], w: 0.003, h: 0.003, height: 180, name: 'Keangnam Landmark C2' },
-      { center: [105.845, 21.004], w: 0.003, h: 0.003, height: 55, name: 'Kho Vật Tư Cứu Nạn Hai Bà Trưng' },
-      // Thái Nguyên
-      { center: [105.842, 21.594], w: 0.0025, h: 0.0025, height: 40, name: 'BCH PCTT Tỉnh Thái Nguyên' },
-      { center: [105.835, 21.588], w: 0.003, h: 0.003, height: 35, name: 'Trạm Y Tế & Trú Ẩn Gang Thép' },
-      // Yên Bái
-      { center: [104.908, 21.725], w: 0.0025, h: 0.0025, height: 35, name: 'BCH PCTT Tỉnh Yên Bái' },
-      { center: [104.895, 21.718], w: 0.002, h: 0.002, height: 28, name: 'Nhà Thi Đấu Yên Bái' },
-      // Lào Cai - Bảo Yên
-      { center: [104.385, 22.253], w: 0.002, h: 0.002, height: 25, name: 'Ban Chỉ Huy Tiền Phương Làng Nủ' },
-      // Quảng Ninh - Hạ Long
-      { center: [107.010, 20.935], w: 0.0035, h: 0.0035, height: 50, name: 'Cảng Tuần Châu Điều Hành Cứu Hộ' }
+      // === HÀ NỘI: Cụm Landmark & Trung tâm Đô thị Cao tầng ===
+      { center: [105.7840, 21.0165], w: 0.0028, h: 0.0028, height: 350, name: 'Keangnam Hanoi Landmark 72 (Tòa tháp cao nhất Hà Nội)' },
+      { center: [105.7825, 21.0155], w: 0.0020, h: 0.0020, height: 212, name: 'Keangnam Residential Tower A (48 tầng)' },
+      { center: [105.7850, 21.0155], w: 0.0020, h: 0.0020, height: 212, name: 'Keangnam Residential Tower B (48 tầng)' },
+      { center: [105.8130, 21.0330], w: 0.0030, h: 0.0025, height: 272, name: 'Lotte Center Hà Nội (65 tầng, Liễu Giai)' },
+      { center: [105.8150, 21.0320], w: 0.0025, h: 0.0025, height: 160, name: 'Vinhomes Metropolis Liễu Giai (3 tháp 45 tầng)' },
+      { center: [105.8030, 21.0080], w: 0.0022, h: 0.0022, height: 177, name: 'Diamond Flower Tower (Lê Văn Lương)' },
+      { center: [105.7940, 21.0050], w: 0.0035, h: 0.0030, height: 145, name: 'Tổ hợp D\'.Capitale Trần Duy Hưng (6 tòa 39 tầng)' },
+      { center: [105.7900, 21.0260], w: 0.0025, h: 0.0025, height: 135, name: 'Viettel Telecom Headquarters (Cầu Giấy)' },
+      { center: [105.7820, 21.0310], w: 0.0022, h: 0.0022, height: 95, name: 'FPT Tower (Khu Công Nghệ Duy Tân)' },
+      { center: [105.7805, 21.0325], w: 0.0020, h: 0.0020, height: 85, name: 'CMC Tower Duy Tân' },
+      { center: [105.7640, 21.0205], w: 0.0045, h: 0.0045, height: 50, name: 'Sân Vận Động Quốc Gia Mỹ Đình (Điểm Trú Ẩn Khẩn Cấp)' },
+      { center: [105.7880, 21.0060], w: 0.0040, h: 0.0035, height: 42, name: 'Trung Tâm Hội Nghị Quốc Gia NCC' },
+      { center: [105.8360, 21.0360], w: 0.0030, h: 0.0030, height: 45, name: 'Tòa Nhà Quốc Hội Việt Nam (Ba Đình)' },
+      { center: [105.8335, 21.0340], w: 0.0030, h: 0.0030, height: 55, name: 'Sở Chỉ Huy PCTT & TKCN Trung Ương' },
+      { center: [105.8420, 21.0430], w: 0.0025, h: 0.0025, height: 147, name: 'EVN Twin Towers Cửa Bắc (Điều Độ Lưới Điện Quốc Gia)' },
+      { center: [105.8540, 21.0280], w: 0.0025, h: 0.0025, height: 40, name: 'UBND TP Hà Nội & BCH PCTT Thủ Đô' },
+      { center: [105.8470, 21.0240], w: 0.0022, h: 0.0022, height: 85, name: 'Meliá Tower (Lý Thường Kiệt)' },
+      { center: [105.8670, 20.9950], w: 0.0045, h: 0.0040, height: 120, name: 'Khu Đô Thị Times City & Park Hill (12 Tòa Tháp)' },
+      { center: [105.8150, 21.0020], w: 0.0045, h: 0.0040, height: 130, name: 'Khu Đô Thị Royal City (6 Tòa Tháp 35 Tầng)' },
+      { center: [105.8690, 21.0460], w: 0.0030, h: 0.0025, height: 135, name: 'Mipec Riverside Long Biên (Ven Sông Hồng)' },
+      { center: [105.8080, 21.0600], w: 0.0040, h: 0.0040, height: 110, name: 'Khu Đô Thị Ciputra Nam Thăng Long' },
+      { center: [105.7950, 21.0550], w: 0.0040, h: 0.0035, height: 125, name: 'Khu Ngoại Giao Đoàn & StarLake Tây Hồ Tây' },
+
+      // === HẢI PHÒNG: Cảng biển & Tháp biểu tượng ===
+      { center: [106.6620, 20.8650], w: 0.0030, h: 0.0030, height: 148, name: 'Vinpearl Imperia Hải Phòng (45 tầng - Cao nhất Hải Phòng)' },
+      { center: [106.6850, 20.8580], w: 0.0030, h: 0.0030, height: 45, name: 'Trung Tâm Hành Chính TP Hải Phòng' },
+      { center: [106.7500, 20.8400], w: 0.0050, h: 0.0040, height: 35, name: 'Cụm Cảng Quốc Tế Tân Vũ - Lạch Huyện' },
+
+      // === QUẢNG NINH: Cảng tàu, Tháp khách sạn, Vịnh Hạ Long ===
+      { center: [107.0850, 20.9480], w: 0.0035, h: 0.0030, height: 110, name: 'FLC Grand Hotel Hạ Long' },
+      { center: [107.0750, 20.9520], w: 0.0030, h: 0.0030, height: 55, name: 'Trụ Sở Tỉnh Ủy & UBND Tỉnh Quảng Ninh' },
+      { center: [107.0100, 20.9350], w: 0.0040, h: 0.0040, height: 50, name: 'Cảng Tàu Khách Quốc Tế Tuần Châu - Điều Hành Cứu Nạn' },
+      { center: [107.0600, 20.9550], w: 0.0030, h: 0.0025, height: 45, name: 'Vincom Plaza Hạ Long' },
+
+      // === THÁI NGUYÊN: Khu công nghiệp & Trung tâm tỉnh ===
+      { center: [105.8420, 21.5940], w: 0.0028, h: 0.0028, height: 48, name: 'BCH PCTT & TKCN Tỉnh Thái Nguyên' },
+      { center: [105.8350, 21.5880], w: 0.0035, h: 0.0035, height: 38, name: 'Tổ Hợp Công Nghiệp Gang Thép Thái Nguyên' },
+      { center: [105.8900, 21.4350], w: 0.0060, h: 0.0050, height: 45, name: 'Tổ Hợp Samsung Electronics Thái Nguyên (SEVT Phổ Yên)' },
+
+      // === LÀO CAI & YÊN BÁI: Trạm cứu nạn & Cáp treo Fansipan ===
+      { center: [103.7760, 22.3030], w: 0.0030, h: 0.0030, height: 65, name: 'Ga Cáp Treo Fansipan Legend & Quần Thể Tâm Linh Fansipan' },
+      { center: [104.3850, 22.2530], w: 0.0025, h: 0.0025, height: 30, name: 'Ban Chỉ Huy Tiền Phương Cứu Hộ Làng Nủ (Bảo Yên)' },
+      { center: [103.9650, 22.4900], w: 0.0025, h: 0.0025, height: 55, name: 'Tổ Hợp Aristo & Trung Tâm Hành Chính Lào Cai' },
+      { center: [104.9080, 21.7250], w: 0.0028, h: 0.0028, height: 45, name: 'Trụ Sở BCH PCTT Tỉnh Yên Bái' },
+      { center: [104.8950, 21.7180], w: 0.0025, h: 0.0025, height: 32, name: 'Nhà Thi Đấu Yên Bái (Điểm Sơ Tán Lũ Sông Thao)' },
+
+      // === PHÚ THỌ & HÒA BÌNH ===
+      { center: [105.2890, 21.3020], w: 0.0025, h: 0.0025, height: 35, name: 'Trạm Điều Phối Cầu Phong Châu & Cứu Hộ Sông Hồng' },
+      { center: [105.3300, 20.8150], w: 0.0035, h: 0.0035, height: 55, name: 'Ban Quản Lý & Đập Thủy Điện Hòa Bình (Sông Đà)' }
     ];
 
     const features = [];
@@ -1595,6 +1698,9 @@ window.NorthStarMapLibre = (function () {
       cachedDrawerData.flood = [...validPoints].sort((a, b) => b.depth - a.depth);
       updateDrawerBadge('flood', validPoints.length);
 
+      // Cập nhật số điểm ngập động vào Dropdown 26 Tỉnh Thành Miền Bắc
+      updateProvinceDropdownCounts();
+
       renderClusteredFloodMarkers();
       syncFloodCirclesData();
       updateMapLibreViewportAlert();
@@ -1605,6 +1711,92 @@ window.NorthStarMapLibre = (function () {
     }
   }
 
+  // =========================================================================
+  // BỘ NHẬN DIỆN VÀ PHÂN VÙNG TỈNH THÀNH (26 TỈNH MIỀN BẮC)
+  // =========================================================================
+  const PROVINCE_KEYWORD_MAP = {
+    'Lào Cai': ['lào cai', 'bảo yên', 'bảo hà', 'làng nủ', 'sa pa', 'lao cai', 'bát xát'],
+    'Yên Bái': ['yên bái', 'yen bai', 'sông thao', 'mù cang chải', 'văn yên', 'trấn yên'],
+    'Thái Nguyên': ['thái nguyên', 'thai nguyen', 'phổ yên', 'đê chã', 'sông cầu', 'gia bẩy', 'sông công'],
+    'Bắc Giang': ['bắc giang', 'bac giang', 'phủ lạng thương', 'hiệp hòa', 'sông thương', 'lục ngạn'],
+    'Phú Thọ': ['phú thọ', 'phu tho', 'việt trì', 'phong châu', 'sông lô', 'đoan hùng', 'thanh sơn'],
+    'Cao Bằng': ['cao bằng', 'cao bang', 'pia oắc', 'bằng giang', 'trùng khánh', 'bảo lạc'],
+    'Quảng Ninh': ['quảng ninh', 'quang ninh', 'bãi cháy', 'cẩm phả', 'hạ long', 'uông bí', 'móng cái', 'vân đồn'],
+    'Hải Phòng': ['hải phòng', 'hai phong', 'hòn dáu', 'đồ sơn', 'cát hải', 'bạch long vĩ', 'thủy nguyên'],
+    'Tuyên Quang': ['tuyên quang', 'tuyen quang', 'chiêm hóa', 'na hang', 'sơn dương'],
+    'Hòa Bình': ['hòa bình', 'hoa binh', 'lương sơn', 'sông đà', 'mai châu', 'kỳ sơn', 'kim bôi'],
+    'Bắc Ninh': ['bắc ninh', 'bac ninh', 'bến hồ', 'sông đuống', 'từ sơn', 'thuận thành'],
+    'Lạng Sơn': ['lạng sơn', 'lang son', 'thất khê', 'sông kỳ cùng', 'đồng đăng', 'hữu lũng'],
+    'Ninh Bình': ['ninh bình', 'ninh binh', 'sông đáy', 'hoa lư', 'tam điệp', 'nho quan'],
+    'Hà Nam': ['hà nam', 'ha nam', 'phủ lý', 'đồng văn', 'kim bảng'],
+    'Nam Định': ['nam định', 'nam dinh', 'sông đào', 'giao thủy', 'hải hậu'],
+    'Thái Bình': ['thái bình', 'thai binh', 'diêm điền', 'kiến xương', 'tiền hải'],
+    'Hưng Yên': ['hưng yên', 'hung yen', 'khoái châu', 'kim động', 'mỹ hào'],
+    'Hải Dương': ['hải dương', 'hai duong', 'chí linh', 'kinh môn', 'nam sách'],
+    'Vĩnh Phúc': ['vĩnh phúc', 'vinh phuc', 'vĩnh yên', 'phúc yên', 'tam đảo', 'bình xuyên'],
+    'Bắc Kạn': ['bắc kạn', 'bac kan', 'ba bể', 'chợ đồn', 'ngân sơn'],
+    'Hà Giang': ['hà giang', 'ha giang', 'đồng văn', 'mèo vạc', 'vị xuyên', 'quản bạ'],
+    'Sơn La': ['sơn la', 'son la', 'mộc châu', 'mường la', 'thuận châu'],
+    'Điện Biên': ['điện biên', 'dien bien', 'mường thanh', 'tuần giáo', 'mường nhé'],
+    'Lai Châu': ['lai châu', 'lai chau', 'phong thổ', 'mường tè', 'tam đường'],
+    'Thanh Hóa': ['thanh hóa', 'thanh hoa', 'sầm sơn', 'bỉm sơn', 'mường lát']
+  };
+
+  function getProvinceForFloodPoint(pt) {
+    const loc = (pt.location || pt.name || '').toLowerCase();
+    for (const [prov, kws] of Object.entries(PROVINCE_KEYWORD_MAP)) {
+      if (kws.some(kw => loc.includes(kw))) {
+        return prov;
+      }
+    }
+    // Tọa độ bao phủ toàn bộ thủ đô Hà Nội (cả nội thành và ngoại thành Ba Vì, Sơn Tây, Mỹ Đức, Mê Linh...)
+    if (pt.lat >= 20.50 && pt.lat <= 21.40 && pt.lng >= 105.30 && pt.lng <= 106.10) {
+      return 'Hà Nội';
+    }
+    // Tìm trung tâm tỉnh gần nhất
+    let nearestProv = 'Hà Nội';
+    let minDist = Infinity;
+    for (const [prov, info] of Object.entries(NORTHERN_PROVINCE_TARGETS)) {
+      const pCenter = info.center || [105.85, 21.03];
+      const d = Math.hypot(pt.lng - pCenter[0], pt.lat - pCenter[1]);
+      if (d < minDist) {
+        minDist = d;
+        nearestProv = prov;
+      }
+    }
+    return nearestProv;
+  }
+
+  function updateProvinceDropdownCounts() {
+    const provSel = document.getElementById('ml-province-selector');
+    if (!provSel || !cachedRawFloodPoints.length) return;
+
+    const counts = {};
+    cachedRawFloodPoints.forEach(pt => {
+      const prov = getProvinceForFloodPoint(pt);
+      counts[prov] = (counts[prov] || 0) + 1;
+    });
+
+    for (let opt of provSel.options) {
+      const provVal = opt.value;
+      if (provVal && provVal !== 'all') {
+        const c = counts[provVal] || 0;
+        const cleanText = opt.text.replace(/\s*\(\d+\s*vùng ngập\)/g, '').replace(/\s*\(\d+\s*điểm ngập\)/g, '');
+        if (c > 0) {
+          opt.text = `${cleanText} (${c} điểm ngập)`;
+        } else {
+          opt.text = cleanText;
+        }
+      }
+    }
+  }
+
+  /**
+   * HIỂN THỊ CỤM ĐIỂM NGẬP THÔNG MINH (LEAFLET-STYLE MAPLIBRE CLUSTERING)
+   * - Zoom < 11.2 (Toàn cảnh / Cấp tỉnh): Huy hiệu tổng hợp số điểm ngập từng Tỉnh/Thành (VD: 🏛️ Hà Nội [130])
+   * - Nhấp vào huy hiệu: Camera flyTo/fitBounds phóng to mượt mà vào trung tâm tỉnh.
+   * - Zoom >= 11.2 (Chi tiết đô thị / quận huyện): Tự động bung toàn bộ các điểm ngập chi tiết kèm mực nước (cm) & sóng radar.
+   */
   function renderClusteredFloodMarkers() {
     if (!mapInstance || !layerVisibility.floodPoints) return;
 
@@ -1615,118 +1807,110 @@ window.NorthStarMapLibre = (function () {
     if (!validPoints.length) return;
 
     const currentZoom = mapInstance.getZoom();
-    const CLUSTER_THRESHOLD_ZOOM = 11.5;
+    const CLUSTER_THRESHOLD_ZOOM = 11.0;
 
     if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
-      // Gom cụm thông minh động theo cấp độ zoom để chống đè chữ và giữ bản đồ thoáng đãng
-      let clusterDist = 0.75;
-      if (currentZoom >= 10.0) {
-        clusterDist = 0.22;
-      } else if (currentZoom >= 8.5) {
-        clusterDist = 0.45;
-      }
+      // CẤP ĐỘ 1: TOÀN CẢNH MIỀN BẮC / TỈNH THÀNH (ZOOM < 11.0)
+      // Gom nhóm điểm ngập theo từng Tỉnh Thành để hiển thị số lượng cụm (như Leaflet MarkerCluster)
+      const provGroups = {};
+      validPoints.forEach(pt => {
+        const prov = getProvinceForFloodPoint(pt);
+        if (!provGroups[prov]) provGroups[prov] = [];
+        provGroups[prov].push(pt);
+      });
 
-      const clusters = [];
-      const visited = new Set();
-
-      for (let i = 0; i < validPoints.length; i++) {
-        if (visited.has(i)) continue;
-        const group = [validPoints[i]];
-        visited.add(i);
-
-        for (let j = i + 1; j < validPoints.length; j++) {
-          if (visited.has(j)) continue;
-          const dLat = validPoints[i].lat - validPoints[j].lat;
-          const dLng = validPoints[i].lng - validPoints[j].lng;
-          const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-
-          if (dist < clusterDist) {
-            group.push(validPoints[j]);
-            visited.add(j);
-          }
-        }
-        clusters.push(group);
-      }
-
-      clusters.forEach(group => {
-        let avgLat = 0;
-        let avgLng = 0;
-        group.forEach(pt => {
-          avgLat += pt.lat;
-          avgLng += pt.lng;
-        });
-        avgLat /= group.length;
-        avgLng /= group.length;
-
-        if (group.length > 1) {
-          createClusterMarker(group, avgLng, avgLat);
-        } else {
-          createIndividualFloodMarker(group[0]);
-        }
+      Object.entries(provGroups).forEach(([provName, groupPts]) => {
+        createProvinceClusterMarker(provName, groupPts);
       });
     } else {
-      // Phóng to chi tiết (zoom >= 11.5): Hiển thị từng điểm đo riêng lẻ
+      // CẤP ĐỘ 2: PHÓNG TO CHI TIẾT ĐÔ THỊ / QUẬN HUYỆN (ZOOM >= 11.0)
+      // Tự động bung toàn bộ các điểm đo riêng lẻ kèm mực nước cm, sóng phản xạ radar và popup cứu hộ
       validPoints.forEach(pt => createIndividualFloodMarker(pt));
     }
   }
 
-  function createClusterMarker(group, avgLng, avgLat) {
+  /**
+   * TẠO HUY HIỆU CỤM ĐIỂM NGẬP CẤP TỈNH THÀNH (PROVINCE FLOOD CLUSTER BADGE)
+   * Hiển thị biểu tượng, tên tỉnh, số lượng vùng ngập, viền phát sáng cảnh báo, nhấp để phóng to bung điểm.
+   */
+  function createProvinceClusterMarker(provName, group) {
     const count = group.length;
     const hasDanger = group.some(pt => pt.depth >= 20 || pt.status === 'danger');
     const hasWarning = group.some(pt => pt.depth >= 5 || pt.status === 'warning');
 
-    let clusterBg = 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)';
-    let ringColor = 'rgba(6, 182, 212, 0.35)';
-    if (hasDanger) {
-      clusterBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)';
-      ringColor = 'rgba(239, 68, 68, 0.45)';
-    } else if (hasWarning) {
-      clusterBg = 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
-      ringColor = 'rgba(245, 158, 11, 0.4)';
+    let threatClass = 'safe';
+    if (hasDanger) threatClass = 'danger';
+    else if (hasWarning) threatClass = 'warning';
+
+    const meta = (window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.metadata && window.ProvinceWeatherLayer.metadata[provName]) || {};
+    const icon = meta.icon || (provName === 'Hà Nội' ? '🏛️' : '📍');
+
+    // Tính tọa độ trung tâm cụm điểm ngập
+    let avgLat = 0, avgLng = 0;
+    group.forEach(pt => {
+      avgLat += pt.lat;
+      avgLng += pt.lng;
+    });
+    avgLat /= count;
+    avgLng /= count;
+
+    // Định vị tối ưu
+    const provTarget = NORTHERN_PROVINCE_TARGETS[provName];
+    if (count <= 2 && provTarget) {
+      avgLng = provTarget.center[0];
+      avgLat = provTarget.center[1];
+    } else if (provName === 'Hà Nội') {
+      avgLng = 105.825;
+      avgLat = 21.025;
     }
 
-    const size = count >= 20 ? 40 : (count >= 8 ? 36 : 30);
-
     const el = document.createElement('div');
-    el.className = 'c2-maplibre-cluster flex items-center justify-center cursor-pointer select-none group';
-    el.style.cssText = `position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: ${size}px; height: ${size}px; pointer-events: auto !important; z-index: 30;`;
+    el.className = 'c2-province-cluster-badge group';
+    el.title = `${icon} ${provName}: ${count} vùng ngập lụt. Nhấp để phóng to chi tiết!`;
     el.innerHTML = `
-      <span class="absolute rounded-full pointer-events-none ${hasDanger ? 'animated-marker-pulse' : ''}" style="width: ${size + 6}px; height: ${size + 6}px; background: ${ringColor};"></span>
-      <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-xl border border-white/60 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto backdrop-blur-xs" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${count} trạm quan trắc (Click để phóng to)">
-        ${count}
+      <span class="c2-province-cluster-pulse ${threatClass}"></span>
+      <div class="c2-province-cluster-inner">
+        <span class="c2-province-cluster-icon">${icon}</span>
+        <span class="c2-province-cluster-name">${provName}</span>
+        <span class="c2-province-cluster-count ${threatClass}">${count}</span>
       </div>
     `;
 
-    // Click cluster: Tính bounds và phóng to mượt mà để bung cụm ra chi tiết
+    // Nhấp huy hiệu: Phóng to mượt mà bay vào tỉnh thành (zoom 12.8), tự động bung toàn bộ các điểm ngập chi tiết ra!
     el.onclick = (e) => {
       e.stopPropagation();
       closeCurrentPopup();
 
-      let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
-      group.forEach(p => {
-        minLng = Math.min(minLng, p.lng);
-        maxLng = Math.max(maxLng, p.lng);
-        minLat = Math.min(minLat, p.lat);
-        maxLat = Math.max(maxLat, p.lat);
+      const targetZoom = provName === 'Hà Nội' ? 12.8 : (count > 1 ? 12.5 : 12.2);
+      mapInstance.flyTo({
+        center: [avgLng, avgLat],
+        zoom: targetZoom,
+        duration: 800,
+        essential: true
       });
 
-      const currentZ = mapInstance.getZoom();
-      if (maxLng - minLng > 0.002 || maxLat - minLat > 0.002) {
-        mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
-          padding: { top: 90, bottom: 90, left: 90, right: 90 },
-          maxZoom: 14.5,
-          duration: 650
-        });
-      } else {
-        mapInstance.flyTo({
-          center: [avgLng, avgLat],
-          zoom: Math.min(currentZ + 2.2, 14.5),
-          duration: 650
-        });
+      // Đồng bộ vào dropdown tỉnh thành
+      const provSel = document.getElementById('ml-province-selector');
+      if (provSel) {
+        for (let i = 0; i < provSel.options.length; i++) {
+          if (provSel.options[i].value === provName) {
+            provSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (typeof window.showNorthStarToast === 'function') {
+        window.showNorthStarToast(`🔍 Phóng to tiêu điểm ${icon} ${provName} (${count} điểm ngập)`, 'info', 2000);
       }
     };
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
+    const marker = new maplibregl.Marker({
+      element: el,
+      anchor: 'center',
+      rotationAlignment: 'viewport',
+      pitchAlignment: 'viewport'
+    })
       .setLngLat([avgLng, avgLat])
       .addTo(mapInstance);
 
@@ -2752,6 +2936,12 @@ window.NorthStarMapLibre = (function () {
           mapInstance.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
         }
       });
+    } else if (layerKey === 'terrain') {
+      if (isVisible) {
+        setup3DTerrainDEM();
+      } else {
+        try { mapInstance.setTerrain(null); } catch (_) {}
+      }
     } else if (layerKey === 'buildings') {
       if (mapInstance.getLayer('buildings-3d-extrusion')) {
         mapInstance.setLayoutProperty('buildings-3d-extrusion', 'visibility', isVisible ? 'visible' : 'none');
@@ -2827,34 +3017,34 @@ window.NorthStarMapLibre = (function () {
     }
   }
 
-  // Tọa độ & mức phóng tối ưu cho 26 Tỉnh Thành Miền Bắc
+  // Tọa độ & mức phóng tối ưu cho 26 Tỉnh Thành Miền Bắc (zoom >= 11.5 tự động bung điểm ngập chi tiết)
   const NORTHERN_PROVINCE_TARGETS = {
-    'Hà Nội': { center: [105.8542, 21.0285], zoom: 11.2 },
-    'Quảng Ninh': { center: [107.1800, 21.1500], zoom: 10.0 },
-    'Hải Phòng': { center: [106.6800, 20.8600], zoom: 10.8 },
-    'Hải Dương': { center: [106.3330, 20.9409], zoom: 10.5 },
-    'Hưng Yên': { center: [106.0511, 20.6464], zoom: 10.5 },
-    'Bắc Ninh': { center: [106.0700, 21.1800], zoom: 11.0 },
-    'Bắc Giang': { center: [106.2000, 21.2800], zoom: 10.2 },
-    'Vĩnh Phúc': { center: [105.5900, 21.3100], zoom: 10.5 },
-    'Phú Thọ': { center: [105.2200, 21.3200], zoom: 10.0 },
-    'Thái Nguyên': { center: [105.8450, 21.5940], zoom: 10.5 },
-    'Bắc Kạn': { center: [105.8300, 22.1400], zoom: 10.2 },
-    'Cao Bằng': { center: [106.2600, 22.6700], zoom: 10.0 },
-    'Lạng Sơn': { center: [106.7600, 21.8500], zoom: 10.2 },
-    'Hà Giang': { center: [104.9800, 22.8200], zoom: 9.8 },
-    'Tuyên Quang': { center: [105.2200, 21.8200], zoom: 10.0 },
-    'Lào Cai': { center: [103.9700, 22.4800], zoom: 10.0 },
-    'Yên Bái': { center: [104.8700, 21.7200], zoom: 10.0 },
-    'Hòa Bình': { center: [105.3400, 20.8100], zoom: 10.0 },
-    'Sơn La': { center: [103.9148, 21.3283], zoom: 9.6 },
-    'Điện Biên': { center: [103.0188, 21.3857], zoom: 9.6 },
-    'Lai Châu': { center: [103.4582, 22.3964], zoom: 9.6 },
-    'Hà Nam': { center: [105.9200, 20.5400], zoom: 10.8 },
-    'Nam Định': { center: [106.1700, 20.4300], zoom: 10.6 },
-    'Thái Bình': { center: [106.3400, 20.4500], zoom: 10.6 },
-    'Ninh Bình': { center: [105.9700, 20.2500], zoom: 10.6 },
-    'Thanh Hóa': { center: [105.7852, 19.8067], zoom: 9.8 }
+    'Hà Nội': { center: [105.8542, 21.0285], zoom: 12.8 },
+    'Quảng Ninh': { center: [107.1800, 21.1500], zoom: 12.0 },
+    'Hải Phòng': { center: [106.6800, 20.8600], zoom: 12.0 },
+    'Hải Dương': { center: [106.3330, 20.9409], zoom: 12.0 },
+    'Hưng Yên': { center: [106.0511, 20.6464], zoom: 12.0 },
+    'Bắc Ninh': { center: [106.0700, 21.1800], zoom: 12.0 },
+    'Bắc Giang': { center: [106.2000, 21.2800], zoom: 12.0 },
+    'Vĩnh Phúc': { center: [105.5900, 21.3100], zoom: 12.0 },
+    'Phú Thọ': { center: [105.2200, 21.3200], zoom: 12.0 },
+    'Thái Nguyên': { center: [105.8450, 21.5940], zoom: 12.0 },
+    'Bắc Kạn': { center: [105.8300, 22.1400], zoom: 12.0 },
+    'Cao Bằng': { center: [106.2600, 22.6700], zoom: 12.0 },
+    'Lạng Sơn': { center: [106.7600, 21.8500], zoom: 12.0 },
+    'Hà Giang': { center: [104.9800, 22.8200], zoom: 12.0 },
+    'Tuyên Quang': { center: [105.2200, 21.8200], zoom: 12.0 },
+    'Lào Cai': { center: [103.9700, 22.4800], zoom: 12.0 },
+    'Yên Bái': { center: [104.8700, 21.7200], zoom: 12.0 },
+    'Hòa Bình': { center: [105.3400, 20.8100], zoom: 12.0 },
+    'Sơn La': { center: [103.9148, 21.3283], zoom: 11.8 },
+    'Điện Biên': { center: [103.0188, 21.3857], zoom: 11.8 },
+    'Lai Châu': { center: [103.4582, 22.3964], zoom: 11.8 },
+    'Hà Nam': { center: [105.9200, 20.5400], zoom: 12.0 },
+    'Nam Định': { center: [106.1700, 20.4300], zoom: 12.0 },
+    'Thái Bình': { center: [106.3400, 20.4500], zoom: 12.0 },
+    'Ninh Bình': { center: [105.9700, 20.2500], zoom: 12.0 },
+    'Thanh Hóa': { center: [105.7852, 19.8067], zoom: 11.8 }
   };
 
   /**
@@ -2897,6 +3087,12 @@ window.NorthStarMapLibre = (function () {
   function setPitch(deg) {
     if (!mapInstance) return;
     currentPitch = deg;
+
+    // Tự động kích hoạt địa hình 3D nổi khối khi người dùng chọn góc nhìn nghiêng 3D
+    if (deg > 0 && layerVisibility.terrain) {
+      setup3DTerrainDEM();
+    }
+
     mapInstance.easeTo({ pitch: deg, duration: 1000 });
     updatePitchBadge();
 
@@ -2968,6 +3164,7 @@ window.NorthStarMapLibre = (function () {
       hasRestored = true;
       mapInstance.off('idle', restoreAllLayers);
 
+      setup3DTerrainDEM();
       setupProvincesVectorLayer();
       setupStormSimulationVectorLayer();
       setupTacticalRouteVectorLayer();
@@ -3077,6 +3274,8 @@ window.NorthStarMapLibre = (function () {
     closeCurrentPopup,
     closePopup: closeCurrentPopup,
     renderHanoiDistrictMarkers,
+    setup3DTerrainDEM,
+    getMap: () => mapInstance,
     get map() { return mapInstance; }
   };
 })();
