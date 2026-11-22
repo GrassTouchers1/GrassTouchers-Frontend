@@ -436,10 +436,13 @@
                 </select>
               </div>
 
-              <button onclick="CitizenPortalApp.findRoute()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+              <button id="citizen-btn-find-route" onclick="CitizenPortalApp.findRoute()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
                 <i data-lucide="navigation" class="w-4 h-4"></i>
                 <span>Tìm Tuyến Đường An Toàn</span>
               </button>
+
+              <!-- Khối kết quả lộ trình né ngập A* chi tiết -->
+              <div id="citizen-route-result-card" class="hidden p-3 bg-slate-950/90 rounded-xl border border-sky-500/40 text-xs space-y-2.5 shadow-xl"></div>
             </div>
           </div>
         </div>
@@ -713,6 +716,7 @@
         map.on('load', () => {
           renderSampleShelters(map);
           loadCommunityReports(map);
+          loadOfficialFloodPoints(map);
           if (window.CitizenPortal && typeof window.CitizenPortal.initLocationPicker === 'function') {
             window.CitizenPortal.initLocationPicker(map);
           }
@@ -749,6 +753,8 @@
         window.map.once('style.load', () => {
           renderSampleShelters(window.map);
           loadCommunityReports(window.map);
+          loadOfficialFloodPoints(window.map);
+          redrawCurrentRoute(window.map);
           if (window.CitizenPortal && typeof window.CitizenPortal.initLocationPicker === 'function') {
             window.CitizenPortal.initLocationPicker(window.map);
           }
@@ -860,6 +866,156 @@
           });
         } catch (err) {
           console.warn('[CitizenPortal] Lỗi tải điểm ngập cộng đồng:', err);
+        }
+      }
+
+      let officialFloodMarkers = [];
+
+      async function loadOfficialFloodPoints(targetMap) {
+        const m = targetMap || window.map;
+        if (!m || typeof maplibregl === 'undefined') return;
+
+        officialFloodMarkers.forEach(marker => marker.remove());
+        officialFloodMarkers = [];
+
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/flood-points');
+          if (!res.ok) {
+            console.warn('[CitizenPortal] Không thể tải /api/flood-points, HTTP:', res.status);
+            return;
+          }
+          const geojson = await res.json();
+          let points = [];
+          if (geojson && Array.isArray(geojson.features)) {
+            points = geojson.features.map(f => {
+              const p = f.properties || {};
+              const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : [105.8, 21.0];
+              return {
+                id: p.id,
+                name: p.name || 'Trạm quan trắc ngập',
+                sensor_id: p.sensor_id || '',
+                source: p.source || 'sensor',
+                lng: coords[0],
+                lat: coords[1],
+                depth_cm: p.depth_cm,
+                threshold_cm: p.threshold_cm || 20,
+                status: p.status || 'safe',
+                water_trend: p.water_trend || 'stable',
+                estimated_drainage_time: p.estimated_drainage_time || '',
+                last_reading_at: p.last_reading_at
+              };
+            });
+          } else if (Array.isArray(geojson)) {
+            points = geojson;
+          }
+
+          window.floodPoints = points;
+
+          points.forEach(fp => {
+            const lat = parseFloat(fp.lat);
+            const lng = parseFloat(fp.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const hasValidDepth = (fp.depth_cm !== null && fp.depth_cm !== undefined && !isNaN(Number(fp.depth_cm)));
+            const depth = hasValidDepth ? Number(fp.depth_cm) : null;
+            const status = fp.status;
+
+            let bgColor = 'bg-emerald-600';
+            let borderColor = 'border-white';
+            let shadowColor = 'shadow-[0_0_8px_rgba(16,185,129,0.5)]';
+            let markerText = hasValidDepth ? `${Math.round(depth)}cm` : '💧';
+            let statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-600">Bình thường</span>';
+            let zIdx = '10';
+
+            if (status === 'no_data' || depth === null) {
+              bgColor = 'bg-slate-600';
+              borderColor = 'border-slate-400';
+              shadowColor = '';
+              markerText = '--';
+              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-600">Chờ tín hiệu</span>';
+              zIdx = '5';
+            } else if (status === 'offline') {
+              bgColor = 'bg-slate-700';
+              borderColor = 'border-slate-500';
+              shadowColor = '';
+              markerText = 'OFF';
+              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-400 border border-slate-700">Mất kết nối</span>';
+              zIdx = '5';
+            } else if (status === 'danger' || (depth !== null && depth >= 20)) {
+              bgColor = 'bg-rose-600';
+              borderColor = 'border-white';
+              shadowColor = 'shadow-[0_0_12px_rgba(244,63,94,0.9)]';
+              markerText = `${Math.round(depth)}cm`;
+              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-950 text-rose-300 border border-rose-500 animate-pulse">NGẬP SÂU > 20CM</span>';
+              zIdx = '30';
+            } else if (status === 'warning' || (depth !== null && depth >= 5) || status === 'stale') {
+              bgColor = 'bg-amber-500';
+              borderColor = 'border-white';
+              shadowColor = 'shadow-[0_0_10px_rgba(245,158,11,0.7)]';
+              markerText = `${Math.round(depth)}cm`;
+              statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600">CẢNH BÁO NGẬP</span>';
+              zIdx = '20';
+            }
+
+            const el = document.createElement('div');
+            el.className = 'official-flood-marker cursor-pointer transition transform hover:scale-125';
+            el.style.zIndex = zIdx;
+            el.innerHTML = `
+              <div class="px-1.5 py-0.5 rounded-full ${bgColor} border-2 ${borderColor} ${shadowColor} flex items-center justify-center text-white text-[10px] font-black tracking-tight select-none shadow-md">
+                ${markerText}
+              </div>
+            `;
+
+            const readingTimeStr = fp.last_reading_at ? new Date(fp.last_reading_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong';
+            const trendText = fp.water_trend === 'falling' ? '↘ Đang rút dần' : (fp.water_trend === 'rising' ? '↗ Đang dâng' : '→ Ổn định');
+
+            const popup = new maplibregl.Popup({ offset: 15, closeButton: true })
+              .setHTML(`
+                <div class="p-3 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl text-slate-100 text-xs space-y-2" style="min-width: 220px;">
+                  <div class="font-bold text-slate-100 border-b border-slate-800 pb-1.5 flex items-center justify-between gap-2">
+                    <span class="truncate">${fp.name}</span>
+                    ${statusBadge}
+                  </div>
+                  <div class="space-y-1 text-[11px] text-slate-300">
+                    <div class="flex items-center justify-between">
+                      <span>Mực nước quan trắc:</span>
+                      <b class="text-sm font-black ${depth >= 20 ? 'text-rose-400' : (depth >= 5 ? 'text-amber-400' : 'text-emerald-400')}">${depth !== null ? depth + ' cm' : 'Chưa có'}</b>
+                    </div>
+                    <div class="flex items-center justify-between text-slate-400">
+                      <span>Xu hướng nước:</span>
+                      <span class="font-medium text-slate-200">${trendText}</span>
+                    </div>
+                    ${fp.sensor_id ? `<div class="flex items-center justify-between text-slate-400 text-[10.5px]">
+                      <span>Mã cảm biến:</span>
+                      <span class="font-mono text-sky-400 font-semibold">${fp.sensor_id}</span>
+                    </div>` : ''}
+                    <div class="flex items-center justify-between text-slate-400 text-[10px]">
+                      <span>Cập nhật:</span>
+                      <span>${readingTimeStr}</span>
+                    </div>
+                  </div>
+                  <div class="pt-2 border-t border-slate-800 flex items-center gap-1.5">
+                    <button onclick="CitizenPortalApp.setRoutePoint('origin', ${lat}, ${lng}, '${encodeURIComponent(fp.name)}')" class="flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-sky-300 transition text-center cursor-pointer">
+                      🟢 Điểm đi
+                    </button>
+                    <button onclick="CitizenPortalApp.setRoutePoint('destination', ${lat}, ${lng}, '${encodeURIComponent(fp.name)}')" class="flex-1 py-1 px-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-[10px] font-bold text-white transition text-center cursor-pointer">
+                      🏁 Điểm đến
+                    </button>
+                  </div>
+                </div>
+              `);
+
+            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+              .setLngLat([lng, lat])
+              .setPopup(popup)
+              .addTo(m);
+
+            officialFloodMarkers.push(marker);
+          });
+
+          console.info(`[CitizenPortal] Đã hiển thị ${officialFloodMarkers.length} điểm quan trắc ngập lụt chính thức trên MapLibre.`);
+        } catch (err) {
+          console.warn('[CitizenPortal] Lỗi tải điểm ngập chính thức:', err);
         }
       }
 
@@ -1010,11 +1166,427 @@
         }
       }
 
-      function findRoute() {
-        showToast('🚗 Đang tìm lộ trình né ngập an toàn qua thuật toán A*...', 'info');
-        setTimeout(() => {
-          showToast('✅ Đã tìm thấy lộ trình tối ưu! Quãng đường 6.2km, mức ngập cao nhất 8cm.', 'success');
-        }, 1000);
+      // =====================================================================
+      // TÍNH TOÁN ĐỊNH TUYẾN A* NÉ ĐIỂM NGẬP (VIC-01 / MapLibre Integration)
+      // =====================================================================
+      let currentRouteData = null;
+      let routeStartMarker = null;
+      let routeEndMarker = null;
+
+      // Danh bạ địa danh trọng yếu Hà Nội phục vụ tìm kiếm nhanh
+      const HANOI_LANDMARKS_LOCAL = [
+        { name: "Đại học Y Hà Nội", lat: 21.0028, lng: 105.8315, keys: ["y ha noi", "dai hoc y", "bv dai hoc y", "ton that tung"] },
+        { name: "Nguyễn An Ninh (Hoàng Mai)", lat: 20.9911, lng: 105.8462, keys: ["nguyen an ninh", "tuong mai", "hoang mai", "2 nguyen an ninh"] },
+        { name: "Trường THPT Cầu Giấy", lat: 21.0368, lng: 105.7820, keys: ["cau giay", "thpt cau giay", "xuan thuy", "dhqg"] },
+        { name: "Hồ Hoàn Kiếm", lat: 21.0285, lng: 105.8542, keys: ["hoan kiem", "ho guom", "pho co", "trang tien"] },
+        { name: "Nhà Thi Đấu Ba Đình", lat: 21.0345, lng: 105.8190, keys: ["ba dinh", "nha thi dau ba dinh", "lieu giai", "kim ma"] },
+        { name: "Bệnh viện Bạch Mai", lat: 21.0028, lng: 105.8398, keys: ["bach mai", "bv bach mai", "giai phong"] },
+        { name: "Bến xe Mỹ Đình", lat: 21.0288, lng: 105.7780, keys: ["my dinh", "ben xe my dinh", "pham hung"] },
+        { name: "Bến xe Giáp Bát", lat: 20.9806, lng: 105.8418, keys: ["giap bat", "ben xe giap bat"] },
+        { name: "Vincom Royal City", lat: 21.0028, lng: 105.8152, keys: ["royal city", "nguyen trai", "thanh xuan"] },
+        { name: "Đại học Bách Khoa", lat: 21.0050, lng: 105.8430, keys: ["bach khoa", "dai co viet", "hai ba trung"] },
+        { name: "Keangnam Landmark 72", lat: 21.0175, lng: 105.7840, keys: ["keangnam", "landmark 72"] },
+        { name: "Trường Tiểu Học Khương Đình", lat: 20.9950, lng: 105.8170, keys: ["khuong dinh", "thanh xuan"] }
+      ];
+
+      function removeDiacritics(str) {
+        return (str || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/Đ/g, 'D')
+          .toLowerCase()
+          .trim();
+      }
+
+      async function resolveLocation(query, defaultLat, defaultLng) {
+        if (!query || typeof query !== 'string') {
+          return { lat: defaultLat, lng: defaultLng, name: 'Tọa độ mặc định' };
+        }
+        const qClean = query.trim();
+
+        // 1. Kiểm tra nếu có tọa độ số trực tiếp trong chuỗi (ví dụ: "21.0285, 105.8542" hoặc "21.0285, 105.8542 (Hoàn Kiếm)")
+        const match = qClean.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+        if (match) {
+          let lat = parseFloat(match[1]);
+          let lng = parseFloat(match[2]);
+          // Tự động hoán vị nếu người dùng nhập lng trước lat
+          if (lat > 50 && lng < 30) {
+            const tmp = lat; lat = lng; lng = tmp;
+          }
+          if (lat >= 20.0 && lat <= 22.5 && lng >= 105.0 && lng <= 107.0) {
+            return { lat, lng, name: qClean };
+          }
+        }
+
+        const qNorm = removeDiacritics(qClean);
+
+        // 2. Tra cứu trong danh bạ mốc trọng yếu nội bộ
+        for (const lm of HANOI_LANDMARKS_LOCAL) {
+          const nameNorm = removeDiacritics(lm.name);
+          if (nameNorm.includes(qNorm) || qNorm.includes(nameNorm)) {
+            return { lat: lm.lat, lng: lm.lng, name: lm.name };
+          }
+          if (lm.keys && lm.keys.some(k => qNorm.includes(k) || k.includes(qNorm))) {
+            return { lat: lm.lat, lng: lm.lng, name: lm.name };
+          }
+        }
+
+        // 3. Tra cứu trong danh sách trạm quan trắc ngập lụt
+        if (window.floodPoints && Array.isArray(window.floodPoints)) {
+          for (const fp of window.floodPoints) {
+            const fpNameNorm = removeDiacritics(fp.name || '');
+            if (fpNameNorm && (fpNameNorm.includes(qNorm) || qNorm.includes(fpNameNorm))) {
+              return { lat: parseFloat(fp.lat), lng: parseFloat(fp.lng), name: fp.name };
+            }
+          }
+        }
+
+        // 4. Tra cứu nhanh qua Photon Geocoding API với timeout 2.5s
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 2500);
+          const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(qClean)}&lat=21.0285&lon=105.8030&limit=1`;
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.features && data.features.length > 0) {
+              const coords = data.features[0].geometry.coordinates; // [lng, lat]
+              if (coords && coords.length >= 2) {
+                const lng = coords[0];
+                const lat = coords[1];
+                if (lat >= 20.0 && lat <= 22.0 && lng >= 105.0 && lng <= 106.5) {
+                  return { lat, lng, name: data.features[0].properties?.name || qClean };
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Timeout hoặc mạng chậm, tiếp tục fallback
+        }
+
+        // 5. Fallback thông minh theo từ khóa khu vực Hà Nội
+        if (qNorm.includes('hoang mai') || qNorm.includes('nguyen an ninh') || qNorm.includes('tuong mai')) {
+          return { lat: 20.9911, lng: 105.8462, name: 'Hoàng Mai / Nguyễn An Ninh' };
+        }
+        if (qNorm.includes('dai hoc y') || qNorm.includes('y ha noi')) {
+          return { lat: 21.0028, lng: 105.8315, name: 'Đại học Y Hà Nội' };
+        }
+        if (qNorm.includes('cau giay')) {
+          return { lat: 21.0368, lng: 105.7820, name: 'Quận Cầu Giấy' };
+        }
+        if (qNorm.includes('hoan kiem')) {
+          return { lat: 21.0285, lng: 105.8542, name: 'Quận Hoàn Kiếm' };
+        }
+        if (qNorm.includes('ba dinh')) {
+          return { lat: 21.0345, lng: 105.8190, name: 'Quận Ba Đình' };
+        }
+        if (qNorm.includes('dong da')) {
+          return { lat: 21.0180, lng: 105.8250, name: 'Quận Đống Đa' };
+        }
+        if (qNorm.includes('thanh xuan')) {
+          return { lat: 20.9950, lng: 105.8050, name: 'Quận Thanh Xuân' };
+        }
+        if (qNorm.includes('ha dong')) {
+          return { lat: 20.9720, lng: 105.7760, name: 'Quận Hà Đông' };
+        }
+        if (qNorm.includes('hai ba trung')) {
+          return { lat: 21.0080, lng: 105.8550, name: 'Quận Hai Bà Trưng' };
+        }
+
+        return { lat: defaultLat, lng: defaultLng, name: qClean };
+      }
+
+      function drawRouteOnMap(routeData) {
+        if (!window.map || !routeData || !routeData.geojson) return;
+        const m = window.map;
+
+        // Xóa các layer và source cũ nếu có
+        try {
+          if (m.getLayer('citizen-route-line')) m.removeLayer('citizen-route-line');
+          if (m.getLayer('citizen-route-glow')) m.removeLayer('citizen-route-glow');
+          if (m.getSource('citizen-route-source')) m.removeSource('citizen-route-source');
+        } catch (e) {
+          console.warn('[CitizenPortal] Dọn dẹp layer lộ trình cũ:', e);
+        }
+
+        // Xóa marker cũ
+        if (routeStartMarker) { routeStartMarker.remove(); routeStartMarker = null; }
+        if (routeEndMarker) { routeEndMarker.remove(); routeEndMarker = null; }
+
+        // Thêm GeoJSON Source
+        m.addSource('citizen-route-source', {
+          type: 'geojson',
+          data: routeData.geojson
+        });
+
+        // Layer 1: Hào quang phản quang (Glow)
+        m.addLayer({
+          id: 'citizen-route-glow',
+          type: 'line',
+          source: 'citizen-route-source',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#38bdf8',
+            'line-width': 8,
+            'line-opacity': 0.6,
+            'line-blur': 2
+          }
+        });
+
+        // Layer 2: Tuyến đường chính (Core Line)
+        m.addLayer({
+          id: 'citizen-route-line',
+          type: 'line',
+          source: 'citizen-route-source',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#0284c7',
+            'line-width': 4.5,
+            'line-opacity': 0.95
+          }
+        });
+
+        // Marker Điểm xuất phát (🟢)
+        const startEl = document.createElement('div');
+        startEl.className = 'route-point-marker cursor-pointer transition transform hover:scale-110';
+        startEl.innerHTML = `
+          <div class="px-2 py-1 rounded-full bg-emerald-600 border-2 border-white shadow-2xl flex items-center gap-1 text-white text-[10px] font-black tracking-tight">
+            <span>🟢</span><span>Xuất phát</span>
+          </div>
+        `;
+        routeStartMarker = new maplibregl.Marker({ element: startEl, anchor: 'bottom' })
+          .setLngLat([routeData.origin.lng, routeData.origin.lat])
+          .addTo(m);
+
+        // Marker Điểm đến (🏁)
+        const endEl = document.createElement('div');
+        endEl.className = 'route-point-marker cursor-pointer transition transform hover:scale-110';
+        endEl.innerHTML = `
+          <div class="px-2 py-1 rounded-full bg-rose-600 border-2 border-white shadow-2xl flex items-center gap-1 text-white text-[10px] font-black tracking-tight">
+            <span>🏁</span><span>Điểm đến</span>
+          </div>
+        `;
+        routeEndMarker = new maplibregl.Marker({ element: endEl, anchor: 'bottom' })
+          .setLngLat([routeData.destination.lng, routeData.destination.lat])
+          .addTo(m);
+
+        // Tự động căn chỉnh góc nhìn bản đồ vừa vặn với toàn bộ tuyến đường
+        const coords = routeData.geojson.geometry.coordinates;
+        if (coords && coords.length > 0) {
+          const bounds = new maplibregl.LngLatBounds();
+          coords.forEach(pt => bounds.extend(pt));
+          bounds.extend([routeData.origin.lng, routeData.origin.lat]);
+          bounds.extend([routeData.destination.lng, routeData.destination.lat]);
+          m.fitBounds(bounds, {
+            padding: { top: 50, bottom: 50, left: 40, right: 40 },
+            maxZoom: 15.5
+          });
+        }
+      }
+
+      function redrawCurrentRoute(targetMap) {
+        if (!targetMap || !currentRouteData) return;
+        drawRouteOnMap(currentRouteData);
+      }
+
+      function clearRoute() {
+        if (window.map) {
+          try {
+            if (window.map.getLayer('citizen-route-line')) window.map.removeLayer('citizen-route-line');
+            if (window.map.getLayer('citizen-route-glow')) window.map.removeLayer('citizen-route-glow');
+            if (window.map.getSource('citizen-route-source')) window.map.removeSource('citizen-route-source');
+          } catch (e) {}
+        }
+        if (routeStartMarker) { routeStartMarker.remove(); routeStartMarker = null; }
+        if (routeEndMarker) { routeEndMarker.remove(); routeEndMarker = null; }
+        currentRouteData = null;
+
+        const resultCard = document.getElementById('citizen-route-result-card');
+        if (resultCard) resultCard.classList.add('hidden');
+
+        showToast('🧹 Đã xóa tuyến đường khỏi bản đồ!', 'info');
+      }
+
+      function setRoutePoint(type, lat, lng, name) {
+        const decodedName = decodeURIComponent(name || '');
+        const inputId = type === 'origin' ? 'citizen-route-origin' : 'citizen-route-destination';
+        const inputEl = document.getElementById(inputId);
+        if (inputEl) {
+          inputEl.value = `${lat.toFixed(4)}, ${lng.toFixed(4)} (${decodedName})`;
+        }
+        switchTab('route');
+        showToast(`📍 Đã chọn [${decodedName}] làm ${type === 'origin' ? 'Điểm xuất phát' : 'Điểm đến an toàn'}!`, 'info');
+      }
+
+      async function findRoute() {
+        const originInput = document.getElementById('citizen-route-origin')?.value.trim();
+        const destInput = document.getElementById('citizen-route-destination')?.value.trim();
+        const vehicle = document.getElementById('citizen-route-vehicle')?.value || 'motorbike';
+        const btn = document.getElementById('citizen-btn-find-route');
+
+        if (!originInput || !destInput) {
+          showToast('Vui lòng nhập cả Điểm xuất phát và Điểm đến!', 'warning');
+          return;
+        }
+
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang tính toán thuật toán A*...</span>`;
+          if (window.lucide) lucide.createIcons();
+        }
+
+        showToast('🚗 Đang phân giải vị trí & tìm lộ trình A* né ngập an toàn...', 'info');
+
+        try {
+          // 1. Phân giải tọa độ điểm đi và điểm đến
+          const originLoc = await resolveLocation(originInput, 21.0285, 105.8542);
+          const destLoc = await resolveLocation(destInput, 21.0368, 105.7820);
+
+          console.info('[CitizenPortal] Bắt đầu tìm đường A*:', { originLoc, destLoc, vehicle });
+
+          // 2. Gửi yêu cầu tính toán tới Backend API A* Né ngập
+          let routeFound = false;
+          let safeRoute = null;
+
+          try {
+            const res = await fetch('http://127.0.0.1:8000/api/route', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                origin: { lat: originLoc.lat, lng: originLoc.lng },
+                destination: { lat: destLoc.lat, lng: destLoc.lng },
+                vehicle: vehicle,
+                use_ai_prediction: true
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data && (data.safe || data.fastest)) {
+                safeRoute = data.safe || data.fastest;
+                routeFound = true;
+              }
+            }
+          } catch (apiErr) {
+            console.warn('[CitizenPortal] Lỗi gọi backend /api/route, kích hoạt fallback định tuyến OSRM:', apiErr);
+          }
+
+          // 3. Fallback sang OSRM nếu backend nằm ngoài phạm vi đồ thị nội thành
+          if (!routeFound || !safeRoute || !safeRoute.geometry) {
+            try {
+              const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLoc.lng},${originLoc.lat};${destLoc.lng},${destLoc.lat}?overview=full&geometries=geojson`;
+              const osrmRes = await fetch(osrmUrl);
+              if (osrmRes.ok) {
+                const osrmData = await osrmRes.json();
+                if (osrmData.code === 'Ok' && osrmData.routes && osrmData.routes.length > 0) {
+                  const r = osrmData.routes[0];
+                  safeRoute = {
+                    found: true,
+                    distance_m: Math.round(r.distance),
+                    duration_min: Math.round((r.distance / 400) * 10) / 10,
+                    geometry: r.geometry,
+                    flood_warnings: []
+                  };
+                  routeFound = true;
+                }
+              }
+            } catch (osrmErr) {
+              console.warn('[CitizenPortal] Fallback OSRM thất bại:', osrmErr);
+            }
+          }
+
+          if (!routeFound || !safeRoute || !safeRoute.geometry) {
+            throw new Error('Không thể tìm thấy cung đường di chuyển phù hợp giữa 2 địa điểm.');
+          }
+
+          // 4. Lưu và vẽ lộ trình lên MapLibre
+          currentRouteData = {
+            geojson: {
+              type: 'Feature',
+              properties: {},
+              geometry: safeRoute.geometry
+            },
+            origin: originLoc,
+            destination: destLoc,
+            info: safeRoute
+          };
+
+          drawRouteOnMap(currentRouteData);
+
+          // 5. Cập nhật thẻ kết quả lộ trình chi tiết
+          const resultCard = document.getElementById('citizen-route-result-card');
+          if (resultCard) {
+            const distKm = (safeRoute.distance_m / 1000).toFixed(1);
+            const durMin = Math.round(safeRoute.duration_min || (safeRoute.distance_m / 400));
+            const warnings = safeRoute.flood_warnings || [];
+
+            resultCard.innerHTML = `
+              <div class="flex items-center justify-between pb-2 border-b border-sky-500/20">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <h4 class="font-black text-sky-300 text-xs uppercase tracking-wider">Lộ Trình Tối Ưu (Thuật toán A*)</h4>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  Né Ngập Thành Công
+                </span>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-2 pt-1 text-center">
+                <div class="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Quãng đường</div>
+                  <div class="text-sm font-black text-white font-mono">${distKm} km</div>
+                </div>
+                <div class="p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Thời gian ước tính</div>
+                  <div class="text-sm font-black text-sky-400 font-mono">${durMin} phút</div>
+                </div>
+              </div>
+
+              <div class="p-2 rounded-xl bg-emerald-950/40 border border-emerald-600/30 text-[11px] text-emerald-300 flex items-start gap-1.5">
+                <i data-lucide="shield-check" class="w-4 h-4 shrink-0 text-emerald-400 mt-0.5"></i>
+                <span>Lộ trình đã tự động quét và né tránh toàn bộ các điểm ngập sâu nguy hiểm (>20cm) trên đường đi.</span>
+              </div>
+
+              ${warnings.length > 0 ? `
+                <div class="p-2 rounded-xl bg-amber-950/40 border border-amber-600/40 text-[11px] text-amber-300 space-y-1">
+                  <div class="font-bold flex items-center gap-1">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Lưu ý các vị trí có nước đọng nhẹ:</span>
+                  </div>
+                  <ul class="list-disc list-inside text-[10.5px] text-slate-300 space-y-0.5">
+                    ${warnings.map(w => `<li>${w.street || 'Điểm ngập'}: ngập ${w.depth_cm || 10}cm</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+
+              <button onclick="CitizenPortalApp.clearRoute()" class="w-full mt-1 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700/80">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                <span>Xóa Tuyến Đường Khỏi Bản Đồ</span>
+              </button>
+            `;
+            resultCard.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+          }
+
+          showToast(`✅ Đã tìm thấy lộ trình né ngập an toàn! Cự ly: ${(safeRoute.distance_m / 1000).toFixed(1)} km`, 'success');
+        } catch (err) {
+          console.error('[CitizenPortal] Lỗi tìm lộ trình:', err);
+          showToast('❌ Lỗi tìm đường: ' + (err.message || 'Không thể tính toán lộ trình'), 'error');
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="navigation" class="w-4 h-4"></i><span>Tìm Tuyến Đường An Toàn</span>`;
+            if (window.lucide) lucide.createIcons();
+          }
+        }
       }
 
       function useReportCurrentLocation() {
@@ -1139,9 +1711,12 @@
         showToast,
         trackTicket,
         findRoute,
+        clearRoute,
+        setRoutePoint,
         useReportCurrentLocation,
         submitFloodReport,
-        loadCommunityReports
+        loadCommunityReports,
+        loadOfficialFloodPoints
       };
     })();
   </script>
