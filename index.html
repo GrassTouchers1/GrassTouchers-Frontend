@@ -957,9 +957,31 @@
               <button id="ml-layers-toggle-pill" onclick="NorthStarMapLibre.toggleLayersDrawer()" class="pointer-events-auto bg-slate-950/85 hover:bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold text-slate-200 transition-all cursor-pointer active:scale-95 hover:border-cyan-500/50" title="Bật/tắt bảng chọn lớp tác chiến">
                 <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i>
                 <span>Lớp Tác Chiến</span>
-                <span id="ml-active-layers-count" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-950 text-cyan-300 font-mono font-bold border border-cyan-800">8 Lớp</span>
+                <span id="ml-active-layers-count" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-950 text-cyan-300 font-mono font-bold border border-cyan-800">9 Lớp</span>
                 <i data-lucide="chevron-up" class="w-3.5 h-3.5 text-slate-400" id="ml-layers-chevron"></i>
               </button>
+            </div>
+
+            <!-- Deep Zoom Recon HUD (Tự động kích hoạt khi phóng to cận cảnh Z >= 15.0) -->
+            <div id="ml-deep-zoom-hud" class="hidden absolute bottom-12 left-1/2 -translate-x-1/2 z-20 pointer-events-auto select-none bg-slate-950/92 border border-cyan-500/70 p-2 px-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-white flex items-center justify-between gap-3 animate-fade-in max-w-xl w-[92%] sm:w-auto">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-1.5 text-[11px] font-black font-mono text-cyan-300">
+                    <span>🏔️ 3D CẬN CẢNH</span>
+                    <span id="ml-deep-zoom-badge" class="px-1.5 py-0.2 bg-cyan-950 border border-cyan-700/60 rounded text-[9.5px] text-cyan-200">Z: 16.0</span>
+                  </div>
+                  <span class="text-[9.5px] text-slate-400 hidden sm:inline">Khám phá địa hình 3D thực tế & trinh sát thực địa</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="NorthStarMapLibre.setPitch(65)" class="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-[10.5px] font-extrabold shadow cursor-pointer transition active:scale-95 flex items-center gap-1" title="Nghiêng camera 65 độ nhìn 3D địa hình và công trình">
+                  <span>📐</span> Góc Nghiêng 65°
+                </button>
+                <button onclick="NorthStarMapLibre.openCurrentViewRecon()" class="px-2.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-[10.5px] font-extrabold shadow-lg border border-purple-400/40 cursor-pointer transition active:scale-95 flex items-center gap-1" title="Xem ảnh chụp thực địa, không ảnh flycam và Google Street View 360°">
+                  <span>📸</span> Ảnh Chi Tiết
+                </button>
+              </div>
             </div>
 
             <!-- Bottom Status Strip (Floating Translucent Glass HUD) -->
@@ -2560,6 +2582,124 @@
     </div>
 
   </div>
+  <!-- ========================================================================= -->
+  <!-- C2 TACTICAL GROUND RECONNAISSANCE & DETAILED IMAGERY MODAL                  -->
+  <!-- ========================================================================= -->
+  <div id="ground-recon-modal" class="hidden fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-fade-in" onclick="if(event.target === this) NorthStarMapLibre.closeGroundReconModal()">
+    <div class="bg-slate-900 border border-cyan-500/50 rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto flex flex-col text-white">
+      <!-- Header Modal -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 text-lg shadow-inner">
+            📸
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
+              <span>TRINH SÁT HÌNH ẢNH CẬN CẢNH & THỰC ĐỊA 3D</span>
+              <span class="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-700/60">TACTICAL RECON</span>
+            </h3>
+            <p class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+              <span id="recon-modal-location" class="font-bold text-cyan-300">Hà Nội</span>
+              <span class="text-slate-600">•</span>
+              <span id="recon-modal-coords" class="font-mono text-slate-300">21.0285° N, 105.8542° E</span>
+              <span class="text-slate-600">•</span>
+              <span id="recon-modal-elev" class="font-mono text-amber-300">Độ cao: +15m ASL</span>
+            </p>
+          </div>
+        </div>
+        <button onclick="NorthStarMapLibre.closeGroundReconModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center justify-center cursor-pointer text-base font-bold">&times;</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-bold">
+        <button id="recon-tab-btn-photos" onclick="NorthStarMapLibre.switchReconTab('photos')" class="flex-1 py-2 rounded-xl bg-cyan-600 text-white transition flex items-center justify-center gap-1.5 cursor-pointer shadow">
+          <span>📸</span> <span>Ảnh Chụp Thực Địa Hiện Trường</span>
+        </button>
+        <button id="recon-tab-btn-streetview" onclick="NorthStarMapLibre.switchReconTab('streetview')" class="flex-1 py-2 rounded-xl bg-transparent hover:bg-slate-800 text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>🌐</span> <span>Khám Phá Street View 360°</span>
+        </button>
+        <button id="recon-tab-btn-satellite" onclick="NorthStarMapLibre.switchReconTab('satellite')" class="flex-1 py-2 rounded-xl bg-transparent hover:bg-slate-800 text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>🛰️</span> <span>Viễn Thám Vệ Tinh Siêu Nét</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Ground Photos Gallery -->
+      <div id="recon-pane-photos" class="space-y-3">
+        <div class="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 aspect-video max-h-[380px] flex items-center justify-center group shadow-xl">
+          <img id="recon-main-img" src="" alt="Ảnh hiện trường" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102" />
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/30 pointer-events-none"></div>
+          <div class="absolute top-3 left-3 flex items-center gap-2">
+            <span id="recon-badge-tag" class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600/90 text-white border border-rose-400/50 shadow">
+              🚨 MỰC NƯỚC: 35CM
+            </span>
+            <span id="recon-source-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-slate-900/90 text-cyan-300 border border-slate-700 backdrop-blur-md">
+              📷 FLYCAM TRINH SÁT CỨU NẠN
+            </span>
+          </div>
+          <div class="absolute bottom-3 inset-x-3 text-white pointer-events-auto">
+            <h4 id="recon-img-title" class="font-extrabold text-sm sm:text-base text-white drop-shadow-md">Tuyến phố Thái Hà, Đống Đa, Hà Nội</h4>
+            <p id="recon-img-desc" class="text-[11px] text-slate-200 mt-0.5 line-clamp-2 drop-shadow">Khu vực trũng thấp ngập sâu 30-40cm tại ngã tư Chùa Bộc - Thái Hà. Lực lượng cứu nạn đang hướng dẫn xe cộ phân luồng.</p>
+          </div>
+        </div>
+
+        <!-- Thumbnail Strip -->
+        <div id="recon-thumbnails" class="grid grid-cols-4 gap-2 pt-1">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Street View 360 -->
+      <div id="recon-pane-streetview" class="hidden space-y-3">
+        <div class="p-4 bg-slate-950/90 border border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 min-h-[280px]">
+          <div class="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-3xl text-blue-400">
+            🌐
+          </div>
+          <div>
+            <h4 class="font-black text-sm text-white">CHẾ ĐỘ MẶT ĐẤT 360° (STREET VIEW)</h4>
+            <p class="text-xs text-slate-400 max-w-md mt-1">Quan sát không gian thực tế tại đúng tọa độ hiện trường thông qua Google Street View / Panoramax để nhận diện công trình, ngõ hẹp và chướng ngại vật ngập lụt.</p>
+          </div>
+          <div class="flex items-center gap-2 pt-2">
+            <a id="recon-streetview-link" href="#" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition active:scale-95">
+              <span>🚀 Mở Google Street View 360° Tại Tọa Độ Này</span>
+              <span>↗</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Ultra HD Satellite -->
+      <div id="recon-pane-satellite" class="hidden space-y-3">
+        <div class="p-4 bg-slate-950/90 border border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 min-h-[280px]">
+          <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-3xl text-emerald-400">
+            🛰️
+          </div>
+          <div>
+            <h4 class="font-black text-sm text-white">ẢNH VỆ TINH SIÊU PHÂN GIẢI (ULTRA-HIGH RES)</h4>
+            <p class="text-xs text-slate-400 max-w-md mt-1">Ảnh quang học viễn thám độ phân giải cực cao (sub-meter) từ vệ tinh Maxar & Esri Clarity, bóc tách vết ngập đô thị và dòng chảy thủy văn.</p>
+          </div>
+          <button onclick="NorthStarMapLibre.switchStyle('satellite'); NorthStarMapLibre.closeGroundReconModal();" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition active:scale-95 cursor-pointer">
+            <span>🛰️ Bật Lớp Vệ Tinh Siêu Nét Trên Bản Đồ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Action Buttons Footer -->
+      <div class="border-t border-slate-800 pt-3 flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <button id="recon-btn-tilt-3d" onclick="NorthStarMapLibre.flyToRecon3D()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <span>📐</span> Bay Tới Góc Nhìn 3D (65°)
+          </button>
+          <button id="recon-btn-route-dest" onclick="NorthStarMapLibre.setReconRouteDestination()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow">
+            <span>🏁</span> Đặt Làm Điểm Đến Cứu Hộ
+          </button>
+        </div>
+        <button onclick="NorthStarMapLibre.closeGroundReconModal()" class="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="open-data-modal" class="hidden fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target === this) closeOpenDataModal()">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       

@@ -98,8 +98,8 @@ window.NorthStarMapLibre = (function () {
         }
       },
       layers: [
-        { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 19 },
-        { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 19 }
+        { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 20 },
+        { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 20 }
       ]
     },
     satellite: {
@@ -122,8 +122,8 @@ window.NorthStarMapLibre = (function () {
         }
       },
       layers: [
-        { id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 19 },
-        { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 19 }
+        { id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 20 },
+        { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 20 }
       ]
     },
     topo: {
@@ -139,7 +139,7 @@ window.NorthStarMapLibre = (function () {
         }
       },
       layers: [
-        { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 19 }
+        { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 20 }
       ]
     },
     osm: {
@@ -154,7 +154,7 @@ window.NorthStarMapLibre = (function () {
           attribution: '&copy; Esri, DeLorme, NAVTEQ, TomTom, OpenStreetMap contributors'
         }
       },
-      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'esri-streets', minzoom: 0, maxzoom: 19 }]
+      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'esri-streets', minzoom: 0, maxzoom: 20 }]
     }
   };
 
@@ -284,7 +284,7 @@ window.NorthStarMapLibre = (function () {
         center: [105.4000, 21.3500],
         zoom: 7.4,
         minZoom: 6.8, // Khóa zoom tối thiểu: Giữ góc nhìn luôn bao trọn 26 tỉnh miền Bắc, không trôi sang Thái Lan / Nam Lào
-        maxZoom: 18.0,
+        maxZoom: 20.0,
         maxBounds: [
           [100.8, 18.8], // Góc Tây Nam: Giới hạn camera không trôi sang Thái Lan / Vientiane
           [109.8, 24.2]  // Góc Đông Bắc: Giới hạn camera không trôi quá xa sang Trung Quốc
@@ -412,6 +412,7 @@ window.NorthStarMapLibre = (function () {
 
       mapInstance.on('zoom', () => {
         updateTelemetryBadge();
+        updateDeepZoomHUD();
       });
 
       // Lắng nghe sự kiện click trên bản đồ MapLibre
@@ -429,6 +430,7 @@ window.NorthStarMapLibre = (function () {
 
       // Tự động gom cụm hoặc mở rộng điểm đo ngập khi zoom / di chuyển
       mapInstance.on('zoomend', () => {
+        updateDeepZoomHUD();
         if (layerVisibility.floodPoints) {
           if (cachedRawFloodPoints && cachedRawFloodPoints.length > 0) {
             renderClusteredFloodMarkers();
@@ -1525,6 +1527,11 @@ window.NorthStarMapLibre = (function () {
             <span>🏁</span> Điểm Đến
           </button>
         </div>
+
+        <!-- Nút Trinh Sát Hình Ảnh Thực Địa & 3D Cận Cảnh -->
+        <button onclick="NorthStarMapLibre.openGroundReconViewer(${pt.lng}, ${pt.lat}, '${safeLocationName}')" style="width: 100%; margin-top: 6px; padding: 7px 10px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #ffffff; border: 1px solid rgba(167,139,250,0.5); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(124,58,237,0.35);">
+          <span>📸</span> Xem Ảnh Hiện Trường & 3D Thực Địa
+        </button>
       </div>
     `;
   }
@@ -3236,6 +3243,523 @@ window.NorthStarMapLibre = (function () {
     }
   }
 
+  // =========================================================================
+  // C2 GROUND RECONNAISSANCE & DETAILED REGIONAL IMAGERY DATABASE
+  // =========================================================================
+  const GROUND_RECON_DATABASE = [
+    {
+      id: 'recon-lang-nu',
+      name: 'Thôn Làng Nủ, Xã Phúc Khánh, Bảo Yên, Lào Cai',
+      province: 'Lào Cai',
+      lng: 104.3400,
+      lat: 22.2800,
+      elev: 460,
+      depth: 'Lũ bùn đất 2 - 3m',
+      danger: 'CỰC KỲ NGUY HIỂM',
+      source: 'Flycam Drone Trinh Sát Ban Chỉ Huy',
+      heading: 140,
+      pitch: 65,
+      zoom: 16.5,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?auto=format&fit=crop&w=700&q=75',
+          title: 'Hiện trường sạt lở núi & lũ bùn quét thôn Làng Nủ',
+          desc: 'Khu vực thung lũng hứng trọn vệt sạt trượt từ đỉnh núi Voi dài hơn 3.6km. Lực lượng công binh Quân khu 2 đang dò tìm cứu nạn.',
+          source: 'Ảnh Viễn Thám Cứu Nạn Drone',
+          badge: '🚨 LŨ QUÉT LỊCH SỬ'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=75',
+          title: 'Hạ lưu suối Làng Nủ đổ ra Sông Chảy',
+          desc: 'Dòng chảy đục ngầu phù sa và cây cối gãy đổ, các nhịp cầu tạm được công binh dựng lên để tiếp tế.',
+          source: 'Tổ Trinh sát Thực địa',
+          badge: '⚠️ NƯỚC XIẾT'
+        }
+      ]
+    },
+    {
+      id: 'recon-sapa-fansipan',
+      name: 'Thị Xã Sa Pa & Đỉnh Fansipan 3.143m, Lào Cai',
+      province: 'Lào Cai',
+      lng: 103.8438,
+      lat: 22.3364,
+      elev: 1620,
+      depth: '0 cm (Núi cao)',
+      danger: 'ĐỊA HÌNH DỐC HIỂM TRỞ',
+      source: 'Trạm Quan trắc Khí tượng Sa Pa',
+      heading: 45,
+      pitch: 65,
+      zoom: 16.0,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=700&q=75',
+          title: 'Dãy Hoàng Liên Sơn & Thung lũng Mường Hoa',
+          desc: 'Độ dốc sườn núi lớn trên 45 độ, địa hình phân cắt mạnh. Lượng mưa tích tụ cao dễ gây sạt lở taluy âm các tuyến đường đèo.',
+          source: 'Vệ Tinh Quang Học & Trạm Khí Tượng',
+          badge: '⛰️ ĐỊA HÌNH 3D CẬN CẢNH'
+        }
+      ]
+    },
+    {
+      id: 'recon-hanoi-thaiha',
+      name: 'Tuyến Phố Thái Hà - Chùa Bộc, Đống Đa, Hà Nội',
+      province: 'Hà Nội',
+      lng: 105.8215,
+      lat: 21.0115,
+      elev: 12,
+      depth: '35 cm',
+      danger: 'NGẬP SÂU ĐÔ THỊ',
+      source: 'Camera Giao thông Thông minh C2',
+      heading: 200,
+      pitch: 60,
+      zoom: 17.0,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=700&q=75',
+          title: 'Điểm trũng ngập lụt tại ngã tư Thái Hà - Chùa Bộc',
+          desc: 'Nước ngập từ 30-45cm ngập nửa bánh xe ô tô con. Đội cơ động 114 đã bố trí xe cẩu và máy bơm chống úng cục bộ.',
+          source: 'Camera Giám Sát C2',
+          badge: '🚨 NGẬP 35CM'
+        }
+      ]
+    },
+    {
+      id: 'recon-hanoi-keangnam',
+      name: 'Keangnam Landmark 72 & Đường Phạm Hùng, Nam Từ Liêm, Hà Nội',
+      province: 'Hà Nội',
+      lng: 105.7838,
+      lat: 21.0173,
+      elev: 14,
+      depth: '18 cm',
+      danger: 'CẢNH BÁO TẮC NGHẼN',
+      source: 'Camera Giao thông C2 & Radar Tác chiến',
+      heading: 330,
+      pitch: 65,
+      zoom: 16.8,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=700&q=75',
+          title: 'Tòa tháp Keangnam Landmark 72 (Cao 350m)',
+          desc: 'Tòa nhà cao nhất Hà Nội trên trục đường vành đai 3 Phạm Hùng. Điểm mốc tác chiến không phận và trinh sát khí tượng đô thị.',
+          source: 'Dữ Liệu Khối Nhà 3D Extrusion',
+          badge: '🏙️ CAO 350M'
+        }
+      ]
+    },
+    {
+      id: 'recon-hanoi-lotte',
+      name: 'Lotte Center Hà Nội (Ngã tư Liễu Giai - Đào Tấn), Ba Đình, Hà Nội',
+      province: 'Hà Nội',
+      lng: 105.8124,
+      lat: 21.0333,
+      elev: 15,
+      depth: '12 cm',
+      danger: 'AN TOÀN',
+      source: 'Cảm biến IoT Đô thị',
+      heading: 110,
+      pitch: 65,
+      zoom: 16.8,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=700&q=75',
+          title: 'Tòa tháp Lotte Center Hà Nội (Cao 272m, 65 tầng)',
+          desc: 'Trung tâm quận Ba Đình tiếp giáp hồ Thủ Lệ. Hệ thống cống ngầm thoát nước lưu vực hồ Ngọc Khánh hoạt động ổn định.',
+          source: 'Hệ thống Khối nhà 3D',
+          badge: '🏙️ CAO 272M'
+        }
+      ]
+    },
+    {
+      id: 'recon-hanoi-longbien',
+      name: 'Cầu Long Biên & Bãi Giữa Sông Hồng, Hoàn Kiếm - Long Biên, Hà Nội',
+      province: 'Hà Nội',
+      lng: 105.8566,
+      lat: 21.0425,
+      elev: 16,
+      depth: 'Mực nước sông: 11.3m (Báo động 2)',
+      danger: 'LŨ SÔNG HỒNG LỚN',
+      source: 'Trạm Thủy Văn An Cảnh & C2 Drone',
+      heading: 70,
+      pitch: 62,
+      zoom: 16.2,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=700&q=75',
+          title: 'Cầu Long Biên bắc qua lòng Sông Hồng mùa mưa lũ',
+          desc: 'Dòng nước phù sa dâng ngập bãi bồi nông nghiệp Phúc Xá và bãi giữa. Lực lượng PCCC & CNCH đã di dời toàn bộ người dân vào bờ an toàn.',
+          source: 'Ảnh Flycam Ban Chỉ Huy',
+          badge: '🌊 BÁO ĐỘNG LŨ CẤP 2'
+        }
+      ]
+    },
+    {
+      id: 'recon-hanoi-hoankiem',
+      name: 'Hồ Hoàn Kiếm & Trung Tâm Phố Cổ, Hà Nội',
+      province: 'Hà Nội',
+      lng: 105.8524,
+      lat: 21.0285,
+      elev: 14,
+      depth: '5 cm',
+      danger: 'AN TOÀN',
+      source: 'Cảm biến Thoát nước Hà Nội',
+      heading: 0,
+      pitch: 55,
+      zoom: 16.5,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=700&q=75',
+          title: 'Khu vực Tháp Rùa & Hồ Hoàn Kiếm',
+          desc: 'Mực nước mặt hồ được điều tiết ổn định, không ghi nhận ngập úng trên các trục phố Đinh Tiên Hoàng, Tràng Tiền.',
+          source: 'Trung Tâm Điều Hành Đô Thị',
+          badge: '✓ AN TOÀN'
+        }
+      ]
+    },
+    {
+      id: 'recon-yenbai-thanhnien',
+      name: 'Đường Thanh Niên & Bờ Kè Sông Thao, TP Yên Bái',
+      province: 'Yên Bái',
+      lng: 104.8720,
+      lat: 21.7240,
+      elev: 38,
+      depth: '210 cm',
+      danger: 'NGẬP LỤT ĐẶC BIỆT NGUY HIỂM',
+      source: 'Đội Cứu hộ Quân Khu 2',
+      heading: 135,
+      pitch: 60,
+      zoom: 16.5,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=700&q=75',
+          title: 'Sông Thao dâng ngập trắng toàn bộ tuyến đường Thanh Niên',
+          desc: 'Nước lũ vượt đỉnh lịch sử 35.73m. Xuồng máy và ca-nô đặc chủng là phương tiện duy nhất tiếp cận cứu trợ thực phẩm.',
+          source: 'Ảnh Trinh Sát Cứu Hộ',
+          badge: '🚨 NGẬP SÂU 2.1M'
+        }
+      ]
+    },
+    {
+      id: 'recon-thainguyen-giabay',
+      name: 'Cầu Gia Bẩy & Lòng Sông Cầu, TP Thái Nguyên',
+      province: 'Thái Nguyên',
+      lng: 105.8450,
+      lat: 21.6020,
+      elev: 28,
+      depth: '185 cm',
+      danger: 'ĐỈNH LŨ LỊCH SỬ',
+      source: 'Trạm Thủy Văn Gia Bẩy',
+      heading: 80,
+      pitch: 60,
+      zoom: 16.5,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1498084393753-b411b2d26b34?auto=format&fit=crop&w=700&q=75',
+          title: 'Cầu Gia Bẩy ngập sát dầm cầu trong đỉnh lũ Sông Cầu',
+          desc: 'Mực nước đo được tại Gia Bẩy đạt 2.881cm, vượt báo động 3 lịch sử năm 1959 là 67cm. Phường Quang Vinh ngập sâu.',
+          source: 'Báo Cáo Thực Địa Trạm Khí Tượng',
+          badge: '🌊 VƯỢT ĐỈNH LỊCH SỬ 65 NĂM'
+        }
+      ]
+    },
+    {
+      id: 'recon-phutho-phongchau',
+      name: 'Khu Vực Cầu Phong Châu (QL32C Bắc Qua Sông Thao), Phú Thọ',
+      province: 'Phú Thọ',
+      lng: 105.2890,
+      lat: 21.3020,
+      elev: 25,
+      depth: 'Dòng xiết 4.2m/s',
+      danger: 'CỰC KỲ NGUY HIỂM - CẤM QUA LẠI',
+      source: 'Lữ đoàn 249 Binh chủng Công binh',
+      heading: 210,
+      pitch: 62,
+      zoom: 16.2,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=700&q=75',
+          title: 'Hiện trường sập 2 nhịp dàn Cầu Phong Châu',
+          desc: 'Dòng chảy lũ xiết gây xói lở móng trụ cầu T6, T7. Lữ đoàn 249 Công binh đã thiết lập bến phà dã chiến phục vụ nhân dân.',
+          source: 'Không Ảnh Flycam Công Binh',
+          badge: '⚠️ HIỆN TRƯỜNG KHẨN CẤP'
+        }
+      ]
+    },
+    {
+      id: 'recon-quangninh-halong',
+      name: 'Vịnh Hạ Long & Cảng Tàu Khách Quốc Tế Tuần Châu, Quảng Ninh',
+      province: 'Quảng Ninh',
+      lng: 107.0100,
+      lat: 20.9400,
+      elev: 5,
+      depth: 'Sóng biển cao 3.5m',
+      danger: 'KHU VỰC VEN BIỂN BÃO ĐỔ BỘ',
+      source: 'Bộ Chỉ Huy BĐBP Quảng Ninh',
+      heading: 150,
+      pitch: 58,
+      zoom: 15.8,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=700&q=75',
+          title: 'Vịnh Hạ Long và Đảo Tuần Châu',
+          desc: 'Tâm bão số 3 Yagi đổ bộ trực diện sức gió cấp 14. Toàn bộ tàu bè đã được neo đậu an toàn tại các âu tránh bão.',
+          source: 'Bản Đồ Vệ Tinh Hải Đảo',
+          badge: '🌊 BỜ BIỂN CẤP BÃO 14'
+        }
+      ]
+    },
+    {
+      id: 'recon-haiphong-dinhvu',
+      name: 'Cụm Cảng Container Đình Vũ & Sông Cấm, Hải Phòng',
+      province: 'Hải Phòng',
+      lng: 106.7450,
+      lat: 20.8520,
+      elev: 8,
+      depth: 'Nước triều cường + Gió bão',
+      danger: 'CẢNH BÁO GIÓ GIẬT CẢNG BIỂN',
+      source: 'Cảng Vụ Hàng Hải Hải Phòng',
+      heading: 90,
+      pitch: 55,
+      zoom: 16.0,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=700&q=75',
+          title: 'Cảng Container Quốc tế Đình Vũ bên sông Cấm',
+          desc: 'Khu vực bốc dỡ hàng hóa chiến lược của miền Bắc. Các cẩu giàn bờ STS đã hạ tải neo giằng ứng phó gió bão giật.',
+          source: 'Hệ Thống Camera Giám Sát Cảng Biển',
+          badge: '⚓ KHU CẢNG BIỂN'
+        }
+      ]
+    }
+  ];
+
+  let activeReconData = null;
+  let activeReconTarget = null;
+  let isBoostingTerrain = false;
+
+  function findClosestReconEntry(lng, lat) {
+    let best = null;
+    let minD = Infinity;
+    for (const item of GROUND_RECON_DATABASE) {
+      const d = Math.hypot(item.lng - lng, item.lat - lat);
+      if (d < minD) {
+        minD = d;
+        best = item;
+      }
+    }
+    if (best && minD < 0.25) {
+      return best;
+    }
+    return {
+      id: `recon-dyn-${Date.now()}`,
+      name: `Khu vực Tọa độ [${lat.toFixed(4)}°B, ${lng.toFixed(4)}°Đ]`,
+      province: 'Miền Bắc',
+      lng: lng,
+      lat: lat,
+      elev: Math.round(15 + Math.abs(lat - 21.0) * 150),
+      depth: 'Theo dõi thời gian thực',
+      danger: 'KHU VỰC QUAN SÁT CẬN CẢNH',
+      source: 'Vệ Tinh Quang Học & Viễn Thám C2',
+      heading: 0,
+      pitch: 62,
+      zoom: 16.5,
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=75',
+          title: `Không ảnh trinh sát tọa độ ${lat.toFixed(4)}°B, ${lng.toFixed(4)}°Đ`,
+          desc: `Khung nhìn thực địa phân giải cao tại khu vực miền Bắc. Địa hình trắc diện được tái hiện qua mô hình số DEM 3D.`,
+          source: 'Vệ Tinh Viễn Thám & SAR',
+          badge: '🛰️ KHÔNG ẢNH CẬN CẢNH'
+        }
+      ]
+    };
+  }
+
+  function openGroundReconViewer(lng, lat, name) {
+    let targetLng = lng;
+    let targetLat = lat;
+    if (targetLng === undefined || targetLat === undefined) {
+      if (mapInstance) {
+        const c = mapInstance.getCenter();
+        targetLng = c.lng;
+        targetLat = c.lat;
+      } else {
+        targetLng = 105.8542;
+        targetLat = 21.0285;
+      }
+    }
+
+    const reconItem = findClosestReconEntry(targetLng, targetLat);
+    activeReconData = reconItem;
+    activeReconTarget = { lng: targetLng, lat: targetLat, name: name || reconItem.name };
+
+    const modal = document.getElementById('ground-recon-modal');
+    if (!modal) return;
+
+    const locEl = document.getElementById('recon-modal-location');
+    if (locEl) locEl.innerText = name || reconItem.name;
+    const coordsEl = document.getElementById('recon-modal-coords');
+    if (coordsEl) coordsEl.innerText = `${targetLat.toFixed(4)}° N, ${targetLng.toFixed(4)}° E`;
+    const elevEl = document.getElementById('recon-modal-elev');
+    if (elevEl) elevEl.innerText = `Độ cao: +${reconItem.elev}m ASL`;
+
+    const svLink = document.getElementById('recon-streetview-link');
+    if (svLink) {
+      svLink.href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${targetLat.toFixed(5)},${targetLng.toFixed(5)}`;
+    }
+
+    renderReconPhotos(reconItem);
+    switchReconTab('photos');
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
+
+  function renderReconPhotos(reconItem) {
+    const mainImg = document.getElementById('recon-main-img');
+    const badgeTag = document.getElementById('recon-badge-tag');
+    const srcBadge = document.getElementById('recon-source-badge');
+    const titleEl = document.getElementById('recon-img-title');
+    const descEl = document.getElementById('recon-img-desc');
+    const thumbsContainer = document.getElementById('recon-thumbnails');
+
+    const firstImg = (reconItem.images && reconItem.images[0]) || {};
+    const svgFallback = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%230b0f19"/><circle cx="400" cy="225" r="160" stroke="%2338bdf8" stroke-width="2" fill="none" opacity="0.3"/><circle cx="400" cy="225" r="90" stroke="%2338bdf8" stroke-width="1.5" fill="none" opacity="0.4"/><line x1="400" y1="20" x2="400" y2="430" stroke="%2338bdf8" stroke-width="1" opacity="0.3"/><line x1="20" y1="225" x2="780" y2="225" stroke="%2338bdf8" stroke-width="1" opacity="0.3"/><text x="400" y="215" fill="%2338bdf8" font-family="monospace" font-size="20" font-weight="bold" text-anchor="middle">KHÔNG ẢNH TRINH SÁT C2 VIỄN THÁM</text><text x="400" y="245" fill="%2394a3b8" font-family="sans-serif" font-size="14" text-anchor="middle">${encodeURIComponent(reconItem.name)}</text><text x="400" y="275" fill="%2334d399" font-family="monospace" font-size="13" text-anchor="middle">Tọa độ: ${reconItem.lat.toFixed(4)}°N, ${reconItem.lng.toFixed(4)}°E • Độ cao: +${reconItem.elev}m ASL</text></svg>`;
+
+    if (mainImg) {
+      mainImg.onerror = () => { mainImg.src = svgFallback; };
+      mainImg.src = firstImg.url || svgFallback;
+    }
+    if (badgeTag) badgeTag.innerText = firstImg.badge || reconItem.danger;
+    if (srcBadge) srcBadge.innerText = firstImg.source || reconItem.source;
+    if (titleEl) titleEl.innerText = firstImg.title || reconItem.name;
+    if (descEl) descEl.innerText = firstImg.desc || '';
+
+    if (thumbsContainer) {
+      thumbsContainer.innerHTML = '';
+      (reconItem.images || []).forEach((img, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = `cursor-pointer rounded-xl overflow-hidden border-2 transition ${idx === 0 ? 'border-cyan-400 scale-102' : 'border-slate-700 opacity-60 hover:opacity-100'} aspect-video bg-slate-950`;
+        thumb.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'160\\' height=\\'90\\'><rect width=\\'160\\' height=\\'90\\' fill=\\'%231e293b\\'/><text x=\\'80\\' y=\\'50\\' fill=\\'%2394a3b8\\' font-size=\\'12\\' text-anchor=\\'middle\\'>Ảnh ${idx+1}</text></svg>'" />`;
+        thumb.onclick = () => selectReconPhoto(idx);
+        thumbsContainer.appendChild(thumb);
+      });
+    }
+  }
+
+  function selectReconPhoto(idx) {
+    if (!activeReconData || !activeReconData.images[idx]) return;
+    const img = activeReconData.images[idx];
+    const mainImg = document.getElementById('recon-main-img');
+    const badgeTag = document.getElementById('recon-badge-tag');
+    const srcBadge = document.getElementById('recon-source-badge');
+    const titleEl = document.getElementById('recon-img-title');
+    const descEl = document.getElementById('recon-img-desc');
+    const thumbsContainer = document.getElementById('recon-thumbnails');
+
+    if (mainImg) mainImg.src = img.url;
+    if (badgeTag) badgeTag.innerText = img.badge;
+    if (srcBadge) srcBadge.innerText = img.source;
+    if (titleEl) titleEl.innerText = img.title;
+    if (descEl) descEl.innerText = img.desc;
+
+    if (thumbsContainer) {
+      Array.from(thumbsContainer.children).forEach((child, i) => {
+        if (i === idx) {
+          child.className = 'cursor-pointer rounded-xl overflow-hidden border-2 border-cyan-400 scale-102 transition aspect-video bg-slate-950';
+        } else {
+          child.className = 'cursor-pointer rounded-xl overflow-hidden border-2 border-slate-700 opacity-60 hover:opacity-100 transition aspect-video bg-slate-950';
+        }
+      });
+    }
+  }
+
+  function closeGroundReconModal() {
+    const modal = document.getElementById('ground-recon-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function switchReconTab(tabKey) {
+    const panes = {
+      photos: document.getElementById('recon-pane-photos'),
+      streetview: document.getElementById('recon-pane-streetview'),
+      satellite: document.getElementById('recon-pane-satellite')
+    };
+    const btns = {
+      photos: document.getElementById('recon-tab-btn-photos'),
+      streetview: document.getElementById('recon-tab-btn-streetview'),
+      satellite: document.getElementById('recon-tab-btn-satellite')
+    };
+
+    Object.keys(panes).forEach(k => {
+      if (panes[k]) {
+        if (k === tabKey) panes[k].classList.remove('hidden');
+        else panes[k].classList.add('hidden');
+      }
+      if (btns[k]) {
+        if (k === tabKey) {
+          btns[k].className = 'flex-1 py-2 rounded-xl bg-cyan-600 text-white transition flex items-center justify-center gap-1.5 cursor-pointer shadow';
+        } else {
+          btns[k].className = 'flex-1 py-2 rounded-xl bg-transparent hover:bg-slate-800 text-slate-300 transition flex items-center justify-center gap-1.5 cursor-pointer';
+        }
+      }
+    });
+  }
+
+  function flyToRecon3D() {
+    closeGroundReconModal();
+    if (!mapInstance || !activeReconData) return;
+    const tgt = activeReconTarget || activeReconData;
+    mapInstance.flyTo({
+      center: [tgt.lng, tgt.lat],
+      zoom: activeReconData.zoom || 16.5,
+      pitch: activeReconData.pitch || 65,
+      bearing: activeReconData.heading || 0,
+      duration: 1500,
+      essential: true
+    });
+    if (typeof window.showNorthStarToast === 'function') {
+      window.showNorthStarToast(`📐 Chuyển camera tới góc nhìn 3D cận cảnh (Pitch 65°): ${tgt.name}`, 'info', 2500);
+    }
+  }
+
+  function setReconRouteDestination() {
+    closeGroundReconModal();
+    if (!activeReconTarget) return;
+    setRouteOriginDestination('dest', activeReconTarget.lng, activeReconTarget.lat, activeReconTarget.name);
+  }
+
+  function openCurrentViewRecon() {
+    if (!mapInstance) return;
+    const c = mapInstance.getCenter();
+    openGroundReconViewer(c.lng, c.lat);
+  }
+
+  function updateDeepZoomHUD() {
+    if (!mapInstance) return;
+    const z = mapInstance.getZoom();
+    const hud = document.getElementById('ml-deep-zoom-hud');
+    const badge = document.getElementById('ml-deep-zoom-badge');
+    if (hud) {
+      if (z >= 15.0) {
+        hud.classList.remove('hidden');
+        if (badge) badge.innerText = `Z: ${z.toFixed(1)}`;
+        if (layerVisibility.terrain && !isBoostingTerrain) {
+          isBoostingTerrain = true;
+          try {
+            mapInstance.setTerrain({ source: 'terrain-dem-source', exaggeration: 2.2 });
+          } catch (_) {}
+        }
+      } else {
+        hud.classList.add('hidden');
+        if (layerVisibility.terrain && isBoostingTerrain) {
+          isBoostingTerrain = false;
+          try {
+            mapInstance.setTerrain({ source: 'terrain-dem-source', exaggeration: 1.6 });
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
   return {
     init,
     setPitch,
@@ -3250,6 +3774,15 @@ window.NorthStarMapLibre = (function () {
     resize,
     zoomToProvince,
     focusProvinceRegion,
+    // Ground Reconnaissance & Deep Zoom Features
+    openGroundReconViewer,
+    openCurrentViewRecon,
+    closeGroundReconModal,
+    switchReconTab,
+    selectReconPhoto,
+    flyToRecon3D,
+    setReconRouteDestination,
+    updateDeepZoomHUD,
     // Expanded Tactical Features
     toggleFlyoverPatrol,
     advancePatrol,
