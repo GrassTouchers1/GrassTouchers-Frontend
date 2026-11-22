@@ -608,7 +608,7 @@
   <!-- ========================================================================= -->
   <!-- 4. FLOATING AI CHATBOT ASSISTANT WIDGET (TRỢ LÝ AI TRỰC BAN THIÊN TAI) -->
   <!-- ========================================================================= -->
-  <div id="ai-assistant-widget" class="fixed bottom-6 right-6 z-[1000] select-none">
+  <div id="ai-assistant-widget" class="fixed bottom-6 right-6 z-[1000]">
     <button onclick="AIAssistant.toggle()" class="relative p-3.5 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80" title="Trợ lý AI Trực ban Thiên tai 24/7">
       <i data-lucide="bot" class="w-6 h-6"></i>
       <span id="ai-assistant-badge" class="absolute -top-1 -right-1 flex h-4 w-4">
@@ -618,7 +618,7 @@
     </button>
 
     <!-- AI Assistant Panel -->
-    <div id="ai-assistant-panel" class="hidden absolute bottom-16 right-0 w-[calc(100vw-2rem)] sm:w-96 max-w-[400px] h-[500px] max-h-[80vh] bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-indigo-500/30 backdrop-blur-md flex flex-col overflow-hidden animate-fade-in">
+    <div id="ai-assistant-panel" class="hidden absolute bottom-16 right-0 w-[calc(100vw-2rem)] sm:w-96 max-w-[400px] h-[500px] max-h-[80vh] bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-indigo-500/30 backdrop-blur-md flex flex-col overflow-hidden animate-fade-in select-text">
       <!-- Header -->
       <div class="p-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
         <div class="flex items-center gap-2">

@@ -54,7 +54,7 @@ const AIAssistant = (function () {
     if (data.status === 'online') {
       labelEl.textContent = '⚡ Groq AI (Online)';
       dotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
-    } else if (data.status === 'offline_fallback' || data.active_provider.includes('mock')) {
+    } else if (data.status === 'offline_fallback' || (data.active_provider && data.active_provider.includes('mock'))) {
       labelEl.textContent = '🛡️ Ngoại tuyến';
       dotEl.className = 'w-1.5 h-1.5 rounded-full bg-cyan-400';
     } else if (data.status === 'disabled') {
@@ -165,27 +165,60 @@ const AIAssistant = (function () {
     thread.appendChild(loadingDiv);
     thread.scrollTop = thread.scrollHeight;
 
+    let lat = 21.0285, lng = 105.8542;
     try {
-      const center = window.map ? window.map.getCenter() : { lat: 21.0285, lng: 105.8542 };
-      const res = await fetch(getApiUrl('/api/ai/chat'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: msg,
-          lat: center.lat,
-          lng: center.lng,
-          include_live_context: true
-        })
-      });
+      if (window.map && typeof window.map.getCenter === 'function') {
+        const c = window.map.getCenter();
+        if (c && typeof c.lat === 'number') lat = c.lat;
+        else if (c && typeof c.lat === 'function') lat = c.lat();
+        if (c && typeof c.lng === 'number') lng = c.lng;
+        else if (c && typeof c.lng === 'function') lng = c.lng();
+      }
+    } catch (err) {
+      console.warn("Không thể lấy toạ độ bản đồ:", err);
+    }
+
+    try {
+      let data = null;
+      try {
+        const res = await fetch(getApiUrl('/api/ai/chat'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: msg,
+            lat: lat,
+            lng: lng,
+            include_live_context: true
+          })
+        });
+        if (res.ok) {
+          data = await res.json();
+        }
+      } catch (e1) {
+        console.warn("Fetch /api/ai/chat gặp sự cố, thử tiếp /api/ai/assistant:", e1);
+      }
+
+      // Kênh dự phòng: Thử endpoint tương thích ngược /api/ai/assistant nếu /api/ai/chat chưa trả lời
+      if (!data) {
+        const res2 = await fetch(getApiUrl('/api/ai/assistant'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: msg,
+            lat: lat,
+            lng: lng
+          })
+        });
+        if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
+        data = await res2.json();
+      }
 
       const indicator = document.getElementById(loadingId);
       if (indicator) indicator.remove();
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
       appendMessage('bot', data.reply, data.suggested_actions, data.provider_used, data.is_fallback);
     } catch (e) {
-      console.warn("Lỗi kết nối /api/ai/chat:", e);
+      console.warn("Lỗi kết nối Trợ lý AI:", e);
       const indicator = document.getElementById(loadingId);
       if (indicator) indicator.remove();
       appendMessage('bot', "⚠️ Không thể kết nối tới máy chủ Trợ lý AI. Hệ thống đang bảo lưu kết nối ngoại tuyến an toàn.");
@@ -257,3 +290,8 @@ const AIAssistant = (function () {
     classifyEmergency
   };
 })();
+
+// Đảm bảo AIAssistant luôn sẵn sàng trên phạm vi toàn cục window
+if (typeof window !== 'undefined') {
+  window.AIAssistant = AIAssistant;
+}
