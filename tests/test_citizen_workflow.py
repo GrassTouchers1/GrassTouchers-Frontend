@@ -188,7 +188,8 @@ class TestCitizenWorkflow(unittest.TestCase):
         self.assertIn("citizen-glass-header", html, "Phải có citizen-glass-header")
         self.assertIn("citizen-hotline-114", html, "Phải có nút Hotline 114 siêu nổi bật")
 
-        # 2. Bộ chuyển đổi bản đồ (Dark, Topo, Satellite)
+        # 2. Bộ chuyển đổi bản đồ (Day, Dark, Topo, Satellite)
+        self.assertIn("citizen-btn-base-day", html, "Phải có nút Bản Đồ Ban Ngày")
         self.assertIn("citizen-btn-base-dark", html, "Phải có nút Bản Đồ Đêm")
         self.assertIn("citizen-btn-base-topo", html, "Phải có nút Bản Đồ Địa Hình")
         self.assertIn("citizen-btn-base-sat", html, "Phải có nút Bản Đồ Vệ Tinh")
