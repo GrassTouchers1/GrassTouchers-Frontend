@@ -900,6 +900,7 @@
       let cachedFloodPoints = [];
       let officialFloodMarkers = [];
       let isMapMaximized = false;
+      let currentExpandedZone = null;
 
       function toggleMapMaximize() {
         const mapWrapper = document.getElementById('citizen-map-wrapper');
@@ -1086,11 +1087,12 @@
 
         // PHÂN CẤP GOM CỤM 3 TẦNG:
         // Tầng 1 (Zoom < 10.5): Gom Cụm Cấp Tỉnh/Thành Phố (Hà Nội: 136 trạm, Thái Nguyên, Lào Cai...)
-        // Tầng 2 (10.5 <= Zoom < 13.5): Gom Cụm Theo Phân Vùng Khu Vực / Quận Huyện (Cầu Giấy, Đống Đa, Hà Đông...)
-        // Tầng 3 (Zoom >= 13.5): Tách bung chi tiết từng trạm đo ngập trên từng tuyến đường phố
+        // Tầng 2 (10.5 <= Zoom < 12.8): Gom Cụm Theo Phân Vùng Khu Vực / Quận Huyện (Cầu Giấy, Đống Đa, Hoài Đức...)
+        // Tầng 3 (Zoom >= 12.8): Tách bung chi tiết từng trạm đo ngập trên từng tuyến đường phố
         if (currentZoom < 10.5) {
+          currentExpandedZone = null;
           renderProvinceClusters(m, validPoints);
-        } else if (currentZoom < 13.5) {
+        } else if (currentZoom < 12.8) {
           renderDistrictZoneClusters(m, validPoints);
         } else {
           validPoints.forEach(pt => createIndividualFloodMarker(m, pt));
@@ -1188,6 +1190,7 @@
         // Click cụm lớn: Bay thẳng vào zoom 11.6 để kích hoạt Tầng 2 (Gom nhóm theo Quận Huyện)
         el.onclick = (e) => {
           e.stopPropagation();
+          currentExpandedZone = null;
           m.flyTo({
             center: [avgLng, avgLat],
             zoom: 11.6,
@@ -1215,6 +1218,13 @@
         });
 
         zoneMap.forEach((pts, zoneName) => {
+          // NẾU ZONE NÀY ĐANG ĐƯỢC CHỌN MỞ RỘNG (EXPANDED):
+          // BUNG TOÀN BỘ CÁC TRẠM CON CHI TIẾT CỦA ZONE NÀY RA BẢN ĐỒ!
+          if (currentExpandedZone && currentExpandedZone === zoneName) {
+            pts.forEach(pt => createIndividualFloodMarker(m, pt));
+            return;
+          }
+
           let avgLat = 0, avgLng = 0;
           pts.forEach(p => {
             avgLat += p.lat;
@@ -1267,7 +1277,7 @@
           ${pulseHtml}
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-bold shadow-xl border transition-all duration-200 group-hover:scale-110 pointer-events-auto"
                style="background: ${bgGradient}; border-color: ${borderColor}; box-shadow: 0 4px 18px ${shadowColor}; backdrop-filter: blur(8px);"
-               title="Khu vực ${zoneName}: ${count} trạm quan trắc (Bấm để phóng to xem trạm chi tiết)">
+               title="Khu vực ${zoneName}: ${count} trạm quan trắc (Bấm để bung ${count} điểm chi tiết)">
             <span class="inline-block w-2 h-2 rounded-full ${dotColor}"></span>
             <span class="tracking-tight text-[11.5px] font-semibold whitespace-nowrap">${shortName}</span>
             <span class="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black border ${countBg}">${count}</span>
@@ -1277,6 +1287,9 @@
         el.onclick = (e) => {
           e.stopPropagation();
 
+          // 1. Đánh dấu quận này đang được mở rộng (bung các trạm ngập con)
+          currentExpandedZone = zoneName;
+
           let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
           pts.forEach(p => {
             minLng = Math.min(minLng, p.lng);
@@ -1285,17 +1298,20 @@
             maxLat = Math.max(maxLat, p.lat);
           });
 
-          // Bấm vào Cụm Quận: Zoom thẳng vào mức zoom 14.3 để bung Tầng 3 (các trạm chi tiết trên đường phố)
+          // 2. Bung ngay lập tức các điểm ngập con của quận này lên bản đồ
+          renderFloodPointsWithClustering(m);
+
+          // 3. Zoom / FitBounds mượt mà đến vùng chứa các điểm
           if (maxLng - minLng > 0.003 || maxLat - minLat > 0.003) {
             m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
               padding: { top: 90, bottom: 90, left: 90, right: 90 },
-              maxZoom: 14.8,
+              maxZoom: 14.5,
               duration: 650
             });
           } else {
             m.flyTo({
               center: [avgLng, avgLat],
-              zoom: 14.3,
+              zoom: 14.0,
               duration: 650
             });
           }
