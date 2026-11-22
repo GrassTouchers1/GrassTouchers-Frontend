@@ -101,17 +101,13 @@ const CoordinatorCommand = (function () {
     }
   ];
 
-  let tacticalLayerGroup = null;
+  let tacticalUnitMarkers = [];
   let activeDispatchRouteLayer = null;
 
   // =========================================================================
   // 1. KHỞI TẠO & NẠP DỮ LIỆU ĐIỀU PHỐI (INITIALIZATION & LIVE DATA SYNC)
   // =========================================================================
   async function init(mapInstance) {
-    if (mapInstance && !tacticalLayerGroup) {
-      tacticalLayerGroup = L.layerGroup().addTo(mapInstance);
-    }
-
     // Nạp dữ liệu đồng thời từ backend
     await refreshAllData();
 
@@ -727,21 +723,30 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
   // 4. CÁC TÁC VỤ NGHIỆP VỤ ĐIỀU PHỐI (OPERATIONAL ACTIONS)
   // =========================================================================
   function flyToIncident(lat, lng, id) {
-    if (!window.map) return;
-    window.map.flyTo([lat, lng], 15, { duration: 1.2 });
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (!mapInst) return;
 
-    // Hiển thị vòng tròn nhấp nháy tại mục tiêu
-    const pulseMarker = L.circleMarker([lat, lng], {
-      radius: 20,
-      color: '#e11d48',
-      fillColor: '#fb7185',
-      fillOpacity: 0.5,
-      weight: 3
-    }).addTo(window.map);
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.focusIncident === 'function' && id) {
+      window.NorthStarMapLibre.focusIncident(id);
+      return;
+    }
 
-    setTimeout(() => {
-      if (window.map) window.map.removeLayer(pulseMarker);
-    }, 4000);
+    if (typeof mapInst.flyTo === 'function') {
+      mapInst.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+    }
+
+    // Hiển thị vòng tròn nhấp nháy tại mục tiêu (native MapLibre Marker)
+    if (typeof maplibregl !== 'undefined') {
+      const pulseEl = document.createElement('div');
+      pulseEl.className = 'w-10 h-10 rounded-full bg-rose-500/40 border-2 border-rose-500 animate-ping pointer-events-none';
+      const pulseMarker = new maplibregl.Marker({ element: pulseEl })
+        .setLngLat([lng, lat])
+        .addTo(mapInst);
+
+      setTimeout(() => {
+        try { pulseMarker.remove(); } catch (_) {}
+      }, 4000);
+    }
   }
 
   function verifyIncident(itemId) {
@@ -902,62 +907,75 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
 
     const unit = rescueUnits.find(u => u.id === mission.assigned_unit_id);
     const unitLatLng = unit ? [unit.lat, unit.lng] : [mission.victim_lat + 0.02, mission.victim_lng + 0.02];
-    const victimLatLng = [mission.victim_lat, mission.victim_lng];
-    const shelterLatLng = [mission.shelter_lat, mission.shelter_lng];
+    const unitLatLng = [mission.assigned_unit_lng, mission.assigned_unit_lat];
+    const victimLatLng = [mission.victim_lng, mission.victim_lat];
+    const shelterLatLng = [mission.shelter_lng, mission.shelter_lat];
+    const routeCoords = [unitLatLng, victimLatLng, shelterLatLng].filter(c => !isNaN(c[0]) && !isNaN(c[1]));
 
-    if (activeDispatchRouteLayer) {
-      window.map.removeLayer(activeDispatchRouteLayer);
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (mapInst && mapInst.getSource && mapInst.getSource('tactical-route-source')) {
+      mapInst.getSource('tactical-route-source').setData({
+        type: 'Feature',
+        properties: { name: 'Dispatch Mission Route' },
+        geometry: {
+          type: 'LineString',
+          coordinates: routeCoords
+        }
+      });
+      if (typeof maplibregl !== 'undefined') {
+        const bounds = new maplibregl.LngLatBounds();
+        routeCoords.forEach(c => bounds.extend(c));
+        mapInst.fitBounds(bounds, { padding: 60, duration: 1200 });
+      }
     }
-
-    // Polyline nét đứt màu đỏ cam
-    activeDispatchRouteLayer = L.polyline([unitLatLng, victimLatLng, shelterLatLng], {
-      color: '#e11d48',
-      weight: 5,
-      dashArray: '8, 8',
-      opacity: 0.9,
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(window.map);
-
-    window.map.fitBounds(activeDispatchRouteLayer.getBounds(), { padding: [60, 60] });
     showToast('🗺️ ĐÃ CẮM LỘ TRÌNH TÁC CHIẾN', `Hiển thị tuyến cứu nạn từ ${mission.assigned_unit_name} tới hiện trường`, 'info');
   }
 
-  // Vẽ các đội cứu nạn lên bản đồ Leaflet
+  // Vẽ các đội cứu nạn lên bản đồ MapLibre GL JS
   function renderTacticalUnitsOnMap() {
-    if (!tacticalLayerGroup || !window.map) return;
-    tacticalLayerGroup.clearLayers();
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (!mapInst || typeof maplibregl === 'undefined') return;
+
+    tacticalUnitMarkers.forEach(m => {
+      try { m.remove(); } catch (_) {}
+    });
+    tacticalUnitMarkers = [];
 
     rescueUnits.forEach(u => {
       const isBoat = u.type === 'boat';
-      const iconHtml = `
+      const el = document.createElement('div');
+      el.className = 'cursor-pointer select-none';
+      el.innerHTML = `
         <div class="relative flex items-center justify-center">
-          <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black">
+          <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black hover:scale-110 transition">
             ${isBoat ? '🚤' : '🚛'}
           </div>
           <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
         </div>
       `;
 
-      const customIcon = L.divIcon({
-        className: 'tactical-unit-icon',
-        html: iconHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      const m = L.marker([u.lat, u.lng], { icon: customIcon });
-      m.bindPopup(`
-        <div class="p-2 text-xs font-sans space-y-1">
-          <div class="font-extrabold text-blue-900">${u.name}</div>
-          <div class="text-slate-600">${u.commander}</div>
-          <div class="text-slate-500 text-[10px]">${u.vehicle}</div>
-          <div class="pt-1 border-t text-[11px] font-bold ${u.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}">
+      const popupHtml = `
+        <div style="padding: 10px; background: #0b0f19; color: #f8fafc; border-radius: 12px; border: 1px solid rgba(56,189,248,0.4); box-shadow: 0 12px 28px rgba(0,0,0,0.8); min-width: 220px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif;">
+          <div style="font-weight: 800; color: #38bdf8; font-size: 13px; margin-bottom: 4px;">${u.name}</div>
+          <div style="font-size: 11px; color: #94a3b8;">${u.commander}</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 2px;">${u.vehicle}</div>
+          <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #1e293b; font-size: 11px; font-weight: 700; color: ${u.status === 'ready' ? '#34d399' : '#fbbf24'};">
             Trạng thái: ${u.status === 'ready' ? 'Sẵn sàng xuất kích' : 'Đang làm nhiệm vụ'}
           </div>
         </div>
-      `);
-      tacticalLayerGroup.addLayer(m);
+      `;
+
+      const popup = new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml);
+      el.onclick = (e) => {
+        e.stopPropagation();
+        popup.setLngLat([u.lng, u.lat]).addTo(mapInst);
+      };
+
+      const m = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([u.lng, u.lat])
+        .addTo(mapInst);
+
+      tacticalUnitMarkers.push(m);
     });
   }
 

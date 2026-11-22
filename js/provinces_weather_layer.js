@@ -360,7 +360,7 @@
       fillOpacity: 0.22
     });
 
-    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+    if (layer && typeof layer.bringToFront === 'function') {
       layer.bringToFront();
     }
   }
@@ -398,35 +398,27 @@
 
   function onFeatureClick(e, provinceName) {
     if (e && e.originalEvent) {
-      L.DomEvent.stopPropagation(e.originalEvent);
-      L.DomEvent.preventDefault(e.originalEvent);
+      if (e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
+      if (e.originalEvent.preventDefault) e.originalEvent.preventDefault();
     }
     const layer = e.target;
     if (layer && typeof layer.closeTooltip === 'function') {
       layer.closeTooltip();
     }
-    const clickLatLng = e.latlng || (layer.getBounds ? layer.getBounds().getCenter() : null);
+    const clickLatLng = e.latlng || (layer && layer.getBounds ? layer.getBounds().getCenter() : null);
 
     // Đóng sạch sẽ mọi popup cũ trên toàn bộ bản đồ trước khi mở popup tỉnh (chống đè popup)
-    if (targetMap) {
-      targetMap.closePopup();
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.closePopup === 'function') {
+      window.NorthStarMapLibre.closePopup();
     }
-    document.querySelectorAll('.leaflet-popup').forEach(p => p.remove());
 
     // Mở popup chi tiết khí tượng & tác chiến của cả vùng tỉnh ngay tại điểm click
-    if (targetMap && clickLatLng) {
-      L.popup({
-        maxWidth: 340,
-        minWidth: 300,
-        className: 'province-weather-leaflet-popup',
-        autoPan: true,
-        autoPanPadding: [30, 30],
-        autoClose: true,
-        closeOnClick: true
-      })
-      .setLatLng(clickLatLng)
-      .setContent(buildHoverCardHtml(provinceName))
-      .openOn(targetMap);
+    if (clickLatLng) {
+      const lng = clickLatLng.lng !== undefined ? clickLatLng.lng : (Array.isArray(clickLatLng) ? clickLatLng[1] : 105.8);
+      const lat = clickLatLng.lat !== undefined ? clickLatLng.lat : (Array.isArray(clickLatLng) ? clickLatLng[0] : 21.0);
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.showProvinceWeatherPopup === 'function') {
+        window.NorthStarMapLibre.showProvinceWeatherPopup(provinceName, [lng, lat]);
+      }
     }
 
     // Tự động đồng bộ vùng chỉ huy

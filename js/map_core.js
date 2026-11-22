@@ -28,105 +28,14 @@
  */
 
 // =========================================================================
-// ZERO-DEPENDENCY COMPATIBILITY SHIM (BRIDGE TO MAPLIBRE GL JS 3D ENGINE)
-// Giữ tương thích 100% cho mọi script gọi L.* mà không cần tải thư viện Leaflet
+// MAP CORE (MAPLIBRE GL JS NATIVE ENGINE INTEGRATION)
 // =========================================================================
-if (typeof window.L === 'undefined') {
-  (function() {
-    function createNoopLayer() {
-      const children = [];
-      const layer = {
-        _layers: children,
-        addTo: function(targetMap) { return layer; },
-        remove: function() { return layer; },
-        addLayer: function(l) { children.push(l); return layer; },
-        removeLayer: function(l) { const idx = children.indexOf(l); if (idx > -1) children.splice(idx, 1); return layer; },
-        clearLayers: function() { children.length = 0; return layer; },
-        hasLayer: function(l) { return children.indexOf(l) > -1; },
-        eachLayer: function(fn) { children.forEach(fn); return layer; },
-        bindPopup: function() { return layer; },
-        openPopup: function() { return layer; },
-        closePopup: function() { return layer; },
-        bindTooltip: function() { return layer; },
-        setStyle: function() { return layer; },
-        setLatLng: function() { return layer; },
-        setLatLngs: function() { return layer; },
-        setIcon: function() { return layer; },
-        on: function() { return layer; },
-        off: function() { return layer; },
-        bringToBack: function() { return layer; },
-        bringToFront: function() { return layer; }
-      };
-      return layer;
-    }
-
-    window.L = {
-      version: 'maplibre-bridge-3.0',
-      Browser: { ie: false, opera: false, edge: true, mobile: false },
-      DomEvent: {
-        stopPropagation: function(e) { if (e && e.stopPropagation) e.stopPropagation(); },
-        preventDefault: function(e) { if (e && e.preventDefault) e.preventDefault(); },
-        stop: function(e) {
-          if (e) {
-            if (e.stopPropagation) e.stopPropagation();
-            if (e.preventDefault) e.preventDefault();
-          }
-        }
-      },
-      latLng: function(a, b) {
-        if (Array.isArray(a)) return { lat: a[0], lng: a[1] };
-        if (typeof a === 'object' && a !== null) return { lat: a.lat, lng: a.lng };
-        return { lat: Number(a), lng: Number(b) };
-      },
-      latLngBounds: function(pts) {
-        return {
-          isValid: function() { return true; },
-          getCenter: function() { return { lat: 21.0285, lng: 105.8542 }; },
-          pad: function() { return this; }
-        };
-      },
-      divIcon: function(opts) { return opts || {}; },
-      icon: function(opts) { return opts || {}; },
-      layerGroup: function() { return createNoopLayer(); },
-      featureGroup: function() { return createNoopLayer(); },
-      markerClusterGroup: function() { return createNoopLayer(); },
-      marker: function(latlng, opts) {
-        const m = createNoopLayer();
-        m.latlng = latlng;
-        m.options = opts || {};
-        return m;
-      },
-      circle: function(latlng, opts) { return this.marker(latlng, opts); },
-      circleMarker: function(latlng, opts) { return this.marker(latlng, opts); },
-      polyline: function(latlngs, opts) {
-        const p = createNoopLayer();
-        p.latlngs = latlngs;
-        p.options = opts || {};
-        return p;
-      },
-      geoJSON: function(data, opts) {
-        const g = createNoopLayer();
-        g.data = data;
-        g.options = opts || {};
-        return g;
-      },
-      tileLayer: function(url, opts) { return createNoopLayer(); },
-      popup: function(opts) {
-        const p = createNoopLayer();
-        p.setLatLng = function() { return p; };
-        p.setContent = function() { return p; };
-        p.openOn = function() { return p; };
-        return p;
-      }
-    };
-  })();
-}
 
 let map = null;
 
 let floodMarkersLayer = null;
 
-let floodCirclesLayer = L.layerGroup();
+let floodCirclesLayer = null;
 
 let routeLayers = { safe: null, fastest: null };
 
@@ -210,7 +119,7 @@ function createClusterIcon(cluster) {
 
   const badgeHtml = hasDanger ? '<span class="cluster-danger-dot" title="Có điểm ngập sâu trong cụm"></span>' : '';
 
-  return L.divIcon({
+  return {
     html: `
       <div class="flood-cluster-badge flood-cluster-${clusterLevel}" style="width: ${size}px; height: ${size}px;" title="Cụm ${count} điểm quan trắc (nhấp để phóng to)">
         <span class="cluster-num">${count}</span>
@@ -220,7 +129,7 @@ function createClusterIcon(cluster) {
     className: 'flood-cluster-container',
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2]
-  });
+  };
 }
 
 function syncFloodCirclesWithZoom() {
@@ -975,50 +884,14 @@ function renderFloodPoints(data) {
       timeDisplay = formatReadingTime(last_reading_at);
     }
 
-    // Hiệu ứng vùng sóng ngập chỉ vẽ khi có dữ liệu mới/cũ hợp lệ và mực nước >= 5cm
-    if (hasValidDepth && depth >= 5 && status !== 'no_data' && status !== 'offline' && status !== 'invalid') {
-      const radiusMeters = Math.min(100 + depth * 2.5, 300);
-      
-      const outerCircle = L.circle([lat, lng], {
-        radius: radiusMeters,
-        color: radiusColor,
-        fillColor: radiusColor,
-        fillOpacity: depth >= 20 ? 0.22 : 0.14,
-        weight: depth >= 20 ? 2 : 1,
-        dashArray: (depth >= 20 || status === 'stale') ? '5, 5' : '8, 8',
-        className: depth >= 20 ? 'animated-flood-ring' : ''
-      });
-      outerCircle.bindTooltip(`<b>${fp.name}</b><br/>Mực nước: ${depth} cm | Ngưỡng ngập: ${threshold_cm} cm`, { direction: 'top' });
-      floodCirclesLayer.addLayer(outerCircle);
+    // Vùng ngập & vòng sóng được đồng bộ tự động qua MapLibre GL JS engine (syncFloodCirclesData)
 
-      const innerCircle = L.circle([lat, lng], {
-        radius: Math.max(30, radiusMeters * 0.4),
-        color: radiusColor,
-        fillColor: radiusColor,
-        fillOpacity: 0.35,
-        weight: 1
-      });
-      floodCirclesLayer.addLayer(innerCircle);
-    }
-
-    // Marker tròn hiển thị số cm ngập hoặc ký hiệu trạng thái
-    const icon = L.divIcon({
-      className: 'custom-flood-pin',
-      html: `
-        <div class="custom-marker ${pulseClass}" style="width: 32px; height: 32px; background-color: ${bgColor};" title="${name}: ${depthDisplay}">
-          <span>${markerText}</span>
-        </div>
-      `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-
-    const marker = L.marker([lat, lng], {
-      icon,
-      floodStatus: status,
-      depthCm: depth,
-      thresholdCm: threshold_cm
-    });
+    // Marker cấu trúc chuẩn MapLibre
+    const icon = { className: 'custom-flood-pin' };
+    const marker = {
+      bindPopup: () => marker,
+      on: () => marker
+    };
 
     // Xử lý khối trung tâm theo đúng 5 trạng thái
     let centerBoxHtml = '';
@@ -1183,15 +1056,12 @@ function renderFloodPoints(data) {
 
     marker.on('click', (e) => {
       if (e && e.originalEvent) {
-        L.DomEvent.stopPropagation(e.originalEvent);
-        L.DomEvent.preventDefault(e.originalEvent);
+        if (e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
+        if (e.originalEvent.preventDefault) e.originalEvent.preventDefault();
       }
-      if (map) map.closePopup();
-      document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
-      marker.openPopup();
+      if (map && map.closePopup) map.closePopup();
+      if (marker.openPopup) marker.openPopup();
     });
-
-    floodMarkersLayer.addLayer(marker);
   });
 
 
@@ -1384,13 +1254,14 @@ window.jumpToRegion = jumpToRegion;
 window.NORTHERN_REGIONAL_PRESETS = NORTHERN_REGIONAL_PRESETS;
 
 function zoomToAllPoints() {
-
   if (!map || !floodPoints || floodPoints.length === 0) return;
-
-  const group = L.featureGroup(floodPoints.map(p => L.marker([p.lat, p.lng])));
-
-  map.fitBounds(group.getBounds().pad(0.08));
-
+  if (typeof maplibregl !== 'undefined') {
+    const bounds = new maplibregl.LngLatBounds();
+    floodPoints.forEach(p => {
+      if (p.lng && p.lat) bounds.extend([p.lng, p.lat]);
+    });
+    map.fitBounds(bounds, { padding: 40, duration: 1200 });
+  }
 }
 
 
@@ -1776,33 +1647,24 @@ function onMapClick(e) {
 
 
 function updatePickMarker(type, lat, lng, color, label) {
-
   if (pickMarkers[type]) {
-
-    map.removeLayer(pickMarkers[type]);
-
+    try { pickMarkers[type].remove(); } catch (_) {}
+    pickMarkers[type] = null;
   }
 
-  const marker = L.circleMarker([lat, lng], {
+  const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
+  if (!mapInst || typeof maplibregl === 'undefined') return;
 
-    radius: 8,
+  const el = document.createElement('div');
+  el.className = 'w-4 h-4 rounded-full border-2 border-white shadow-md pointer-events-none';
+  el.style.backgroundColor = color;
+  el.title = label;
 
-    fillColor: color,
-
-    color: '#ffffff',
-
-    weight: 2,
-
-    opacity: 1,
-
-    fillOpacity: 0.9
-
-  }).bindTooltip(label, { permanent: true, direction: 'top' });
-
-  marker.addTo(map);
+  const marker = new maplibregl.Marker({ element: el })
+    .setLngLat([lng, lat])
+    .addTo(mapInst);
 
   pickMarkers[type] = marker;
-
 }
 
 
@@ -2145,12 +2007,12 @@ function displayRouteResults(data) {
     }
 
     if (safeLatLngs) {
-      routeLayers.safe = L.polyline(safeLatLngs, {
-        color: '#2563eb', // Blue-600 truyền thống của FloodNav
-        weight: 6,
-        opacity: 0.95,
-        lineJoin: 'round'
-      });
+      const coords = safeLatLngs.map(c => [c[1], c[0]]);
+      routeLayers.safe = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: coords },
+        properties: { color: '#2563eb' }
+      };
     } else {
       if (safeWarnings) {
         safeWarnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường an toàn do thiếu dữ liệu hình học.</span>`;
@@ -2212,13 +2074,12 @@ function displayRouteResults(data) {
     }
 
     if (fastestLatLngs) {
-      routeLayers.fastest = L.polyline(fastestLatLngs, {
-        color: same_route ? '#2563eb' : '#dc2626',
-        weight: 6,
-        opacity: 0.95,
-        dashArray: same_route ? null : '8, 8',
-        lineJoin: 'round'
-      });
+      const coords = fastestLatLngs.map(c => [c[1], c[0]]);
+      routeLayers.fastest = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: coords },
+        properties: { color: same_route ? '#2563eb' : '#dc2626' }
+      };
     } else {
       if (warnings) {
         warnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường nhanh nhất do thiếu dữ liệu hình học.</span>`;
@@ -2290,25 +2151,14 @@ function selectActiveRoute(mode) {
       return;
     }
 
-    // Gỡ bỏ lớp nhanh nhất nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
-    if (routeLayers.fastest && map && map.hasLayer(routeLayers.fastest)) {
-      map.removeLayer(routeLayers.fastest);
-    }
-
-    // Đưa lớp an toàn lên bản đồ
-    if (map && !map.hasLayer(routeLayers.safe)) {
-      routeLayers.safe.addTo(map);
-    }
-    routeLayers.safe.setStyle({ color: '#2563eb', weight: 6, opacity: 0.95, lineJoin: 'round' });
-    routeLayers.safe.bringToFront();
-
-    try {
-      const bounds = routeLayers.safe.getBounds();
-      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
-        map.fitBounds(bounds, { padding: [40, 40] });
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
+    if (mapInst && mapInst.getSource && mapInst.getSource('tactical-route-source') && routeLayers.safe) {
+      mapInst.getSource('tactical-route-source').setData(routeLayers.safe);
+      if (typeof maplibregl !== 'undefined' && routeLayers.safe.geometry && routeLayers.safe.geometry.coordinates) {
+        const bounds = new maplibregl.LngLatBounds();
+        routeLayers.safe.geometry.coordinates.forEach(c => bounds.extend(c));
+        mapInst.fitBounds(bounds, { padding: 40, duration: 1200 });
       }
-    } catch (e) {
-      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến an toàn:", e);
     }
 
     if (cardSafe) {
@@ -2324,8 +2174,8 @@ function selectActiveRoute(mode) {
     if (badgeFastest) badgeFastest.classList.add('hidden');
 
     // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến an toàn
-    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
-      const latlngs = routeLayers.safe.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
+    if (window.VehicleSim && typeof VehicleSim.start === 'function' && routeLayers.safe.geometry) {
+      const latlngs = routeLayers.safe.geometry.coordinates.map(c => [c[1], c[0]]);
       const v = document.querySelector('input[name="vehicle"]:checked');
       VehicleSim.start(latlngs, v ? v.value : 'motorbike');
     }
@@ -2335,31 +2185,14 @@ function selectActiveRoute(mode) {
       return;
     }
 
-    // Gỡ bỏ lớp an toàn nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
-    if (routeLayers.safe && map && map.hasLayer(routeLayers.safe)) {
-      map.removeLayer(routeLayers.safe);
-    }
-
-    // Đưa lớp nhanh nhất lên bản đồ
-    if (map && !map.hasLayer(routeLayers.fastest)) {
-      routeLayers.fastest.addTo(map);
-    }
-    routeLayers.fastest.setStyle({
-      color: same_route ? '#2563eb' : '#dc2626',
-      weight: 6,
-      opacity: 0.95,
-      dashArray: same_route ? null : '8, 8',
-      lineJoin: 'round'
-    });
-    routeLayers.fastest.bringToFront();
-
-    try {
-      const bounds = routeLayers.fastest.getBounds();
-      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
-        map.fitBounds(bounds, { padding: [40, 40] });
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
+    if (mapInst && mapInst.getSource && mapInst.getSource('tactical-route-source') && routeLayers.fastest) {
+      mapInst.getSource('tactical-route-source').setData(routeLayers.fastest);
+      if (typeof maplibregl !== 'undefined' && routeLayers.fastest.geometry && routeLayers.fastest.geometry.coordinates) {
+        const bounds = new maplibregl.LngLatBounds();
+        routeLayers.fastest.geometry.coordinates.forEach(c => bounds.extend(c));
+        mapInst.fitBounds(bounds, { padding: 40, duration: 1200 });
       }
-    } catch (e) {
-      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến nhanh nhất:", e);
     }
 
     if (cardFastest) {
@@ -2375,8 +2208,8 @@ function selectActiveRoute(mode) {
     if (badgeSafe) badgeSafe.classList.add('hidden');
 
     // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến nhanh nhất
-    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
-      const latlngs = routeLayers.fastest.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
+    if (window.VehicleSim && typeof VehicleSim.start === 'function' && routeLayers.fastest.geometry) {
+      const latlngs = routeLayers.fastest.geometry.coordinates.map(c => [c[1], c[0]]);
       const v = document.querySelector('input[name="vehicle"]:checked');
       VehicleSim.start(latlngs, v ? v.value : 'motorbike');
     }

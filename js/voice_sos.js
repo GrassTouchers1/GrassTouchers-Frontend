@@ -213,28 +213,36 @@ const VoiceSOSManager = (function () {
 
     window.map.getContainer().style.cursor = 'crosshair';
 
-    // Đăng ký sự kiện nhấp chuột 1 lần trên Leaflet map
-    window.map.once('click', handleMapClickPick);
+    // Đăng ký sự kiện nhấp chuột 1 lần trên MapLibre map
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (mapInst && typeof mapInst.once === 'function') {
+      mapInst.once('click', handleMapClickPick);
+    }
   }
 
   function handleMapClickPick(e) {
     if (!isMapPicking) return;
-    selectedLat = e.latlng.lat;
-    selectedLng = e.latlng.lng;
+    const lat = e.lngLat ? e.lngLat.lat : (e.latlng ? e.latlng.lat : null);
+    const lng = e.lngLat ? e.lngLat.lng : (e.latlng ? e.latlng.lng : null);
+    if (lat === null || lng === null) return;
+
+    selectedLat = lat;
+    selectedLng = lng;
     selectedLocLabel = 'Điểm chấm trên bản đồ';
 
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+
     // Ghim marker tạm thời để nạn nhân thấy rõ
-    if (tempSOSMarker && window.map) {
-      window.map.removeLayer(tempSOSMarker);
+    if (tempSOSMarker) {
+      try { tempSOSMarker.remove(); } catch (_) {}
+      tempSOSMarker = null;
     }
-    if (window.L && window.map) {
-      tempSOSMarker = L.circleMarker([selectedLat, selectedLng], {
-        radius: 12,
-        color: '#e11d48',
-        fillColor: '#f43f5e',
-        fillOpacity: 0.9,
-        weight: 3
-      }).addTo(window.map);
+    if (mapInst && typeof maplibregl !== 'undefined') {
+      const el = document.createElement('div');
+      el.className = 'w-6 h-6 rounded-full bg-rose-500 border-2 border-white shadow-xl animate-pulse pointer-events-none';
+      tempSOSMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([selectedLng, selectedLat])
+        .addTo(mapInst);
     }
 
     finishMapPick();

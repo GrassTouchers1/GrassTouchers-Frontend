@@ -356,8 +356,8 @@ window.NorthStarMapLibre = (function () {
         try {
           const ctrlTopRight = document.querySelector('.maplibregl-ctrl-top-right');
           if (ctrlTopRight) {
-            ctrlTopRight.style.setProperty('top', '72px', 'important');
-            ctrlTopRight.style.setProperty('right', '14px', 'important');
+            ctrlTopRight.style.setProperty('top', '84px', 'important');
+            ctrlTopRight.style.setProperty('right', '16px', 'important');
             ctrlTopRight.style.setProperty('margin', '0', 'important');
             ctrlTopRight.style.setProperty('z-index', '25', 'important');
           }

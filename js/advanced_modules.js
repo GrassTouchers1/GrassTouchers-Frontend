@@ -116,53 +116,72 @@ const TimelineSimulator = (function () {
 // 2. SAR FLOOD MANAGER (VIỄN THÁM VỆ TINH SENTINEL-1 SAR C-BAND)
 // ============================================================================
 const SarFloodManager = (function () {
-  let sarLayerGroup = null;
   let isVisible = false;
 
   async function init() {
-    if (!window.map) return;
-    sarLayerGroup = L.layerGroup();
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (!mapInst) return;
     try {
       const res = await fetch(getApiUrl('/api/satellite/sar-flood-polygons'));
       if (!res.ok) return;
       const data = await res.json();
 
-      L.geoJSON(data, {
-        style: function (feature) {
-          return {
-            color: '#0284c7',
-            weight: 2.5,
-            opacity: 0.9,
-            fillColor: '#38bdf8',
-            fillOpacity: 0.35,
-            dashArray: '6, 6'
-          };
-        },
-        onEachFeature: function (feature, layer) {
-          const p = feature.properties;
+      if (!mapInst.getSource('sar-flood-source')) {
+        mapInst.addSource('sar-flood-source', {
+          type: 'geojson',
+          data: data
+        });
+
+        mapInst.addLayer({
+          id: 'sar-flood-fill',
+          type: 'fill',
+          source: 'sar-flood-source',
+          paint: {
+            'fill-color': '#38bdf8',
+            'fill-opacity': isVisible ? 0.35 : 0
+          }
+        });
+
+        mapInst.addLayer({
+          id: 'sar-flood-line',
+          type: 'line',
+          source: 'sar-flood-source',
+          paint: {
+            'line-color': '#0284c7',
+            'line-width': 2.5,
+            'line-dasharray': [3, 2],
+            'line-opacity': isVisible ? 0.9 : 0
+          }
+        });
+
+        mapInst.on('click', 'sar-flood-fill', (e) => {
+          if (!e.features || !e.features.length) return;
+          const p = e.features[0].properties;
           const popupContent = `
-            <div class="p-2 text-slate-800 font-sans max-w-xs">
-              <div class="flex items-center justify-between text-cyan-700 font-bold text-xs pb-1 border-b border-cyan-100">
-                <span class="flex items-center gap-1">🛰️ SENTINEL-1 SAR</span>
-                <span class="text-[9.5px] px-1.5 py-0.2 rounded bg-cyan-100 text-cyan-800 font-extrabold uppercase">${p.severity}</span>
+            <div style="padding: 10px; background: #0b0f19; color: #f8fafc; border-radius: 12px; border: 1px solid rgba(56,189,248,0.5); box-shadow: 0 12px 28px rgba(0,0,0,0.8); min-width: 250px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(56,189,248,0.3); padding-bottom: 4px; margin-bottom: 6px;">
+                <span style="font-weight: 800; color: #38bdf8; font-size: 12px;">🛰️ SENTINEL-1 SAR</span>
+                <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(14,165,233,0.2); color: #38bdf8; font-weight: 800;">${p.severity || 'HIGH'}</span>
               </div>
-              <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.title}</h4>
-              <p class="text-xs text-slate-600 mt-1">${p.description}</p>
-              <div class="mt-2 text-[11px] bg-cyan-50/80 p-2 rounded border border-cyan-200/80 space-y-0.5">
-                <div><b>Độ tin cậy mặt nước:</b> <span class="text-cyan-800 font-bold">${p.water_confidence}%</span></div>
-                <div><b>Ước tính diện tích:</b> ~${p.area_km2} km²</div>
-                <div><b>Mực nước ước đoán:</b> ${p.water_depth_est}</div>
-                <div><b>Cảm biến:</b> ${p.sensor} (${p.satellite_pass})</div>
+              <h4 style="font-weight: 800; font-size: 13px; color: #ffffff; margin: 4px 0;">${p.title}</h4>
+              <p style="font-size: 11px; color: #cbd5e1; margin: 4px 0;">${p.description || ''}</p>
+              <div style="margin-top: 8px; font-size: 10.5px; background: rgba(2,6,23,0.8); padding: 6px; border-radius: 6px; border: 1px solid #1e293b;">
+                <div><b>Độ tin cậy:</b> <span style="color: #38bdf8;">${p.water_confidence || 95}%</span></div>
+                <div><b>Diện tích:</b> ~${p.area_km2 || 12} km²</div>
+                <div><b>Mực nước:</b> ${p.water_depth_est || 'Ước tính 1.2m'}</div>
+                <div><b>Cảm biến:</b> ${p.sensor || 'Sentinel-1 C-SAR'}</div>
               </div>
             </div>
           `;
-          layer.bindPopup(popupContent, { maxWidth: 300 });
-        }
-      }).addTo(sarLayerGroup);
-
-      // Thêm vào bản đồ nếu đang được bật
-      if (isVisible) {
-        sarLayerGroup.addTo(window.map);
+          if (typeof maplibregl !== 'undefined') {
+            new maplibregl.Popup({ offset: 12 })
+              .setLngLat(e.lngLat)
+              .setHTML(popupContent)
+              .addTo(mapInst);
+          }
+        });
+      } else {
+        mapInst.getSource('sar-flood-source').setData(data);
       }
     } catch (e) {
       console.warn("Lỗi tải lớp viễn thám SAR:", e);
@@ -171,14 +190,16 @@ const SarFloodManager = (function () {
 
   function toggle(enabled) {
     isVisible = enabled;
-    if (!sarLayerGroup || !window.map) return;
-    if (enabled) {
-      sarLayerGroup.addTo(window.map);
-      if (window.showToast) {
-        showToast("🛰️ Đã bật Lớp Vùng ngập Vệ tinh", "Hiển thị 5 đa giác viễn thám Sentinel-1 SAR C-Band", "info");
-      }
-    } else {
-      window.map.removeLayer(sarLayerGroup);
+    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+    if (!mapInst) return;
+    if (mapInst.getLayer && mapInst.getLayer('sar-flood-fill')) {
+      mapInst.setPaintProperty('sar-flood-fill', 'fill-opacity', enabled ? 0.35 : 0);
+    }
+    if (mapInst.getLayer && mapInst.getLayer('sar-flood-line')) {
+      mapInst.setPaintProperty('sar-flood-line', 'line-opacity', enabled ? 0.9 : 0);
+    }
+    if (enabled && window.showToast) {
+      showToast("🛰️ Đã bật Lớp Vùng ngập Vệ tinh", "Hiển thị 5 đa giác viễn thám Sentinel-1 SAR C-Band", "info");
     }
   }
 
@@ -229,44 +250,63 @@ const RescueDispatchManager = (function () {
       const data = await res.json();
 
       // Xóa các marker và route cũ nếu có
-      if (dispatchPolyline && window.map) window.map.removeLayer(dispatchPolyline);
-      dispatchMarkers.forEach(m => window.map.removeLayer(m));
+      dispatchMarkers.forEach(m => {
+        try { m.remove(); } catch (_) {}
+      });
       dispatchMarkers = [];
 
-      // Vẽ đường lộ trình tuần tự
-      if (data.route_polyline && window.map) {
-        dispatchPolyline = L.polyline(data.route_polyline, {
-          color: '#e11d48',
-          weight: 4,
-          dashArray: '8, 8',
-          opacity: 0.9
-        }).addTo(window.map);
-        window.map.fitBounds(dispatchPolyline.getBounds(), { padding: [40, 40] });
+      const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
+
+      // Vẽ đường lộ trình tuần tự trên MapLibre
+      if (data.route_polyline && mapInst) {
+        // data.route_polyline is [[lat, lng], ...]
+        const coords = data.route_polyline.map(c => [c[1], c[0]]);
+        if (mapInst.getSource && mapInst.getSource('tactical-route-source')) {
+          mapInst.getSource('tactical-route-source').setData({
+            type: 'Feature',
+            properties: { name: 'Fleet Dispatch Route' },
+            geometry: {
+              type: 'LineString',
+              coordinates: coords
+            }
+          });
+        }
+        if (typeof maplibregl !== 'undefined') {
+          const bounds = new maplibregl.LngLatBounds();
+          coords.forEach(c => bounds.extend(c));
+          mapInst.fitBounds(bounds, { padding: 40, duration: 1200 });
+        }
       }
 
       // Đánh dấu các mốc thứ tự 1, 2, 3...
-      data.ordered_stops.forEach(s => {
-        const badgeColor = s.type === 'start' ? '#2563eb' : (s.type === 'shelter' ? '#059669' : '#e11d48');
-        const markerIcon = L.divIcon({
-          className: 'dispatch-stop-icon',
-          html: `
-            <div style="background-color: ${badgeColor};" class="w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white">
+      if (data.ordered_stops && mapInst && typeof maplibregl !== 'undefined') {
+        data.ordered_stops.forEach(s => {
+          const badgeColor = s.type === 'start' ? '#2563eb' : (s.type === 'shelter' ? '#059669' : '#e11d48');
+          const el = document.createElement('div');
+          el.className = 'cursor-pointer select-none';
+          el.innerHTML = `
+            <div style="background-color: ${badgeColor};" class="w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition">
               ${s.step}
             </div>
-          `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
+          `;
+          const popupHtml = `
+            <div style="padding: 8px; font-size: 11px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif;">
+              <b>Chặng ${s.step}: ${s.title}</b>
+              <div style="color: #64748b; margin-top: 4px;">${s.action}</div>
+              <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">Cách chặng trước: ~${s.distance_from_prev_km} km</div>
+            </div>
+          `;
+          const popup = new maplibregl.Popup({ offset: 14 }).setHTML(popupHtml);
+          el.onclick = (e) => {
+            e.stopPropagation();
+            popup.setLngLat([s.lng, s.lat]).addTo(mapInst);
+          };
+          const m = new maplibregl.Marker({ element: el })
+            .setLngLat([s.lng, s.lat])
+            .addTo(mapInst);
+          dispatchMarkers.push(m);
         });
-        const m = L.marker([s.lat, s.lng], { icon: markerIcon }).addTo(window.map);
-        m.bindPopup(`
-          <div class="p-1.5 text-xs font-sans">
-            <b>Chặng ${s.step}: ${s.title}</b>
-            <div class="text-slate-600 mt-1">${s.action}</div>
-            <div class="text-[10px] text-slate-400 mt-1">Cách chặng trước: ~${s.distance_from_prev_km} km</div>
-          </div>
-        `);
-        dispatchMarkers.push(m);
-      });
+      }
 
       // Hiển thị kết quả tóm tắt trên sidebar
       if (statusEl) {
