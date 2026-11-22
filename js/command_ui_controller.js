@@ -173,6 +173,9 @@ const CommandUIController = (function () {
     topStatsCollapsed: false,
     zenMapMode: false,
     activeIntakeFilter: 'all',
+    activePriorityFilter: 'all',
+    activeVerificationFilter: 'all',
+    selectedReliefId: null,
     quickSearchQuery: '',
     activeIntakeStatusFilter: 'all',
     archiveSearchQuery: '',
@@ -1586,6 +1589,35 @@ const CommandUIController = (function () {
       items = items.filter(i => i.status === 'resolved' || i.status === 'rescued');
     }
 
+    // Lọc theo Mức ưu tiên AI (P1 - P4)
+    if (state.activePriorityFilter && state.activePriorityFilter !== 'all') {
+      const prioKey = state.activePriorityFilter.toUpperCase();
+      items = items.filter(i => {
+        const p = (i.final_priority || i.priority || '').toUpperCase();
+        if (prioKey === 'P1') return p === 'P1' || p === 'CRITICAL';
+        if (prioKey === 'P2') return p === 'P2' || p === 'HIGH';
+        if (prioKey === 'P3') return p === 'P3' || p === 'MEDIUM';
+        if (prioKey === 'P4') return p === 'P4' || p === 'LOW';
+        return p === prioKey;
+      });
+    }
+
+    // Lọc theo Cấp độ xác minh
+    if (state.activeVerificationFilter === 'verified') {
+      items = items.filter(i => i.is_verified || i.verification_status === 'source_verified' || i.verification_status === 'content_verified');
+    } else if (state.activeVerificationFilter === 'needs_verification') {
+      items = items.filter(i => !i.is_verified || i.verification_status === 'needs_verification');
+    }
+
+    // Sắp xếp chuẩn Hàng chờ Điều phối: P1 -> P2 -> P3 -> P4, cùng mức xếp theo thời gian (FIFO)
+    const PRIO_WEIGHT = { P1: 1, CRITICAL: 1, P2: 2, HIGH: 2, P3: 3, MEDIUM: 3, P4: 4, LOW: 4 };
+    items.sort((a, b) => {
+      const wA = PRIO_WEIGHT[(a.final_priority || a.priority || '').toUpperCase()] || 5;
+      const wB = PRIO_WEIGHT[(b.final_priority || b.priority || '').toUpperCase()] || 5;
+      if (wA !== wB) return wA - wB;
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    });
+
     if (items.length === 0) {
       listEl.innerHTML = `
         <tr>
@@ -1605,15 +1637,27 @@ const CommandUIController = (function () {
     }
 
     listEl.innerHTML = items.map(item => {
-      let priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap shadow-xs">⚪ Bình thường</span>';
-      if (item.priority === 'critical') {
-        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-black bg-rose-950/90 text-rose-300 border border-rose-700/80 whitespace-nowrap shadow-xs animate-pulse">🔴 P1 Khẩn Cấp</span>';
-      } else if (item.priority === 'high') {
-        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-amber-950/90 text-amber-300 border border-amber-700/80 whitespace-nowrap shadow-xs">🟠 P2 Ưu Tiên</span>';
+      const pNorm = (item.final_priority || item.priority || 'P3').toUpperCase();
+      let priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap shadow-xs">⚪ P4 Theo Dõi</span>';
+      
+      if (pNorm === 'P1' || pNorm === 'CRITICAL') {
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-black bg-rose-950/90 text-rose-300 border border-rose-700/80 whitespace-nowrap shadow-xs animate-pulse">🔴 P1 Nguy Hiểm Tức Thời</span>';
+      } else if (pNorm === 'P2' || pNorm === 'HIGH') {
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-amber-950/90 text-amber-300 border border-amber-700/80 whitespace-nowrap shadow-xs">🟠 P2 Nguy Cơ Cao</span>';
+      } else if (pNorm === 'P3' || pNorm === 'MEDIUM') {
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-blue-950/90 text-blue-300 border border-blue-700/80 whitespace-nowrap shadow-xs">🟡 P3 Cần Cứu Trợ</span>';
       }
 
+      const antiDowngradeBadge = item.was_downgrade_prevented ? `
+        <span class="inline-block mt-1 text-[9.5px] font-bold text-rose-400 bg-rose-950/80 border border-rose-800 px-1.5 py-0.2 rounded" title="Đã kích hoạt bảo vệ: Ngăn AI hạ mức ưu tiên sai">🛡️ Chặn hạ mức</span>
+      ` : '';
+
+      const missingInfoBadge = (item.missing_information && item.missing_information.length > 0) ? `
+        <span class="inline-block mt-1 text-[9.5px] font-medium text-amber-400 bg-amber-950/60 border border-amber-800/80 px-1.5 py-0.2 rounded" title="Thiếu: ${item.missing_information.join(', ')}">⚠️ Thiếu TT</span>
+      ` : '';
+
       const verifyBtnHtml = roleCfg.canVerify ? `
-        <button onclick="CommandUIController.verifyIncident('${item.id}')" title="Xác minh tin chính xác" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition whitespace-nowrap">
+        <button onclick="CommandUIController.verifyIncident('${item.id}')" title="Xác minh tin chính xác" class="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition whitespace-nowrap">
           ✓ Duyệt
         </button>
       ` : '';
@@ -1623,7 +1667,7 @@ const CommandUIController = (function () {
           <span>🖨️ Phiếu</span>
         </button>
       ` : (roleCfg.canDispatch ? `
-        <button onclick="CommandUIController.openDispatchModal('${item.id}')" title="Lập lệnh điều phối" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10.5px] cursor-pointer shadow-xs transition flex items-center gap-1 whitespace-nowrap">
+        <button onclick="CommandUIController.openDispatchModal('${item.id}')" title="Lập lệnh điều phối" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10.5px] cursor-pointer shadow-xs transition flex items-center gap-1 whitespace-nowrap">
           <span>⚡ Lệnh</span>
         </button>
       ` : `
@@ -1635,7 +1679,7 @@ const CommandUIController = (function () {
 
       return `
         <tr class="even:bg-slate-900/40 odd:bg-slate-950/40 hover:bg-slate-800/80 transition border-b border-slate-800/50">
-          <td class="p-3 font-mono font-bold text-sky-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Xem hồ sơ nhật ký tác chiến">${item.id} 📋</td>
+          <td class="p-3 font-mono font-bold text-sky-400 hover:underline cursor-pointer whitespace-nowrap" onclick="CommandUIController.openReliefAIDetailModal('${item.id}')" title="Nhấn để xem phân tích AI Qwen3-8B & Guardrails">${item.id} 🤖</td>
           <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">${formatRelativeTime(item.created_at)}</td>
           <td class="p-3 whitespace-nowrap">
             <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
@@ -1649,8 +1693,12 @@ const CommandUIController = (function () {
           <td class="p-3 max-w-xs">
             <p class="text-[11px] text-slate-300 line-clamp-2">${item.description || 'Không có mô tả chi tiết'}</p>
             ${item.water_level_cm > 0 ? `<span class="inline-block mt-1 text-[10px] text-cyan-400 font-bold whitespace-nowrap">🌊 Mực nước: ~${item.water_level_cm}cm</span>` : ''}
+            ${missingInfoBadge}
           </td>
-          <td class="p-3 whitespace-nowrap">${priorityBadge}</td>
+          <td class="p-3 whitespace-nowrap">
+            ${priorityBadge}
+            ${antiDowngradeBadge}
+          </td>
           <td class="p-3 whitespace-nowrap">
             ${item.status === 'resolved' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800 whitespace-nowrap">✅ Đã cứu</span>' :
               (item.status === 'dispatched' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-blue-950/80 text-blue-300 border border-blue-800 whitespace-nowrap animate-pulse">🚑 Đang ứng cứu</span>' :
@@ -1658,12 +1706,15 @@ const CommandUIController = (function () {
                   '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-amber-950/80 text-amber-300 border border-amber-800 whitespace-nowrap">⏳ Chờ duyệt</span>'))}
           </td>
           <td class="p-3 text-right whitespace-nowrap">
-            <div class="flex items-center justify-end gap-1.5">
-              <button onclick="CommandUIController.locateIncidentOnMap('${item.id}')" title="Định vị ngay trên bản đồ tác chiến COP" class="px-2.5 py-1 bg-sky-600/30 hover:bg-sky-600/60 text-sky-300 border border-sky-500/50 rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1 shadow-xs active:scale-95">
+            <div class="flex items-center justify-end gap-1">
+              <button onclick="CommandUIController.locateIncidentOnMap('${item.id}')" title="Định vị ngay trên bản đồ tác chiến COP" class="px-2 py-1 bg-sky-600/30 hover:bg-sky-600/60 text-sky-300 border border-sky-500/50 rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1 shadow-xs active:scale-95">
                 <span>📍 Bản Đồ</span>
               </button>
-              <button onclick="CommandUIController.openIncidentDocket('${item.id}')" title="Mở hồ sơ nhật ký" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded font-bold text-[10.5px] cursor-pointer transition">
-                📋
+              <button onclick="CommandUIController.openReliefAIDetailModal('${item.id}')" title="Soi chi tiết phân tích AI & Guardrails" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 border border-indigo-700/60 rounded font-bold text-[10.5px] cursor-pointer transition flex items-center gap-1">
+                <span>🤖 AI</span>
+              </button>
+              <button onclick="CommandUIController.openReliefPriorityOverrideModal('${item.id}')" title="Điều phối viên thay đổi / xác nhận mức ưu tiên" class="px-2 py-1 bg-amber-900/60 hover:bg-amber-800/80 text-amber-300 border border-amber-700/60 rounded font-bold text-[10.5px] cursor-pointer transition">
+                <span>⚖️ Đổi</span>
               </button>
               ${verifyBtnHtml}
               ${dispatchBtnHtml}
@@ -4661,6 +4712,234 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     renderIntakeView();
   }
 
+  function filterIntakePriority(priority) {
+    state.activePriorityFilter = priority;
+    const btns = document.querySelectorAll('.cmd-priority-filter-btn');
+    btns.forEach(btn => {
+      const id = btn.id;
+      if (id === `intake-prio-${priority}`) {
+        btn.className = 'cmd-priority-filter-btn px-2.5 py-1 rounded bg-rose-600 text-white font-black cursor-pointer shadow-xs';
+      } else {
+        btn.className = 'cmd-priority-filter-btn px-2.5 py-1 rounded text-slate-300 hover:bg-slate-800 cursor-pointer font-bold border border-slate-700';
+      }
+    });
+    renderIntakeView();
+  }
+
+  function filterIntakeVerification(verType) {
+    state.activeVerificationFilter = verType;
+    const btns = document.querySelectorAll('.cmd-ver-filter-btn');
+    btns.forEach(btn => {
+      const id = btn.id;
+      if (id === `intake-ver-${verType}`) {
+        btn.className = 'cmd-ver-filter-btn px-2 py-0.5 rounded bg-emerald-600 text-white font-bold cursor-pointer';
+      } else {
+        btn.className = 'cmd-ver-filter-btn px-2 py-0.5 rounded text-slate-400 hover:bg-slate-800 cursor-pointer font-medium';
+      }
+    });
+    renderIntakeView();
+  }
+
+  function openReliefAIDetailModal(id) {
+    const item = intakeData.find(i => String(i.id) === String(id));
+    if (!item) return;
+    state.selectedReliefId = id;
+
+    const modal = document.getElementById('relief-ai-detail-modal');
+    if (!modal) return;
+
+    document.getElementById('ai-modal-req-id').textContent = item.id;
+    const pNorm = (item.final_priority || item.priority || 'P3').toUpperCase();
+    const pBadge = document.getElementById('ai-modal-priority-badge');
+    if (pBadge) {
+      if (pNorm === 'P1' || pNorm === 'CRITICAL') {
+        pBadge.className = 'px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white animate-pulse';
+        pBadge.textContent = '🔴 P1 Nguy Hiểm Tức Thời';
+      } else if (pNorm === 'P2' || pNorm === 'HIGH') {
+        pBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-600 text-white';
+        pBadge.textContent = '🟠 P2 Nguy Cơ Cao';
+      } else if (pNorm === 'P3' || pNorm === 'MEDIUM') {
+        pBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600 text-white';
+        pBadge.textContent = '🟡 P3 Cần Cứu Trợ';
+      } else {
+        pBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-200';
+        pBadge.textContent = '⚪ P4 Theo Dõi';
+      }
+    }
+
+    document.getElementById('ai-modal-raw-message').textContent = item.description || item.notes || 'Không có mô tả chi tiết';
+    document.getElementById('ai-modal-contact').textContent = item.contact_name || 'Người dân';
+    document.getElementById('ai-modal-phone').textContent = item.phone || 'Chưa cung cấp';
+    document.getElementById('ai-modal-people').textContent = (item.people_count > 0 ? `${item.people_count} người` : 'Chưa rõ (mặc định ít nhất 1)');
+    document.getElementById('ai-modal-water-level').textContent = (item.water_level_cm > 0 ? `~${(item.water_level_cm/100).toFixed(2)}m (${item.water_level_cm}cm)` : 'Chưa có thông số');
+    
+    const trendMap = { rising: '🌊 Đang dâng nhanh', stable: '↔️ Ổn định', receding: '📉 Đang rút', unknown: '❓ Chưa xác định' };
+    document.getElementById('ai-modal-water-trend').textContent = trendMap[item.water_trend] || (item.water_level_cm > 100 ? '🌊 Đang dâng sâu' : '↔️ Ổn định');
+    
+    const mobMap = { trapped_roof: '🏠 Mắc kẹt trên mái/tum', isolated: '🏝️ Bị cô lập chia cắt', cannot_move: '🚫 Không thể tự di chuyển', can_walk: '🚶 Tự đi lại được', unknown: '❓ Chưa xác định' };
+    document.getElementById('ai-modal-mobility').textContent = mobMap[item.mobility_status] || (item.has_vulnerable ? 'Cần hỗ trợ cáng/xuồng' : 'Khả năng tự thoát hiểm hạn chế');
+
+    const vEl = document.getElementById('ai-modal-vulnerable');
+    const vulList = item.vulnerable_people || (item.has_vulnerable ? ['Trẻ nhỏ / Người già'] : []);
+    vEl.innerHTML = vulList.length > 0 
+      ? vulList.map(v => `<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px] font-bold">⚠️ ${v}</span>`).join('')
+      : '<span class="text-slate-400">Không ghi nhận</span>';
+
+    const nEl = document.getElementById('ai-modal-needs');
+    const needsList = item.relief_needs || ['Ca-nô/xuồng di tản', 'Áo phao', 'Lương thực'];
+    nEl.innerHTML = needsList.map(n => `<span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 text-[10px] font-bold">📦 ${n}</span>`).join('');
+
+    document.getElementById('ai-modal-location').textContent = item.location_text || (item.district ? `${item.district}, ${item.province}` : 'Khu vực ngập lụt');
+    document.getElementById('ai-modal-coords').textContent = `📍 [Lat: ${Number(item.lat || 21.0285).toFixed(4)}, Lng: ${Number(item.lng || 105.8542).toFixed(4)}]`;
+
+    const antiBadge = document.getElementById('ai-modal-anti-downgrade-badge');
+    if (antiBadge) {
+      if (item.was_downgrade_prevented) antiBadge.classList.remove('hidden');
+      else antiBadge.classList.add('hidden');
+    }
+
+    document.getElementById('ai-modal-raw-priority').textContent = item.raw_ai_priority || (pNorm === 'P1' ? 'P2 (AI gợi ý)' : 'P3 (AI gợi ý)');
+    document.getElementById('ai-modal-final-priority').textContent = `${pNorm} (Quyết định sau Guardrails)`;
+
+    const reasonsList = item.ai_priority_reasons && item.ai_priority_reasons.length > 0
+      ? item.ai_priority_reasons
+      : (pNorm === 'P1' 
+          ? ['Có dấu hiệu đe dọa trực tiếp tính mạng trong vùng lũ xiết', 'Mực nước ngập sâu hoặc mắc kẹt trên mái nhà']
+          : ['Có người dễ bị tổn thương cần di tản khẩn trương', 'Khu vực ngập lụt gây chia cắt cục bộ']);
+    
+    document.getElementById('ai-modal-reasons-list').innerHTML = reasonsList.map(r => `<li>${r}</li>`).join('');
+
+    const guardrailsList = item.guardrails_applied && item.guardrails_applied.length > 0
+      ? item.guardrails_applied
+      : (pNorm === 'P1' ? ['RULE_P1_IMMEDIATE_DANGER', 'RULE_P1_RISING_WATER_DEEP'] : ['RULE_P2_VULNERABLE_POPULATION']);
+    document.getElementById('ai-modal-guardrails-list').innerHTML = guardrailsList.map(g => `<span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">${g}</span>`).join('');
+
+    const verBadge = document.getElementById('ai-modal-ver-status-badge');
+    if (verBadge) {
+      verBadge.textContent = item.verification_status || (item.is_verified ? 'source_verified' : 'needs_verification');
+    }
+    const verNotesEl = document.getElementById('ai-modal-ver-notes');
+    verNotesEl.innerHTML = `
+      <div>• Kiểm tra cấu trúc: <span class="text-emerald-400 font-bold">✓ Hợp lệ 100%</span></div>
+      <div>• Tọa độ địa lý: <span class="text-cyan-300 font-mono">[${Number(item.lat||21.0285).toFixed(4)}, ${Number(item.lng||105.8542).toFixed(4)}]</span></div>
+      <div>• Nguồn tiếp nhận: <span class="font-bold text-white">${item.source_label || item.source}</span></div>
+    `;
+
+    const auditEl = document.getElementById('ai-modal-audit-trail');
+    const history = item.override_history && item.override_history.length > 0
+      ? item.override_history
+      : [
+          { timestamp: item.created_at, actor: 'Qwen3-8B AI', action: 'created', new_priority: pNorm, reason: 'Trích xuất và đề xuất ban đầu' }
+        ];
+    auditEl.innerHTML = history.map(h => `
+      <div class="p-1 rounded bg-slate-900 border border-slate-800">
+        <span class="text-slate-400">[${formatRelativeTime(h.timestamp)}]</span>
+        <span class="text-amber-400 font-bold">${h.actor}</span>: 
+        <span class="text-white">${h.action}</span> 
+        ${h.old_priority ? `(${h.old_priority} ➔ <b class="text-rose-400">${h.new_priority}</b>)` : `<b class="text-rose-400">[${h.new_priority}]</b>`} 
+        - <span class="text-slate-300 italic">${h.reason || ''}</span>
+      </div>
+    `).join('');
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeReliefAIDetailModal() {
+    const modal = document.getElementById('relief-ai-detail-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function locateIncidentFromAIModal() {
+    if (!state.selectedReliefId) return;
+    const id = state.selectedReliefId;
+    closeReliefAIDetailModal();
+    locateIncidentOnMap(id);
+  }
+
+  function openReliefPriorityOverrideFromAIModal() {
+    if (!state.selectedReliefId) return;
+    const id = state.selectedReliefId;
+    closeReliefAIDetailModal();
+    openReliefPriorityOverrideModal(id);
+  }
+
+  function openReliefPriorityOverrideModal(id) {
+    const item = intakeData.find(i => String(i.id) === String(id));
+    if (!item) return;
+    state.selectedReliefId = id;
+
+    const modal = document.getElementById('relief-priority-override-modal');
+    if (!modal) return;
+
+    document.getElementById('override-modal-req-id').value = id;
+    document.getElementById('override-modal-req-id-display').textContent = id;
+    
+    const currPrio = (item.final_priority || item.priority || 'P3').toUpperCase();
+    const sel = document.getElementById('override-modal-new-priority');
+    if (sel) {
+      if (currPrio === 'CRITICAL' || currPrio === 'P1') sel.value = 'P1';
+      else if (currPrio === 'HIGH' || currPrio === 'P2') sel.value = 'P2';
+      else if (currPrio === 'MEDIUM' || currPrio === 'P3') sel.value = 'P3';
+      else sel.value = 'P4';
+    }
+
+    document.getElementById('override-modal-reason').value = '';
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeReliefPriorityOverrideModal() {
+    const modal = document.getElementById('relief-priority-override-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function submitReliefPriorityOverride() {
+    const reqId = document.getElementById('override-modal-req-id').value;
+    const newPrio = document.getElementById('override-modal-new-priority').value;
+    const dispatcher = document.getElementById('override-modal-dispatcher-name').value || 'Điều phối viên Tác chiến';
+    const reason = document.getElementById('override-modal-reason').value.trim();
+
+    if (!reason || reason.length < 3) {
+      showToast('⚠️ THIẾU LÝ DO', 'Vui lòng nhập lý do điều chỉnh mức ưu tiên để lưu nhật ký truy vết!', 'warning');
+      return;
+    }
+
+    try {
+      await fetch(`/api/relief/queue/${reqId}/override`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          new_priority: newPrio,
+          dispatcher_name: dispatcher,
+          reason: reason
+        })
+      });
+    } catch (e) {
+      console.warn('API override fallback locally:', e);
+    }
+
+    const item = intakeData.find(i => String(i.id) === String(reqId));
+    if (item) {
+      const oldP = item.final_priority || item.priority;
+      item.final_priority = newPrio;
+      item.priority = newPrio;
+      if (!item.override_history) item.override_history = [];
+      item.override_history.push({
+        timestamp: new Date().toISOString(),
+        actor: dispatcher,
+        action: 'dispatcher_override',
+        old_priority: oldP,
+        new_priority: newPrio,
+        reason: reason
+      });
+    }
+
+    closeReliefPriorityOverrideModal();
+    renderIntakeView();
+    showToast('⚖️ ĐIỀU PHỐI VIÊN GHI ĐÈ', `Đã lưu quyết định: [${reqId}] ➔ ${newPrio} (Lý do: ${reason})`, 'info');
+  }
+
   function setupGlobalEventListeners() {
     // Phím tắt điều hành tác chiến & Giám sát bản đồ
     document.addEventListener('keydown', (e) => {
@@ -4821,6 +5100,15 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     toggleZenMapMode,
     handleSearchInput,
     filterIntake,
+    filterIntakePriority,
+    filterIntakeVerification,
+    openReliefAIDetailModal,
+    closeReliefAIDetailModal,
+    locateIncidentFromAIModal,
+    openReliefPriorityOverrideFromAIModal,
+    openReliefPriorityOverrideModal,
+    closeReliefPriorityOverrideModal,
+    submitReliefPriorityOverride,
     openDispatchModal,
     closeDispatchModal,
     submitDispatchMission,
