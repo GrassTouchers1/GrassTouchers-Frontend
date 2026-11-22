@@ -44,9 +44,7 @@ const VehicleSim = (function () {
     clearTimeout(restartTimer);
     rafId = null;
     restartTimer = null;
-    if (marker) {
-      try { marker.remove(); } catch (_) {}
-    }
+    if (marker && typeof map !== 'undefined') map.removeLayer(marker);
     marker = null;
     iconEl = null;
   }
@@ -65,11 +63,10 @@ const VehicleSim = (function () {
     return [lat, lng];
   }
 
-  // rawLatLngs: [[lat, lng], ...] của tuyến an toàn; vehicle: 'motorbike' | 'car'
+  // rawLatLngs: [[lat, lng], ...] hoặc [L.LatLng, ...] của tuyến an toàn; vehicle: 'motorbike' | 'car'
   function start(rawLatLngs, vehicle) {
     stop();
-    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || window.map;
-    if (!mapInst || !rawLatLngs || !Array.isArray(rawLatLngs) || rawLatLngs.length < 2) return;
+    if (typeof map === 'undefined' || !rawLatLngs || !Array.isArray(rawLatLngs) || rawLatLngs.length < 2) return;
 
     // Chuẩn hóa toàn bộ tọa độ về mảng 2 chiều [[lat, lng], [lat, lng], ...]
     const latlngs = rawLatLngs.map(toLatLngPair).filter(Boolean);
@@ -90,15 +87,16 @@ const VehicleSim = (function () {
     const initIsEast = initDlng >= 0;
     const initScaleX = initIsEast ? -1 : 1;
 
-    const el = document.createElement('div');
-    el.className = 'vehicle-sim-marker select-none pointer-events-none';
-    el.innerHTML = `<div id="sim-vehicle-icon" class="vehicle-icon" style="font-size:28px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));transform:scaleX(${initScaleX});transform-origin:center;transition:transform 0.15s ease-out;display:inline-block;">${emoji}</div>`;
-
-    if (typeof maplibregl !== 'undefined') {
-      marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([latlngs[0][1], latlngs[0][0]])
-        .addTo(mapInst);
-    }
+    marker = L.marker(latlngs[0], {
+      icon: L.divIcon({
+        html: `<div id="sim-vehicle-icon" class="vehicle-icon" style="font-size:28px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));transform:scaleX(${initScaleX});transform-origin:center;transition:transform 0.15s ease-out;display:inline-block;">${emoji}</div>`,
+        className: 'vehicle-sim-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      }),
+      interactive: false,
+      zIndexOffset: 1000
+    }).addTo(map);
 
     // Thời gian chạy demo: 8s - 25s tuỳ độ dài tuyến
     const duration = Math.max(8000, Math.min(25000, total * 4));
@@ -118,11 +116,7 @@ const VehicleSim = (function () {
       const segLen = cum[seg] - cum[seg - 1] || 1;
       const t = Math.min(Math.max((dist - cum[seg - 1]) / segLen, 0), 1);
       const a = latlngs[seg - 1], b = latlngs[seg];
-      const currentLat = a[0] + (b[0] - a[0]) * t;
-      const currentLng = a[1] + (b[1] - a[1]) * t;
-      if (marker && marker.setLngLat) {
-        marker.setLngLat([currentLng, currentLat]);
-      }
+      marker.setLatLng([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
 
       // Tự động căn chỉnh đầu xe theo hướng tiến
       const dLng = b[1] - a[1];

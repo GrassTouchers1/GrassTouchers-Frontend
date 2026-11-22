@@ -23,19 +23,18 @@
 
  * Phụ trách: Thành viên 1 & Thành viên 2 (Hợp tác nâng cấp)
 
- * Động cơ Bản đồ: MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved)
+ * Thư viện: Leaflet 1.9.4 (BSD-2-Clause - OSI Approved)
+
  * =================================================
  */
 
-// =========================================================================
-// MAP CORE (MAPLIBRE GL JS NATIVE ENGINE INTEGRATION)
-// =========================================================================
+
 
 let map = null;
 
 let floodMarkersLayer = null;
 
-let floodCirclesLayer = null;
+let floodCirclesLayer = L.layerGroup();
 
 let routeLayers = { safe: null, fastest: null };
 
@@ -119,7 +118,7 @@ function createClusterIcon(cluster) {
 
   const badgeHtml = hasDanger ? '<span class="cluster-danger-dot" title="Có điểm ngập sâu trong cụm"></span>' : '';
 
-  return {
+  return L.divIcon({
     html: `
       <div class="flood-cluster-badge flood-cluster-${clusterLevel}" style="width: ${size}px; height: ${size}px;" title="Cụm ${count} điểm quan trắc (nhấp để phóng to)">
         <span class="cluster-num">${count}</span>
@@ -129,7 +128,7 @@ function createClusterIcon(cluster) {
     className: 'flood-cluster-container',
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2]
-  };
+  });
 }
 
 function syncFloodCirclesWithZoom() {
@@ -148,18 +147,135 @@ function syncFloodCirclesWithZoom() {
 }
 
 function initMap() {
-  if (window.NorthStarMapLibre) {
-    window.NorthStarMapLibre.init('maplibre-container');
-    map = window.NorthStarMapLibre.map;
-    window.map = map;
+  if (map || window.map) return map || window.map;
+
+  // Tâm bản đồ bao quát toàn bộ địa bàn các tỉnh Miền Bắc (NorthStar Northern Vietnam Ecosystem)
+
+  map = L.map('map', {
+    // FE: gán map vào window
+    
+
+    center: [21.45, 105.70],
+
+    zoom: 8,
+
+    zoomControl: true
+
+  });
+  window.map = map;
+
+
+
+  // Lớp bản đồ chính: ESRI World Street Map (Akamai CDN tốc độ cao, không dính watermark, không cần API key)
+
+  // FE-01: Cách ly container bản đồ tránh lỗi xung đột z-index modal
+  const mapContainer = map.getContainer();
+  mapContainer.style.isolation = 'isolate';
+  if (mapContainer.parentElement) {
+    mapContainer.parentElement.style.isolation = 'isolate';
   }
+
+  // 1. Lớp bản đồ Vệ tinh Viễn thám ESRI kèm Nhãn địa danh (100% Miễn phí, Không API Key)
+  const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics',
+    maxZoom: 19
+  });
+  const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '',
+    maxZoom: 19,
+    pane: 'shadowPane'
+  });
+  esriBaseLayer = L.layerGroup([esriImagery, esriLabels]);
+
+  // 2. Lớp bản đồ Dark Mode tác chiến cao cấp (Esri World Dark Gray Canvas - 100% Miễn phí, Không API Key, Chuẩn phòng chỉ huy)
+  const esriDarkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    maxNativeZoom: 16,
+    maxZoom: 19
+  });
+  const esriDarkLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '',
+    maxNativeZoom: 16,
+    maxZoom: 19,
+    pane: 'shadowPane'
+  });
+  darkBaseLayer = L.layerGroup([esriDarkBase, esriDarkLabels]);
+
+  // 3. Lớp bản đồ OpenStreetMap France (CDN châu Âu tốc độ cao)
+  osmFrLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap France &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    subdomains: ['a', 'b', 'c']
+  });
+
+  // 4. Lớp bản đồ OpenStreetMap Quốc tế (Sử dụng Esri World Topo Map - Không giới hạn, Không lỗi DNS)
+  osmLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap contributors',
+    maxZoom: 19
+  });
+
+  osmLayer.on('tileerror', function(error) {
+    if (error.tile && !error.tile.dataset.fallbackTried) {
+      error.tile.dataset.fallbackTried = 'true';
+      const coords = error.coords;
+      if (coords) {
+        error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    }
+  });
+
+  osmFrLayer.on('tileerror', function(error) {
+    if (error.tile && !error.tile.dataset.fallbackTried) {
+      error.tile.dataset.fallbackTried = 'true';
+      const coords = error.coords;
+      if (coords) {
+        error.tile.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    }
+  });
+
+  // Gắn lên window để truy cập toàn cục an toàn
+  window.osmFrLayer = osmFrLayer;
+  window.osmLayer = osmLayer;
+  window.esriBaseLayer = esriBaseLayer;
+  window.darkBaseLayer = darkBaseLayer;
+
+  // Mặc định nạp Bản đồ Tác chiến Tối (Tactical Dark Canvas C2) đồng bộ 100% giao diện điều hành
+  currentBaseLayer = darkBaseLayer;
+  currentBaseLayer.addTo(map);
+  window.currentBaseLayer = currentBaseLayer;
 
   // Chuyển đổi lớp bản đồ nền từ Bảng điều khiển Lớp Bản Đồ
   function switchBaseLayer(type) {
-    if (window.NorthStarMapLibre) {
-      const keyMap = { osm: 'osm', intl: 'osm', dark: 'dark', esri: 'satellite' };
-      window.NorthStarMapLibre.switchStyle(keyMap[type] || 'satellite');
+    if (!map) return;
+    
+    // Gỡ bỏ triệt để tất cả các base layers khả dĩ để không bao giờ bị đè lớp
+    const allBase = [osmFrLayer, osmLayer, darkBaseLayer, esriBaseLayer];
+    allBase.forEach(layer => {
+      if (layer && map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+
+    if (type === 'osm') {
+      currentBaseLayer = osmFrLayer;
+    } else if (type === 'intl') {
+      currentBaseLayer = osmLayer;
+    } else if (type === 'dark') {
+      currentBaseLayer = darkBaseLayer;
+    } else if (type === 'esri') {
+      currentBaseLayer = esriBaseLayer;
     }
+
+    if (currentBaseLayer) {
+      currentBaseLayer.addTo(map);
+      if (typeof currentBaseLayer.bringToBack === 'function') {
+        currentBaseLayer.bringToBack();
+      } else if (typeof currentBaseLayer.eachLayer === 'function') {
+        currentBaseLayer.eachLayer(l => { if (l.bringToBack) l.bringToBack(); });
+      }
+    }
+    window.currentBaseLayer = currentBaseLayer;
 
     const isDark = (type === 'dark');
     if (isDark) {
@@ -188,23 +304,106 @@ function initMap() {
   }
   window.switchBaseLayer = switchBaseLayer;
 
+    // Triển khai Marker Clustering cho 130 điểm ngập (Leaflet.markercluster)
+  if (typeof L.markerClusterGroup === 'function') {
+    floodMarkersLayer = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      spiderfyOnMaxZoom: true,
+      spiderfyDistanceMultiplier: 1.4,
+      maxClusterRadius: 40,
+      disableClusteringAtZoom: 16,
+      iconCreateFunction: createClusterIcon
+    });
+  } else {
+    floodMarkersLayer = L.layerGroup();
+  }
+  floodCirclesLayer.addTo(map);
+  floodMarkersLayer.addTo(map);
+  map.on('zoomend', syncFloodCirclesWithZoom);
+
   window.toggleFloodPointsLayer = function(visible) {
-    if (window.NorthStarMapLibre) {
-      window.NorthStarMapLibre.toggleLayerUI('floodPoints');
+    if (!map) return;
+    if (visible) {
+      if (!map.hasLayer(floodCirclesLayer)) map.addLayer(floodCirclesLayer);
+      if (!map.hasLayer(floodMarkersLayer)) map.addLayer(floodMarkersLayer);
+    } else {
+      if (map.hasLayer(floodCirclesLayer)) map.removeLayer(floodCirclesLayer);
+      if (map.hasLayer(floodMarkersLayer)) map.removeLayer(floodMarkersLayer);
     }
   };
 
-  // Tải danh sách điểm ngập ban đầu & các tác vụ nền
+  map.on('click', onMapClick);
+
+  if (window.NorthStarRescue) {
+    NorthStarRescue.initRescueLayers(map);
+    NorthStarRescue.loadDisasters();
+    NorthStarRescue.loadShelters();
+    NorthStarRescue.loadSOSBeacons();
+  }
+
+  if (window.CoordinatorCommand) {
+    CoordinatorCommand.init(map);
+  }
+
+  if (window.CommandUIController && typeof window.CommandUIController.init === 'function') {
+    window.CommandUIController.init(map);
+  }
+
+
+
+  // Cập nhật cảnh báo điểm ngập theo thời gian thực khi người dùng kéo/thu phóng bản đồ
+
+  map.on('moveend', () => {
+
+    updateViewportFloodAlert();
+
+    renderPointsList();
+  syncFloodCirclesWithZoom();
+
+  });
+
+
+
+  // Tự động tính toán lại kích thước bản đồ tránh lỗi màn hình xám khi layout flex tải xong
+
+  map.whenReady(() => {
+
+    map.invalidateSize();
+
+  });
+
+  setTimeout(() => { if (map) map.invalidateSize(); }, 250);
+
+  setTimeout(() => { if (map) map.invalidateSize(); }, 800);
+
+  window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+
+
+
+  // Tải danh sách điểm ngập ban đầu
+
   loadFloodPoints();
   checkPostGISConnection();
   loadWeatherInfo();
-  fetchAiPredictions();
+  fetchAiPredictions(); // Nạp dự báo AI vào cache nền tránh spam API
+  map.on('popupopen', handlePopupOpen);
+
+  // Khởi tạo Lớp Ranh giới Ô Tỉnh thành & Thời tiết / AQI Trực tiếp
+  if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.init === 'function') {
+    window.ProvinceWeatherLayer.init(map);
+  }
+
+
+
 
   // Kiểm tra và hiển thị hướng dẫn người dùng mới (Onboarding Guide)
+
   checkFirstTimeVisitor();
 
-  return map;
 }
+
+
 
 // 2. Tải danh sách 8 điểm ngập và vẽ lên bản đồ
 async function loadFloodPoints() {
@@ -884,14 +1083,50 @@ function renderFloodPoints(data) {
       timeDisplay = formatReadingTime(last_reading_at);
     }
 
-    // Vùng ngập & vòng sóng được đồng bộ tự động qua MapLibre GL JS engine (syncFloodCirclesData)
+    // Hiệu ứng vùng sóng ngập chỉ vẽ khi có dữ liệu mới/cũ hợp lệ và mực nước >= 5cm
+    if (hasValidDepth && depth >= 5 && status !== 'no_data' && status !== 'offline' && status !== 'invalid') {
+      const radiusMeters = Math.min(100 + depth * 2.5, 300);
+      
+      const outerCircle = L.circle([lat, lng], {
+        radius: radiusMeters,
+        color: radiusColor,
+        fillColor: radiusColor,
+        fillOpacity: depth >= 20 ? 0.22 : 0.14,
+        weight: depth >= 20 ? 2 : 1,
+        dashArray: (depth >= 20 || status === 'stale') ? '5, 5' : '8, 8',
+        className: depth >= 20 ? 'animated-flood-ring' : ''
+      });
+      outerCircle.bindTooltip(`<b>${fp.name}</b><br/>Mực nước: ${depth} cm | Ngưỡng ngập: ${threshold_cm} cm`, { direction: 'top' });
+      floodCirclesLayer.addLayer(outerCircle);
 
-    // Marker cấu trúc chuẩn MapLibre
-    const icon = { className: 'custom-flood-pin' };
-    const marker = {
-      bindPopup: () => marker,
-      on: () => marker
-    };
+      const innerCircle = L.circle([lat, lng], {
+        radius: Math.max(30, radiusMeters * 0.4),
+        color: radiusColor,
+        fillColor: radiusColor,
+        fillOpacity: 0.35,
+        weight: 1
+      });
+      floodCirclesLayer.addLayer(innerCircle);
+    }
+
+    // Marker tròn hiển thị số cm ngập hoặc ký hiệu trạng thái
+    const icon = L.divIcon({
+      className: 'custom-flood-pin',
+      html: `
+        <div class="custom-marker ${pulseClass}" style="width: 32px; height: 32px; background-color: ${bgColor};" title="${name}: ${depthDisplay}">
+          <span>${markerText}</span>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const marker = L.marker([lat, lng], {
+      icon,
+      floodStatus: status,
+      depthCm: depth,
+      thresholdCm: threshold_cm
+    });
 
     // Xử lý khối trung tâm theo đúng 5 trạng thái
     let centerBoxHtml = '';
@@ -1056,12 +1291,15 @@ function renderFloodPoints(data) {
 
     marker.on('click', (e) => {
       if (e && e.originalEvent) {
-        if (e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
-        if (e.originalEvent.preventDefault) e.originalEvent.preventDefault();
+        L.DomEvent.stopPropagation(e.originalEvent);
+        L.DomEvent.preventDefault(e.originalEvent);
       }
-      if (map && map.closePopup) map.closePopup();
-      if (marker.openPopup) marker.openPopup();
+      if (map) map.closePopup();
+      document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+      marker.openPopup();
     });
+
+    floodMarkersLayer.addLayer(marker);
   });
 
 
@@ -1225,12 +1463,9 @@ const NORTHERN_REGIONAL_PRESETS = {
 };
 
 function jumpToRegion(regionKey) {
-  if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.jumpToRegion === 'function') {
-    window.NorthStarMapLibre.jumpToRegion(regionKey);
-  } else if (map && typeof map.flyTo === 'function') {
-    const target = NORTHERN_REGIONAL_PRESETS[regionKey] || NORTHERN_REGIONAL_PRESETS.all;
-    map.flyTo(target.center, target.zoom, { duration: 1.2 });
-  }
+  if (!map) return;
+  const target = NORTHERN_REGIONAL_PRESETS[regionKey] || NORTHERN_REGIONAL_PRESETS.all;
+  map.flyTo(target.center, target.zoom, { duration: 1.2 });
 
   const selEl = document.getElementById('region-jump-select');
   if (selEl && selEl.value !== regionKey) {
@@ -1254,14 +1489,13 @@ window.jumpToRegion = jumpToRegion;
 window.NORTHERN_REGIONAL_PRESETS = NORTHERN_REGIONAL_PRESETS;
 
 function zoomToAllPoints() {
+
   if (!map || !floodPoints || floodPoints.length === 0) return;
-  if (typeof maplibregl !== 'undefined') {
-    const bounds = new maplibregl.LngLatBounds();
-    floodPoints.forEach(p => {
-      if (p.lng && p.lat) bounds.extend([p.lng, p.lat]);
-    });
-    map.fitBounds(bounds, { padding: 40, duration: 1200 });
-  }
+
+  const group = L.featureGroup(floodPoints.map(p => L.marker([p.lat, p.lng])));
+
+  map.fitBounds(group.getBounds().pad(0.08));
+
 }
 
 
@@ -1647,24 +1881,33 @@ function onMapClick(e) {
 
 
 function updatePickMarker(type, lat, lng, color, label) {
+
   if (pickMarkers[type]) {
-    try { pickMarkers[type].remove(); } catch (_) {}
-    pickMarkers[type] = null;
+
+    map.removeLayer(pickMarkers[type]);
+
   }
 
-  const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
-  if (!mapInst || typeof maplibregl === 'undefined') return;
+  const marker = L.circleMarker([lat, lng], {
 
-  const el = document.createElement('div');
-  el.className = 'w-4 h-4 rounded-full border-2 border-white shadow-md pointer-events-none';
-  el.style.backgroundColor = color;
-  el.title = label;
+    radius: 8,
 
-  const marker = new maplibregl.Marker({ element: el })
-    .setLngLat([lng, lat])
-    .addTo(mapInst);
+    fillColor: color,
+
+    color: '#ffffff',
+
+    weight: 2,
+
+    opacity: 1,
+
+    fillOpacity: 0.9
+
+  }).bindTooltip(label, { permanent: true, direction: 'top' });
+
+  marker.addTo(map);
 
   pickMarkers[type] = marker;
+
 }
 
 
@@ -2007,12 +2250,12 @@ function displayRouteResults(data) {
     }
 
     if (safeLatLngs) {
-      const coords = safeLatLngs.map(c => [c[1], c[0]]);
-      routeLayers.safe = {
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: coords },
-        properties: { color: '#2563eb' }
-      };
+      routeLayers.safe = L.polyline(safeLatLngs, {
+        color: '#2563eb', // Blue-600 truyền thống của FloodNav
+        weight: 6,
+        opacity: 0.95,
+        lineJoin: 'round'
+      });
     } else {
       if (safeWarnings) {
         safeWarnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường an toàn do thiếu dữ liệu hình học.</span>`;
@@ -2074,12 +2317,13 @@ function displayRouteResults(data) {
     }
 
     if (fastestLatLngs) {
-      const coords = fastestLatLngs.map(c => [c[1], c[0]]);
-      routeLayers.fastest = {
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: coords },
-        properties: { color: same_route ? '#2563eb' : '#dc2626' }
-      };
+      routeLayers.fastest = L.polyline(fastestLatLngs, {
+        color: same_route ? '#2563eb' : '#dc2626',
+        weight: 6,
+        opacity: 0.95,
+        dashArray: same_route ? null : '8, 8',
+        lineJoin: 'round'
+      });
     } else {
       if (warnings) {
         warnings.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ Không thể hiển thị tuyến đường nhanh nhất do thiếu dữ liệu hình học.</span>`;
@@ -2151,14 +2395,25 @@ function selectActiveRoute(mode) {
       return;
     }
 
-    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
-    if (mapInst && mapInst.getSource && mapInst.getSource('tactical-route-source') && routeLayers.safe) {
-      mapInst.getSource('tactical-route-source').setData(routeLayers.safe);
-      if (typeof maplibregl !== 'undefined' && routeLayers.safe.geometry && routeLayers.safe.geometry.coordinates) {
-        const bounds = new maplibregl.LngLatBounds();
-        routeLayers.safe.geometry.coordinates.forEach(c => bounds.extend(c));
-        mapInst.fitBounds(bounds, { padding: 40, duration: 1200 });
+    // Gỡ bỏ lớp nhanh nhất nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
+    if (routeLayers.fastest && map && map.hasLayer(routeLayers.fastest)) {
+      map.removeLayer(routeLayers.fastest);
+    }
+
+    // Đưa lớp an toàn lên bản đồ
+    if (map && !map.hasLayer(routeLayers.safe)) {
+      routeLayers.safe.addTo(map);
+    }
+    routeLayers.safe.setStyle({ color: '#2563eb', weight: 6, opacity: 0.95, lineJoin: 'round' });
+    routeLayers.safe.bringToFront();
+
+    try {
+      const bounds = routeLayers.safe.getBounds();
+      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
+        map.fitBounds(bounds, { padding: [40, 40] });
       }
+    } catch (e) {
+      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến an toàn:", e);
     }
 
     if (cardSafe) {
@@ -2174,8 +2429,8 @@ function selectActiveRoute(mode) {
     if (badgeFastest) badgeFastest.classList.add('hidden');
 
     // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến an toàn
-    if (window.VehicleSim && typeof VehicleSim.start === 'function' && routeLayers.safe.geometry) {
-      const latlngs = routeLayers.safe.geometry.coordinates.map(c => [c[1], c[0]]);
+    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
+      const latlngs = routeLayers.safe.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
       const v = document.querySelector('input[name="vehicle"]:checked');
       VehicleSim.start(latlngs, v ? v.value : 'motorbike');
     }
@@ -2185,14 +2440,31 @@ function selectActiveRoute(mode) {
       return;
     }
 
-    const mapInst = (window.NorthStarMapLibre && window.NorthStarMapLibre.getMap()) || map;
-    if (mapInst && mapInst.getSource && mapInst.getSource('tactical-route-source') && routeLayers.fastest) {
-      mapInst.getSource('tactical-route-source').setData(routeLayers.fastest);
-      if (typeof maplibregl !== 'undefined' && routeLayers.fastest.geometry && routeLayers.fastest.geometry.coordinates) {
-        const bounds = new maplibregl.LngLatBounds();
-        routeLayers.fastest.geometry.coordinates.forEach(c => bounds.extend(c));
-        mapInst.fitBounds(bounds, { padding: 40, duration: 1200 });
+    // Gỡ bỏ lớp an toàn nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
+    if (routeLayers.safe && map && map.hasLayer(routeLayers.safe)) {
+      map.removeLayer(routeLayers.safe);
+    }
+
+    // Đưa lớp nhanh nhất lên bản đồ
+    if (map && !map.hasLayer(routeLayers.fastest)) {
+      routeLayers.fastest.addTo(map);
+    }
+    routeLayers.fastest.setStyle({
+      color: same_route ? '#2563eb' : '#dc2626',
+      weight: 6,
+      opacity: 0.95,
+      dashArray: same_route ? null : '8, 8',
+      lineJoin: 'round'
+    });
+    routeLayers.fastest.bringToFront();
+
+    try {
+      const bounds = routeLayers.fastest.getBounds();
+      if (bounds && typeof bounds.isValid === 'function' ? bounds.isValid() : true) {
+        map.fitBounds(bounds, { padding: [40, 40] });
       }
+    } catch (e) {
+      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến nhanh nhất:", e);
     }
 
     if (cardFastest) {
@@ -2208,8 +2480,8 @@ function selectActiveRoute(mode) {
     if (badgeSafe) badgeSafe.classList.add('hidden');
 
     // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến nhanh nhất
-    if (window.VehicleSim && typeof VehicleSim.start === 'function' && routeLayers.fastest.geometry) {
-      const latlngs = routeLayers.fastest.geometry.coordinates.map(c => [c[1], c[0]]);
+    if (window.VehicleSim && typeof VehicleSim.start === 'function') {
+      const latlngs = routeLayers.fastest.getLatLngs().map(ll => Array.isArray(ll) ? [ll[0], ll[1]] : [ll.lat, ll.lng]);
       const v = document.querySelector('input[name="vehicle"]:checked');
       VehicleSim.start(latlngs, v ? v.value : 'motorbike');
     }
