@@ -202,13 +202,18 @@ const CommandUIController = (function () {
   let missionData = [];
   let floodStationsData = [];
 
-  // Tactical Leaflet Layers
-  const tacticalLayers = {
-    sosGroup: null,
-    unitsGroup: null,
-    sheltersGroup: null,
-    dispatchRoutesGroup: null
+  // Tactical MapLibre Markers & Layers
+  const tacticalMarkers = {
+    sos: [],
+    units: [],
+    shelters: []
   };
+
+  function getMapLibreInst() {
+    if (mapInstance && mapInstance._maplibre) return mapInstance._maplibre;
+    if (window.map && window.map._maplibre) return window.map._maplibre;
+    return mapInstance || window.map;
+  }
 
   // =========================================================================
   // 2. KHỞI TẠO HỆ THỐNG (SYSTEM INITIALIZATION)
@@ -216,13 +221,6 @@ const CommandUIController = (function () {
   async function init(map) {
     if (map) mapInstance = map;
     else if (!mapInstance && window.map) mapInstance = window.map;
-
-    if (mapInstance) {
-      if (!tacticalLayers.sosGroup) tacticalLayers.sosGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.unitsGroup) tacticalLayers.unitsGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.sheltersGroup) tacticalLayers.sheltersGroup = L.layerGroup().addTo(mapInstance);
-      if (!tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup = L.layerGroup().addTo(mapInstance);
-    }
 
     if (isInitialized) {
       renderAllComponents();
@@ -1026,7 +1024,7 @@ const CommandUIController = (function () {
       }
     }
 
-    // Đảm bảo Leaflet cập nhật kích thước khung vẽ
+    // Đảm bảo MapLibre cập nhật kích thước khung vẽ
     setTimeout(() => {
       if (mapInstance && typeof mapInstance.invalidateSize === 'function') {
         mapInstance.invalidateSize();
@@ -3814,7 +3812,10 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     if (s) s.status = 'rescued';
 
     // 5. Xóa đường vẽ lộ trình và ẩn marker khỏi bản đồ
-    if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+    const mapInst = getMapLibreInst();
+    if (mapInst && mapInst.getSource('c2-dispatch-route-source')) {
+      mapInst.getSource('c2-dispatch-route-source').setData({ type: 'FeatureCollection', features: [] });
+    }
     if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
       window.NorthStarRescue.loadSOSBeacons();
     }
@@ -3876,7 +3877,10 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     const s = (sosData || []).find(sItem => sItem.id === item.id || sItem.raw_id === item.raw_id || (sItem.phone && sItem.phone === item.phone));
     if (s) s.status = 'rescued';
 
-    if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+    const mapInst = getMapLibreInst();
+    if (mapInst && mapInst.getSource('c2-dispatch-route-source')) {
+      mapInst.getSource('c2-dispatch-route-source').setData({ type: 'FeatureCollection', features: [] });
+    }
 
     if (item.raw_id) {
       fetch(getApiUrl(`/api/sos/${item.raw_id}/status`), {
@@ -3899,33 +3903,26 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   // 5. BẢN ĐỒ TÁC CHIẾN GIS TƯƠNG TÁC (TACTICAL GIS INTEGRATION)
   // =========================================================================
   function renderTacticalMapLayers() {
-    if (!mapInstance) return;
+    const mapInst = getMapLibreInst();
+    if (!mapInst || !window.maplibregl) return;
 
-    // 1. Vẽ các điểm SOS - Chỉ hiển thị các tín hiệu chưa điều phối / đang chờ xử lý
-    // Khi đã xuất quân hoặc đã cứu hộ xong, tín hiệu lập tức biến mất khỏi bản đồ để tránh trùng lặp và rối mắt
-    if (tacticalLayers.sosGroup) {
-      tacticalLayers.sosGroup.clearLayers();
-      const activeSOS = sosData.filter(s => s.status === 'pending' || s.status === 'verified');
+    // 1. SOS Beacons
+    tacticalMarkers.sos.forEach(m => { if (m && typeof m.remove === 'function') m.remove(); });
+    tacticalMarkers.sos = [];
 
-      activeSOS.forEach(s => {
-        const markerHtml = `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute w-8 h-8 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
-            <div class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white">
-              SOS
-            </div>
-          </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-sos-icon',
-          html: markerHtml,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-
-        const m = L.marker([s.lat, s.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
+    const activeSOS = sosData.filter(s => s.status === 'pending' || s.status === 'verified');
+    activeSOS.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'relative flex items-center justify-center cursor-pointer';
+      el.innerHTML = `
+        <span class="absolute w-8 h-8 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
+        <div class="w-7 h-7 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white">
+          SOS
+        </div>
+      `;
+      const popup = new window.maplibregl.Popup({ offset: 16, className: 'c2-dark-glass-popup' })
+        .setHTML(`
+          <div class="p-2 text-xs font-sans space-y-1 text-slate-800">
             <div class="font-extrabold text-rose-700">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</div>
             <div class="font-bold text-slate-900">${s.contact_name} - ${s.phone}</div>
             <div>Số người: <b>${s.people_count} người ${s.has_vulnerable ? '(Có trẻ nhỏ/người già)' : ''}</b></div>
@@ -3937,71 +3934,75 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
             </div>
           </div>
         `);
-        tacticalLayers.sosGroup.addLayer(m);
-      });
-    }
+      const m = new window.maplibregl.Marker({ element: el })
+        .setLngLat([s.lng, s.lat])
+        .setPopup(popup)
+        .addTo(mapInst);
+      tacticalMarkers.sos.push(m);
+    });
 
-    // 2. Vẽ vị trí các đội cứu hộ
-    if (tacticalLayers.unitsGroup) {
-      tacticalLayers.unitsGroup.clearLayers();
-      unitsData.forEach(u => {
-        const isBoat = u.type === 'boat';
-        const iconHtml = `
-          <div class="relative flex items-center justify-center">
-            <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black">
-              ${isBoat ? '🚤' : '🚛'}
-            </div>
-            <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
+    // 2. Units
+    tacticalMarkers.units.forEach(m => { if (m && typeof m.remove === 'function') m.remove(); });
+    tacticalMarkers.units = [];
+
+    unitsData.forEach(u => {
+      const isBoat = u.type === 'boat';
+      const el = document.createElement('div');
+      el.className = 'cursor-pointer';
+      el.innerHTML = `
+        <div class="relative flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black">
+            ${isBoat ? '🚤' : '🚛'}
           </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-unit-icon',
-          html: iconHtml,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
-
-        const m = L.marker([u.lat, u.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
+          <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${u.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'} border border-white"></span>
+        </div>
+      `;
+      const popup = new window.maplibregl.Popup({ offset: 16, className: 'c2-dark-glass-popup' })
+        .setHTML(`
+          <div class="p-2 text-xs font-sans space-y-1 text-slate-800">
             <div class="font-bold text-blue-700">${u.name}</div>
             <div>Chỉ huy: <b>${u.commander}</b> (SĐT: ${u.phone})</div>
             <div>Trạng thái: <b>${u.status === 'ready' ? '🟢 Sẵn sàng' : '🟡 Đang cơ động'}</b></div>
             <div>Trang bị: ${u.equipment}</div>
           </div>
         `);
-        tacticalLayers.unitsGroup.addLayer(m);
-      });
-    }
+      const m = new window.maplibregl.Marker({ element: el })
+        .setLngLat([u.lng, u.lat])
+        .setPopup(popup)
+        .addTo(mapInst);
+      tacticalMarkers.units.push(m);
+    });
 
-    // 3. Vẽ các điểm sơ tán an toàn
-    if (tacticalLayers.sheltersGroup) {
-      tacticalLayers.sheltersGroup.clearLayers();
-      shelterData.forEach(sh => {
-        const iconHtml = `
-          <div class="w-7 h-7 rounded-full bg-emerald-600 text-white shadow-md border-2 border-white flex items-center justify-center text-xs font-black">
-            🛡️
-          </div>
-        `;
-        const icon = L.divIcon({
-          className: 'tactical-shelter-icon',
-          html: iconHtml,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
+    // 3. Shelters
+    tacticalMarkers.shelters.forEach(m => { if (m && typeof m.remove === 'function') m.remove(); });
+    tacticalMarkers.shelters = [];
 
-        const m = L.marker([sh.lat, sh.lng], { icon: icon });
-        m.bindPopup(`
-          <div class="p-2 text-xs font-sans space-y-1">
+    const sheltersList = (typeof shelterData !== 'undefined' ? shelterData : (typeof sheltersData !== 'undefined' ? sheltersData : []));
+    sheltersList.forEach(sh => {
+      const el = document.createElement('div');
+      el.className = 'cursor-pointer';
+      el.innerHTML = `
+        <div class="w-7 h-7 rounded-full bg-emerald-600 text-white shadow-md border-2 border-white flex items-center justify-center text-xs font-black">
+          🛡️
+        </div>
+      `;
+      const popup = new window.maplibregl.Popup({ offset: 16, className: 'c2-dark-glass-popup' })
+        .setHTML(`
+          <div class="p-2 text-xs font-sans space-y-1 text-slate-800">
             <div class="font-bold text-emerald-700">🛡️ ${sh.name}</div>
             <div class="text-[11px] text-slate-600">${sh.address}</div>
             <div>Sức chứa: <b>${sh.current_occupancy} / ${sh.capacity}</b> người</div>
             <div>Nhu yếu phẩm: ${sh.supplies_status}</div>
           </div>
         `);
-        tacticalLayers.sheltersGroup.addLayer(m);
-      });
-    }
+      const m = new window.maplibregl.Marker({ element: el })
+        .setLngLat([sh.lng, sh.lat])
+        .setPopup(popup)
+        .addTo(mapInst);
+      tacticalMarkers.shelters.push(m);
+    });
+  }
+
   }
 
   // =========================================================================
@@ -4271,7 +4272,10 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       if (s) s.status = 'rescued';
 
       // Xóa route trên bản đồ
-      if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+      const mapInst = getMapLibreInst();
+    if (mapInst && mapInst.getSource('c2-dispatch-route-source')) {
+      mapInst.getSource('c2-dispatch-route-source').setData({ type: 'FeatureCollection', features: [] });
+    }
 
       // Đồng bộ backend
       if (item.raw_id) {
@@ -4560,34 +4564,56 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
   }
 
   function drawTacticalMissionRoute(missionId) {
-    if (!mapInstance || !tacticalLayers.dispatchRoutesGroup) return;
+    const mapInst = getMapLibreInst();
+    if (!mapInst) return;
 
     const mission = missionData.find(m => m.id === missionId);
     if (!mission) return;
 
     const unit = unitsData.find(u => u.id === mission.assigned_unit_id);
-    const unitCoord = unit ? [unit.lat, unit.lng] : [mission.victim_lat - 0.02, mission.victim_lng - 0.02];
-    const victimCoord = [mission.victim_lat, mission.victim_lng];
-    const shelterCoord = [mission.shelter_lat, mission.shelter_lng];
+    const unitCoord = unit ? [unit.lng, unit.lat] : [mission.victim_lng - 0.02, mission.victim_lat - 0.02];
+    const victimCoord = [mission.victim_lng, mission.victim_lat];
+    const shelterCoord = [mission.shelter_lng, mission.shelter_lat];
 
-    tacticalLayers.dispatchRoutesGroup.clearLayers();
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [unitCoord, victimCoord] },
+          properties: { type: 'leg1' }
+        },
+        {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [victimCoord, shelterCoord] },
+          properties: { type: 'leg2' }
+        }
+      ]
+    };
 
-    // 1. Tuyến từ Đội đến Nạn nhân (Đường nét đứt màu đỏ/cam)
-    const leg1 = L.polyline([unitCoord, victimCoord], {
-      color: '#ef4444',
-      weight: 4,
-      dashArray: '6, 8',
-      opacity: 0.9
-    }).addTo(tacticalLayers.dispatchRoutesGroup);
+    if (mapInst.getSource('c2-dispatch-route-source')) {
+      mapInst.getSource('c2-dispatch-route-source').setData(geojson);
+    } else if (typeof mapInst.addSource === 'function') {
+      mapInst.addSource('c2-dispatch-route-source', { type: 'geojson', data: geojson });
+      mapInst.addLayer({
+        id: 'c2-dispatch-route-layer',
+        type: 'line',
+        source: 'c2-dispatch-route-source',
+        paint: {
+          'line-color': ['match', ['get', 'type'], 'leg1', '#ef4444', '#10b981'],
+          'line-width': 4.5,
+          'line-dasharray': [3, 2],
+          'line-opacity': 0.95
+        }
+      });
+    }
 
-    // 2. Tuyến từ Nạn nhân đến Điểm Sơ tán (Đường màu xanh ngọc)
-    const leg2 = L.polyline([victimCoord, shelterCoord], {
-      color: '#10b981',
-      weight: 4,
-      opacity: 0.9
-    }).addTo(tacticalLayers.dispatchRoutesGroup);
-
-    mapInstance.fitBounds(L.latLngBounds([unitCoord, victimCoord, shelterCoord]), { padding: [60, 60] });
+    const allCoords = [unitCoord, victimCoord, shelterCoord];
+    const minLng = Math.min(...allCoords.map(c => c[0])), maxLng = Math.max(...allCoords.map(c => c[0]));
+    const minLat = Math.min(...allCoords.map(c => c[1])), maxLat = Math.max(...allCoords.map(c => c[1]));
+    if (typeof mapInst.fitBounds === 'function') {
+      mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, duration: 800 });
+    }
     showToast('🧭 CẮM TUYẾN TÁC CHIẾN', `Đã hiển thị lộ trình [${mission.id}] trên bản đồ`, 'info');
   }
 
@@ -4695,7 +4721,10 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       const s = sosData.find(item => (incident && item.id === incident.id) || (mission.victim_phone && item.phone === mission.victim_phone));
       if (s) s.status = 'rescued';
 
-      if (tacticalLayers.dispatchRoutesGroup) tacticalLayers.dispatchRoutesGroup.clearLayers();
+      const mapInst = getMapLibreInst();
+    if (mapInst && mapInst.getSource('c2-dispatch-route-source')) {
+      mapInst.getSource('c2-dispatch-route-source').setData({ type: 'FeatureCollection', features: [] });
+    }
       if (window.NorthStarRescue && typeof window.NorthStarRescue.loadSOSBeacons === 'function') {
         window.NorthStarRescue.loadSOSBeacons();
       }

@@ -25,21 +25,54 @@
  */
 
 const NorthStarRescue = (function () {
-  let disasterLayerGroup = null;
-  let shelterLayerGroup = null;
-  let sosLayerGroup = null;
-  let evacuationRouteLayer = null;
+  let activeRescueMarkers = {
+    disasters: [],
+    shelters: [],
+    sos: []
+  };
+  let activeRescuePopup = null;
+  let evacuationRouteGeoJson = { type: 'FeatureCollection', features: [] };
 
   let allShelters = [];
   let allDisasters = [];
   let allSOSBeacons = [];
 
+  function getMapLibre() {
+    if (window.map && window.map._maplibre) return window.map._maplibre;
+    if (window.map && typeof window.map.getSource === 'function') return window.map;
+    return null;
+  }
+
   function initRescueLayers(map) {
-    if (!map) return;
-    if (!disasterLayerGroup) disasterLayerGroup = L.layerGroup().addTo(map);
-    if (!shelterLayerGroup) shelterLayerGroup = L.layerGroup().addTo(map);
-    if (!sosLayerGroup) sosLayerGroup = L.layerGroup().addTo(map);
+    const mapInst = getMapLibre();
+    if (mapInst && mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
+      setupRescueSourcesAndLayers(mapInst);
+    } else if (mapInst) {
+      mapInst.once('load', () => setupRescueSourcesAndLayers(mapInst));
+    }
     connectRealtimeWebSocket();
+  }
+
+  function setupRescueSourcesAndLayers(mapInst) {
+    if (!mapInst) return;
+    if (!mapInst.getSource('evacuation-route-source')) {
+      mapInst.addSource('evacuation-route-source', {
+        type: 'geojson',
+        data: evacuationRouteGeoJson
+      });
+      mapInst.addLayer({
+        id: 'evacuation-route-layer',
+        type: 'line',
+        source: 'evacuation-route-source',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#10b981',
+          'line-width': 6,
+          'line-dasharray': [2, 1],
+          'line-opacity': 0.95
+        }
+      });
+    }
   }
 
   // ==========================================
@@ -117,56 +150,28 @@ const NorthStarRescue = (function () {
   }
 
   function renderDisasterLayers() {
-    if (!window.map || !disasterLayerGroup) return;
-    disasterLayerGroup.clearLayers();
+    const mapInst = getMapLibre();
+    if (!mapInst) return;
 
-    allDisasters.forEach(feat => {
-      const p = feat.properties;
-      const coords = feat.geometry.coordinates;
-      const latLng = [coords[1], coords[0]];
-      const radius = p.radius_m || 200;
+    activeRescueMarkers.disasters.forEach(m => m.remove());
+    activeRescueMarkers.disasters = [];
 
-      let color = '#f97316'; // flood
-      let fillColor = '#fb923c';
-      let icon = 'waves';
-
-      if (p.hazard_type === 'landslide') {
-        color = '#dc2626';
-        fillColor = '#ef4444';
-        icon = 'mountain';
-      } else if (p.hazard_type === 'storm') {
-        color = '#eab308';
-        fillColor = '#fde047';
-        icon = 'wind';
+    allDisasters.forEach(d => {
+      const p = d.properties || d;
+      let latLng = null;
+      if (d.geometry && d.geometry.coordinates) {
+        latLng = [d.geometry.coordinates[1], d.geometry.coordinates[0]];
+      } else if (p.latitude && p.longitude) {
+        latLng = [parseFloat(p.latitude), parseFloat(p.longitude)];
+      } else if (p.lat && p.lng) {
+        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
       }
+      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
 
-      // Vẽ vòng tròn bán kính vùng nguy cơ
-      const circle = L.circle(latLng, {
-        radius: radius,
-        color: color,
-        weight: 2,
-        fillColor: fillColor,
-        fillOpacity: 0.25,
-        dashArray: p.severity === 'critical' ? '4, 4' : null,
-      });
-
-      // Marker biểu tượng nguy hiểm
-      const markerHtml = `
-        <div class="relative flex items-center justify-center">
-          <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
-          <div class="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold" style="background-color: ${color}">
-            ⚠️
-          </div>
-        </div>
-      `;
-      const customIcon = L.divIcon({
-        className: 'disaster-hazard-icon',
-        html: markerHtml,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-
-      const marker = L.marker(latLng, { icon: customIcon });
+      const radius = p.radius_meters || 500;
+      let color = '#f59e0b';
+      if (p.severity === 'critical') color = '#ef4444';
+      else if (p.severity === 'high') color = '#ea580c';
 
       const hazardLabels = {
         flood: 'LŨ LỤT & NGẬP SÂU',
@@ -176,11 +181,11 @@ const NorthStarRescue = (function () {
       };
       const hazardName = hazardLabels[String(p.hazard_type).toLowerCase()] || String(p.hazard_type).toUpperCase();
 
-      let severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-extrabold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">CẢNH BÁO</span>';
+      let severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-extrabold bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide">CẢNH BÁO</span>';
       if (p.severity === 'critical') {
-        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-rose-100 text-rose-800 border border-rose-300 uppercase tracking-wide animate-pulse">ĐẶC BIỆT NGUY CẤP</span>';
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800 uppercase tracking-wide animate-pulse">ĐẶC BIỆT NGUY CẤP</span>';
       } else if (p.severity === 'high') {
-        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wide">RẤT NGUY HIỂM</span>';
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-amber-950 text-amber-300 border border-amber-800 uppercase tracking-wide">RẤT NGUY HIỂM</span>';
       }
 
       const popupHtml = `
@@ -199,29 +204,25 @@ const NorthStarRescue = (function () {
           </div>
         </div>
       `;
-      circle.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
-      circle.on('click', (e) => {
-        if (e && e.originalEvent) {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
-        }
-        if (window.map) window.map.closePopup();
-        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
-        circle.openPopup();
-      });
-      marker.on('click', (e) => {
-        if (e && e.originalEvent) {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
-        }
-        if (window.map) window.map.closePopup();
-        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
-        marker.openPopup();
-      });
 
-      disasterLayerGroup.addLayer(circle);
-      disasterLayerGroup.addLayer(marker);
+      const el = document.createElement('div');
+      el.className = 'relative flex items-center justify-center cursor-pointer';
+      el.innerHTML = `
+        <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
+        <div class="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold" style="background-color: ${color}">
+          ⚠️
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
+        .setHTML(popupHtml);
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([latLng[1], latLng[0]])
+        .setPopup(popup)
+        .addTo(mapInst);
+
+      activeRescueMarkers.disasters.push(marker);
     });
   }
 
@@ -273,68 +274,67 @@ const NorthStarRescue = (function () {
   }
 
   function renderShelterLayers() {
-    if (!window.map || !shelterLayerGroup) return;
-    shelterLayerGroup.clearLayers();
+    const mapInst = getMapLibre();
+    if (!mapInst) return;
 
-    allShelters.forEach(feat => {
-      const p = feat.properties;
-      const coords = feat.geometry.coordinates;
-      const latLng = [coords[1], coords[0]];
+    activeRescueMarkers.shelters.forEach(m => m.remove());
+    activeRescueMarkers.shelters = [];
 
-      const markerHtml = `
-        <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer">
-          <span class="text-xs font-bold">🛡️</span>
-        </div>
-      `;
-      const shelterIcon = L.divIcon({
-        className: 'shelter-map-icon',
-        html: markerHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
+    allShelters.forEach(s => {
+      const p = s.properties || s;
+      let latLng = null;
+      if (s.geometry && s.geometry.coordinates) {
+        latLng = [s.geometry.coordinates[1], s.geometry.coordinates[0]];
+      } else if (p.latitude && p.longitude) {
+        latLng = [parseFloat(p.latitude), parseFloat(p.longitude)];
+      } else if (p.lat && p.lng) {
+        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
+      }
+      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
 
-      const marker = L.marker(latLng, { icon: shelterIcon });
       const percent = Math.min(100, Math.round((p.current_occupancy / p.capacity) * 100));
+      let capColor = 'text-emerald-400 bg-emerald-950 border-emerald-800';
+      if (percent >= 90) capColor = 'text-rose-400 bg-rose-950 border-rose-800';
+      else if (percent >= 70) capColor = 'text-amber-400 bg-amber-950 border-amber-800';
+
+      const el = document.createElement('div');
+      el.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer';
+      el.innerHTML = '<span class="text-sm">🛡️</span>';
+      el.title = `${p.name} (${percent}% sức chứa)`;
 
       const popupHtml = `
-        <div class="p-2.5 max-w-xs text-slate-100 font-sans select-none">
-          <div class="flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-wide">
-            <span>🛡️ ĐIỂM SƠ TÁN AN TOÀN</span>
-            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">${p.status}</span>
+        <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+            <span class="font-extrabold text-xs text-emerald-400 flex items-center gap-1">🛡️ TRẠM TRÚ ẨN AN TOÀN</span>
+            <span class="text-[9.5px] px-1.5 py-0.2 rounded font-bold border ${capColor}">${percent}% SỨC CHỨA</span>
           </div>
-          <h4 class="font-black text-sm text-white mt-1.5 leading-snug">${p.name}</h4>
-          <p class="text-xs text-slate-300 mt-0.5">${p.address || ''}</p>
-          
-          <div class="mt-2.5 pt-2 border-t border-slate-800 space-y-1.5 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
-            <div class="flex justify-between text-xs">
-              <span class="text-slate-400">Sức chứa:</span>
-              <span class="font-bold text-white font-mono">${p.current_occupancy} / ${p.capacity} (${percent}%)</span>
+          <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.name}</h4>
+          <p class="text-xs text-slate-300 mt-1 leading-relaxed">${p.address || 'Khu vực an toàn đã được thẩm định'}</p>
+          <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
+            <div class="flex justify-between text-slate-300">
+              <span>Đang tiếp nhận:</span>
+              <b class="text-white">${p.current_occupancy} / ${p.capacity} người</b>
             </div>
-            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div class="h-full ${percent > 80 ? 'bg-amber-400' : 'bg-emerald-400'}" style="width: ${percent}%"></div>
+            <div class="flex justify-between text-slate-400 text-[10px]">
+              <span>Liên hệ: ${p.contact_person || 'Ban Chỉ huy'}</span>
+              <a href="tel:${p.contact_phone}" class="text-cyan-400 font-bold">${p.contact_phone || '114'}</a>
             </div>
-            <div class="text-[11px] text-slate-300">
-              <span class="text-slate-400">Vật tư:</span> <b class="text-slate-200">${p.supplies_status || 'Sẵn sàng'}</b>
-            </div>
-            ${p.contact_phone ? `<div class="text-[11px] text-slate-300"><span class="text-slate-400">Hotline:</span> <a href="tel:${p.contact_phone}" class="text-amber-300 font-bold font-mono hover:underline">${p.contact_phone}</a></div>` : ''}
           </div>
-
-          <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="w-full mt-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
-            <span>Dẫn đường sơ tán tới đây</span>
+          <button onclick="NorthStarRescue.routeToShelter(${latLng[1]}, ${latLng[0]}, '${p.name.replace(/'/g, "\'")}')" class="mt-2.5 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
+            <span>🧭 Dẫn Đường Sơ Tán Đến Đây</span>
           </button>
         </div>
       `;
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
-      marker.on('click', (e) => {
-        if (e && e.originalEvent) {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
-        }
-        if (window.map) window.map.closePopup();
-        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
-        marker.openPopup();
-      });
-      shelterLayerGroup.addLayer(marker);
+
+      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
+        .setHTML(popupHtml);
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([latLng[1], latLng[0]])
+        .setPopup(popup)
+        .addTo(mapInst);
+
+      activeRescueMarkers.shelters.push(marker);
     });
   }
 
@@ -397,79 +397,69 @@ const NorthStarRescue = (function () {
   }
 
   function renderSOSLayers() {
-    if (!window.map || !sosLayerGroup) return;
-    sosLayerGroup.clearLayers();
+    const mapInst = getMapLibre();
+    if (!mapInst) return;
 
-    allSOSBeacons.forEach(feat => {
-      const p = feat.properties;
-      const coords = feat.geometry.coordinates;
-      const latLng = [coords[1], coords[0]];
+    activeRescueMarkers.sos.forEach(m => m.remove());
+    activeRescueMarkers.sos = [];
 
-      // Ẩn tất cả tín hiệu đã được bàn giao đội cứu hộ hoặc đã cứu hộ an toàn (tránh rối mắt và trùng lặp bản đồ)
-      if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
+    const activeSOS = allSOSBeacons.filter(b => {
+      const p = b.properties || b;
+      return p.status === 'active' || p.status === 'pending' || p.status === 'verified';
+    });
 
-      const markerHtml = `
-        <div class="relative flex items-center justify-center">
-          <span class="absolute w-10 h-10 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
-          <div class="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xl border-2 border-white text-xs font-black">
-            SOS
-          </div>
+    activeSOS.forEach(s => {
+      const p = s.properties || s;
+      let latLng = null;
+      if (s.geometry && s.geometry.coordinates) {
+        latLng = [s.geometry.coordinates[1], s.geometry.coordinates[0]];
+      } else if (p.lat && p.lng) {
+        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
+      }
+      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
+
+      const pNorm = (p.final_priority || p.priority || 'P3').toUpperCase();
+      let color = '#ef4444';
+      if (pNorm === 'P2' || pNorm === 'HIGH') color = '#f59e0b';
+      else if (pNorm === 'P3' || pNorm === 'MEDIUM') color = '#0284c7';
+      else if (pNorm === 'P4' || pNorm === 'LOW') color = '#64748b';
+
+      const el = document.createElement('div');
+      el.className = 'relative flex items-center justify-center cursor-pointer';
+      el.innerHTML = `
+        <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
+        <div class="w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white select-none" style="background-color: ${color}">
+          SOS
         </div>
       `;
-      const sosIcon = L.divIcon({
-        className: 'sos-beacon-icon',
-        html: markerHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
 
-      const marker = L.marker(latLng, { icon: sosIcon });
       const popupHtml = `
         <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
-          <div class="flex items-center justify-between pb-1.5 border-b border-rose-500/30">
-            <span class="flex items-center gap-1.5 text-rose-400 font-black text-xs tracking-wider">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
-            <span class="text-[10px] px-2 py-0.5 rounded-full font-black bg-rose-500/20 text-rose-300 border border-rose-500/40">${(p.priority || 'P1').toUpperCase()}</span>
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+            <span class="font-extrabold text-xs text-rose-400 flex items-center gap-1">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
+            <span class="text-[10px] px-2 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800">${pNorm}</span>
           </div>
-          <div class="mt-2">
-            <h4 class="font-black text-sm text-white leading-snug">${p.contact_name || 'Nạn nhân'}</h4>
-            <div class="text-xs font-mono font-bold text-amber-300 mt-0.5 flex items-center gap-1">
-              <span>📞</span>
-              <span>${p.phone || 'Chưa có SĐT'}</span>
-            </div>
+          <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.contact_name} (${p.people_count} người)</h4>
+          <p class="text-xs text-slate-300 mt-1 italic leading-relaxed">"${p.description || p.notes || 'Cần hỗ trợ di tản khẩn cấp!'}"</p>
+          <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
+            <div class="text-slate-300">SĐT: <a href="tel:${p.phone}" class="text-amber-300 font-bold">${p.phone}</a></div>
+            <div class="text-slate-400 text-[10px]">Địa bàn: ${p.location_text || (p.district ? p.district + ', ' + p.province : 'Khu vực ngập sâu')}</div>
           </div>
-          <div class="text-xs text-slate-200 mt-2 space-y-1.5 bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-            <div class="flex justify-between items-center">
-              <span class="text-slate-400 font-medium">Số người mắc kẹt:</span>
-              <span class="font-extrabold text-white text-sm font-mono">${p.people_count} người ${p.has_elderly_or_children ? '⚠️' : ''}</span>
-            </div>
-            ${p.has_elderly_or_children ? '<div class="text-[11px] text-amber-400 font-bold bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/60">⚠️ Có trẻ nhỏ / người già neo đơn</div>' : ''}
-            <div class="flex justify-between items-center">
-              <span class="text-slate-400 font-medium">Mực nước ngập:</span>
-              <span class="font-extrabold text-rose-400 font-mono text-sm">~${p.water_level_cm || 0} cm</span>
-            </div>
-            ${p.notes ? `<div class="pt-1.5 mt-1 border-t border-slate-800 text-[11px] text-slate-300 leading-relaxed italic">"${p.notes}"</div>` : ''}
-          </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 flex gap-2">
-            <a href="tel:${p.phone}" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-center text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md no-underline">
-              <span class="text-white font-black">📞 Gọi nạn nhân</span>
-            </a>
-            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="px-3 py-2 bg-slate-800 hover:bg-emerald-950 active:bg-emerald-900 text-slate-200 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/50 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm cursor-pointer" title="Đánh dấu đã giải cứu an toàn và chuyển vào kho hồ sơ">
-              <span>✓ Đã an toàn</span>
-            </button>
-          </div>
+          <button onclick="CommandUIController.openDispatchModal('${p.id || p.raw_id}')" class="mt-2.5 w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
+            <span>⚡ Lập Lệnh Cứu Nạn (Điều Phối)</span>
+          </button>
         </div>
       `;
-      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true, autoPan: true, autoPanPadding: [40, 40] });
-      marker.on('click', (e) => {
-        if (e && e.originalEvent) {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
-        }
-        if (window.map) window.map.closePopup();
-        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
-        marker.openPopup();
-      });
-      sosLayerGroup.addLayer(marker);
+
+      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
+        .setHTML(popupHtml);
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([latLng[1], latLng[0]])
+        .setPopup(popup)
+        .addTo(mapInst);
+
+      activeRescueMarkers.sos.push(marker);
     });
   }
 
@@ -551,25 +541,35 @@ const NorthStarRescue = (function () {
   }
 
   function renderEvacuationRouteOnMap(routeData) {
-    if (!window.map) return;
-    if (evacuationRouteLayer) window.map.removeLayer(evacuationRouteLayer);
+    const mapInst = getMapLibre();
+    if (!mapInst || !routeData || !routeData.geometry || !routeData.geometry.coordinates) return;
 
-    const geom = routeData.geometry;
-    if (!geom || !geom.coordinates) return;
+    const coords = routeData.geometry.coordinates; // [[lng, lat], ...]
+    evacuationRouteGeoJson = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: coords
+        }
+      }]
+    };
 
-    // Chuyển đổi [lng, lat] -> [lat, lng]
-    const latLngs = geom.coordinates.map(c => [c[1], c[0]]);
+    if (mapInst.getSource('evacuation-route-source')) {
+      mapInst.getSource('evacuation-route-source').setData(evacuationRouteGeoJson);
+    }
 
-    evacuationRouteLayer = L.polyline(latLngs, {
-      color: '#10b981', // Xanh lá cây an toàn
-      weight: 6,
-      opacity: 0.9,
-      lineCap: 'round',
-      lineJoin: 'round',
-      dashArray: '8, 8'
-    }).addTo(window.map);
-
-    window.map.fitBounds(evacuationRouteLayer.getBounds(), { padding: [50, 50] });
+    let minLng = 180, minLat = 90, maxLng = -180, maxLat = -90;
+    coords.forEach(c => {
+      if (c[0] < minLng) minLng = c[0];
+      if (c[0] > maxLng) maxLng = c[0];
+      if (c[1] < minLat) minLat = c[1];
+      if (c[1] > maxLat) maxLat = c[1];
+    });
+    if (minLng <= maxLng && minLat <= maxLat) {
+      mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
+    }
   }
 
   function renderEvacuationResultCard(routeData) {
@@ -712,9 +712,11 @@ const NorthStarRescue = (function () {
   }
 
   function flyToPoint(lat, lng) {
-    if (window.map) {
-      window.map.flyTo([lat, lng], 15, { duration: 1.2 });
+    const mapInst = getMapLibre();
+    if (mapInst) {
+      mapInst.flyTo({ center: [lng, lat], zoom: 15.5, duration: 1200 });
     }
+  }
   }
 
   function toggleLayer(layerType, show) {

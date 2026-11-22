@@ -18,7 +18,7 @@
 
 /**
  * ========================================================
- * FloodNav - Mô phỏng xe di chuyển trên lộ trình
+ * FloodNav - Mô phỏng xe di chuyển trên lộ trình (MapLibre GL JS Engine)
  * map_core.js gọi: VehicleSim.start(latlngs, vehicle) sau khi vẽ tuyến
  * Dùng requestAnimationFrame, nội suy theo quãng đường thực (haversine)
  * Tự động xoay/lật đầu xe theo đúng hướng di chuyển thực tế (FE-01 / Thành viên 3)
@@ -39,12 +39,19 @@ const VehicleSim = (function () {
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
+  function getMapInstance() {
+    if (!window.map) return null;
+    return window.map._maplibre || window.map;
+  }
+
   function stop() {
     if (rafId) cancelAnimationFrame(rafId);
     clearTimeout(restartTimer);
     rafId = null;
     restartTimer = null;
-    if (marker && typeof map !== 'undefined') map.removeLayer(marker);
+    if (marker && typeof marker.remove === 'function') {
+      marker.remove();
+    }
     marker = null;
     iconEl = null;
   }
@@ -63,10 +70,11 @@ const VehicleSim = (function () {
     return [lat, lng];
   }
 
-  // rawLatLngs: [[lat, lng], ...] hoặc [L.LatLng, ...] của tuyến an toàn; vehicle: 'motorbike' | 'car'
+  // rawLatLngs: [[lat, lng], ...] của tuyến an toàn; vehicle: 'motorbike' | 'car'
   function start(rawLatLngs, vehicle) {
     stop();
-    if (typeof map === 'undefined' || !rawLatLngs || !Array.isArray(rawLatLngs) || rawLatLngs.length < 2) return;
+    const mapInst = getMapInstance();
+    if (!mapInst || !rawLatLngs || !Array.isArray(rawLatLngs) || rawLatLngs.length < 2) return;
 
     // Chuẩn hóa toàn bộ tọa độ về mảng 2 chiều [[lat, lng], [lat, lng], ...]
     const latlngs = rawLatLngs.map(toLatLngPair).filter(Boolean);
@@ -87,16 +95,18 @@ const VehicleSim = (function () {
     const initIsEast = initDlng >= 0;
     const initScaleX = initIsEast ? -1 : 1;
 
-    marker = L.marker(latlngs[0], {
-      icon: L.divIcon({
-        html: `<div id="sim-vehicle-icon" class="vehicle-icon" style="font-size:28px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));transform:scaleX(${initScaleX});transform-origin:center;transition:transform 0.15s ease-out;display:inline-block;">${emoji}</div>`,
-        className: 'vehicle-sim-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      }),
-      interactive: false,
-      zIndexOffset: 1000
-    }).addTo(map);
+    const el = document.createElement('div');
+    el.className = 'vehicle-sim-marker';
+    el.style.pointerEvents = 'none';
+    el.innerHTML = `<div id="sim-vehicle-icon" class="vehicle-icon" style="font-size:28px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));transform:scaleX(${initScaleX});transform-origin:center;transition:transform 0.15s ease-out;display:inline-block;">${emoji}</div>`;
+
+    if (!window.maplibregl) return;
+    marker = new window.maplibregl.Marker({
+      element: el,
+      anchor: 'center'
+    })
+      .setLngLat([latlngs[0][1], latlngs[0][0]])
+      .addTo(mapInst);
 
     // Thời gian chạy demo: 8s - 25s tuỳ độ dài tuyến
     const duration = Math.max(8000, Math.min(25000, total * 4));
@@ -116,7 +126,12 @@ const VehicleSim = (function () {
       const segLen = cum[seg] - cum[seg - 1] || 1;
       const t = Math.min(Math.max((dist - cum[seg - 1]) / segLen, 0), 1);
       const a = latlngs[seg - 1], b = latlngs[seg];
-      marker.setLatLng([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      const curLat = a[0] + (b[0] - a[0]) * t;
+      const curLng = a[1] + (b[1] - a[1]) * t;
+
+      if (marker) {
+        marker.setLngLat([curLng, curLat]);
+      }
 
       // Tự động căn chỉnh đầu xe theo hướng tiến
       const dLng = b[1] - a[1];
@@ -128,21 +143,15 @@ const VehicleSim = (function () {
 
       if (!iconEl) iconEl = document.getElementById('sim-vehicle-icon');
       if (iconEl) {
-        // Emoji chuẩn (🚗 / 🏍️) có mặt quay về bên Trái (Tây)
-        // Khi di chuyển sang Phải (Đông): lật scaleX(-1) để đầu xe hướng sang Phải
-        // Khi di chuyển sang Trái (Tây): scaleX(1) để đầu xe hướng sang Trái
         const scaleX = lastIsEast ? -1 : 1;
-        // Độ nghiêng dốc nhẹ
         const slope = Math.atan2(dLat, Math.abs(dLng) * 1.1 + 0.00001) * (180 / Math.PI);
         const tilt = Math.max(-20, Math.min(20, -slope * (lastIsEast ? 1 : -1)));
-
         iconEl.style.transform = `scaleX(${scaleX}) rotate(${tilt.toFixed(1)}deg)`;
       }
 
       if (progress < 1) {
         rafId = requestAnimationFrame(frame);
       } else {
-        // Tới nơi: nghỉ 1.5s rồi chạy lại để demo liên tục
         rafId = null;
         restartTimer = setTimeout(() => start(latlngs, vehicle), 1500);
       }

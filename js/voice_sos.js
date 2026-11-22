@@ -197,7 +197,7 @@ const VoiceSOSManager = (function () {
   }
 
   /**
-   * Cho phép nạn nhân trực tiếp bấm chấm vị trí trên bản đồ Leaflet
+   * Cho phép nạn nhân trực tiếp bấm chấm vị trí trên bản đồ MapLibre GL JS
    */
   function pickLocationOnMap() {
     const modal = document.getElementById('voice-sos-modal');
@@ -211,30 +211,35 @@ const VoiceSOSManager = (function () {
     if (modal) modal.classList.add('hidden');
     if (banner) banner.classList.remove('hidden');
 
-    window.map.getContainer().style.cursor = 'crosshair';
+    const container = window.map.getCanvas ? window.map.getCanvas() : window.map.getContainer();
+    if (container) container.style.cursor = 'crosshair';
 
-    // Đăng ký sự kiện nhấp chuột 1 lần trên Leaflet map
+    // Đăng ký sự kiện nhấp chuột 1 lần trên MapLibre map
     window.map.once('click', handleMapClickPick);
   }
 
   function handleMapClickPick(e) {
     if (!isMapPicking) return;
-    selectedLat = e.latlng.lat;
-    selectedLng = e.latlng.lng;
+    const lat = e.lngLat ? e.lngLat.lat : (e.latlng ? e.latlng.lat : e.lat);
+    const lng = e.lngLat ? e.lngLat.lng : (e.latlng ? e.latlng.lng : e.lng);
+    selectedLat = lat;
+    selectedLng = lng;
     selectedLocLabel = 'Điểm chấm trên bản đồ';
 
-    // Ghim marker tạm thời để nạn nhân thấy rõ
-    if (tempSOSMarker && window.map) {
-      window.map.removeLayer(tempSOSMarker);
+    // Ghim marker tạm thời bằng MapLibre Marker
+    if (tempSOSMarker && typeof tempSOSMarker.remove === 'function') {
+      tempSOSMarker.remove();
+      tempSOSMarker = null;
     }
-    if (window.L && window.map) {
-      tempSOSMarker = L.circleMarker([selectedLat, selectedLng], {
-        radius: 12,
-        color: '#e11d48',
-        fillColor: '#f43f5e',
-        fillOpacity: 0.9,
-        weight: 3
-      }).addTo(window.map);
+
+    const mapInst = window.map._maplibre || window.map;
+    if (window.maplibregl && mapInst) {
+      const el = document.createElement('div');
+      el.className = 'w-7 h-7 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center text-white text-xs font-black animate-pulse';
+      el.innerText = '📍';
+      tempSOSMarker = new window.maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([lng, lat])
+        .addTo(mapInst);
     }
 
     finishMapPick();

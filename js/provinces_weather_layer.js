@@ -360,7 +360,7 @@
       fillOpacity: 0.22
     });
 
-    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+    if (true) {
       layer.bringToFront();
     }
   }
@@ -397,61 +397,66 @@
   }
 
   function onFeatureClick(e, provinceName) {
-    if (e && e.originalEvent) {
-      L.DomEvent.stopPropagation(e.originalEvent);
-      L.DomEvent.preventDefault(e.originalEvent);
-    }
-    const layer = e.target;
-    if (layer && typeof layer.closeTooltip === 'function') {
-      layer.closeTooltip();
-    }
-    const clickLatLng = e.latlng || (layer.getBounds ? layer.getBounds().getCenter() : null);
+    const mapInst = (window.map && window.map._maplibre) ? window.map._maplibre : (window.map || null);
+    if (!mapInst) return;
 
-    // Đóng sạch sẽ mọi popup cũ trên toàn bộ bản đồ trước khi mở popup tỉnh (chống đè popup)
-    if (targetMap) {
-      targetMap.closePopup();
-    }
-    document.querySelectorAll('.leaflet-popup').forEach(p => p.remove());
+    const lngLat = e.lngLat ? [e.lngLat.lng, e.lngLat.lat] : (e.latlng ? [e.latlng.lng, e.latlng.lat] : [105.8, 21.0]);
 
-    // Mở popup chi tiết khí tượng & tác chiến của cả vùng tỉnh ngay tại điểm click
-    if (targetMap && clickLatLng) {
-      L.popup({
-        maxWidth: 340,
-        minWidth: 300,
-        className: 'province-weather-leaflet-popup',
-        autoPan: true,
-        autoPanPadding: [30, 30],
-        autoClose: true,
-        closeOnClick: true
-      })
-      .setLatLng(clickLatLng)
-      .setContent(buildHoverCardHtml(provinceName))
-      .openOn(targetMap);
+    if (window.map && typeof window.map.closePopup === 'function') {
+      window.map.closePopup();
     }
+    document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
 
-    // Tự động đồng bộ vùng chỉ huy
+    new maplibregl.Popup({
+      maxWidth: '340px',
+      className: 'flood-custom-popup',
+      closeButton: true,
+      closeOnClick: true
+    })
+      .setLngLat(lngLat)
+      .setHTML(buildHoverCardHtml(provinceName))
+      .addTo(mapInst);
+
     syncRegionSelector(provinceName);
 
     const meta = PROVINCE_METADATA[provinceName] || {};
     const data = weatherCache[provinceName] || {};
-    if (typeof window.showNorthStarToast === 'function') {
-      window.showNorthStarToast(
+    if (typeof window.showToast === 'function') {
+      window.showToast(
         `📍 Đã chọn: ${provinceName} • ${data.temp}°C - ${data.weatherDesc} (AQI ${data.aqi})`,
-        meta.alertLevel === 'danger' ? 'danger' : 'info',
-        2500
+        'info'
       );
     }
   }
 
   function zoomToProvince(provinceName) {
-    if (!targetMap || !geoJsonLayer) return;
-    geoJsonLayer.eachLayer(layer => {
-      if (layer.feature && layer.feature.properties && layer.feature.properties.name === provinceName) {
-        if (layer.getBounds) {
-          targetMap.fitBounds(layer.getBounds().pad(0.12), { duration: 1.0 });
+    const mapInst = (window.map && window.map._maplibre) ? window.map._maplibre : (window.map || null);
+    if (!mapInst) return;
+
+    const meta = PROVINCE_METADATA[provinceName];
+    if (meta) {
+      mapInst.flyTo({ center: [meta.lng, meta.lat], zoom: 9.2, duration: 1000 });
+      return;
+    }
+
+    const feature = NORTHERN_PROVINCES_GEOJSON.features.find(f => f.properties.name === provinceName);
+    if (feature && feature.geometry && feature.geometry.coordinates) {
+      let minLng = 180, minLat = 90, maxLng = -180, maxLat = -90;
+      const scanCoords = (arr) => {
+        if (typeof arr[0] === 'number') {
+          if (arr[0] < minLng) minLng = arr[0];
+          if (arr[0] > maxLng) maxLng = arr[0];
+          if (arr[1] < minLat) minLat = arr[1];
+          if (arr[1] > maxLat) maxLat = arr[1];
+        } else {
+          arr.forEach(scanCoords);
         }
+      };
+      scanCoords(feature.geometry.coordinates);
+      if (minLng <= maxLng) {
+        mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 40, duration: 1000 });
       }
-    });
+    }
   }
 
   function focusProvinceRegion(provinceName) {
@@ -469,58 +474,71 @@
   }
 
   function init(map) {
-    if (!map) return;
     targetMap = map;
+    const mapInst = (map && map._maplibre) ? map._maplibre : (map || null);
+    if (!mapInst) return;
 
-    if (provincesLayerGroup && map.hasLayer(provincesLayerGroup)) {
-      map.removeLayer(provincesLayerGroup);
+    if (mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
+      setupProvincesLayers(mapInst);
+    } else if (mapInst.once) {
+      mapInst.once('load', () => setupProvincesLayers(mapInst));
     }
 
-    provincesLayerGroup = L.layerGroup();
-
-    // 1. Tạo Leaflet GeoJSON layer cho các ô vùng tỉnh thành khổng lồ
-    geoJsonLayer = L.geoJSON(NORTHERN_PROVINCES_GEOJSON, {
-      style: getFeatureStyle,
-      onEachFeature: function (feature, layer) {
-        const provinceName = feature.properties.name;
-
-        // Tooltip gọn gàng, thanh lịch khi rê chuột qua ô tỉnh (không vướng mắt)
-        layer.bindTooltip(() => {
-          const meta = PROVINCE_METADATA[provinceName] || { icon: '📍' };
-          const data = weatherCache[provinceName] || { temp: 23.5, weatherIcon: '⛅' };
-          return `
-            <div class="flex items-center gap-1.5 px-1 py-0.5 font-sans pointer-events-none text-slate-100">
-              <span class="text-sm">${meta.icon}</span>
-              <span class="font-bold text-white text-xs">${provinceName}</span>
-              <span class="text-cyan-300 font-mono text-xs font-black">${data.temp}°C ${data.weatherIcon}</span>
-              <span class="text-[10px] text-slate-400 border-l border-slate-700 pl-1.5 ml-0.5">Nhấp xem chi tiết 🔍</span>
-            </div>
-          `;
-        }, {
-          sticky: true,
-          direction: 'auto',
-          offset: [15, 0],
-          opacity: 0.98,
-          className: 'province-weather-leaflet-tooltip'
-        });
-
-        layer.on({
-          mouseover: highlightFeature,
-          mouseout: resetHighlight,
-          click: (e) => onFeatureClick(e, provinceName)
-        });
-      }
-    });
-
-    provincesLayerGroup.addLayer(geoJsonLayer);
-
-    // Mặc định nạp lên bản đồ
-    provincesLayerGroup.addTo(map);
-
-    // Kích hoạt nạp dữ liệu Open-Meteo trực tiếp nền
     fetchLiveOpenMeteo();
+  }
 
-    // Tự động làm mới dữ liệu sau mỗi 10 phút
+  function setupProvincesLayers(mapInst) {
+    if (!mapInst) return;
+
+    if (!mapInst.getSource('northern-provinces-source')) {
+      mapInst.addSource('northern-provinces-source', {
+        type: 'geojson',
+        data: NORTHERN_PROVINCES_GEOJSON
+      });
+
+      mapInst.addLayer({
+        id: 'provinces-fill-layer',
+        type: 'fill',
+        source: 'northern-provinces-source',
+        paint: {
+          'fill-color': [
+            'case',
+            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.15)',
+            ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.14)',
+            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.10)',
+            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.10)',
+            'rgba(2, 132, 199, 0.06)'
+          ],
+          'fill-opacity': 0.8
+        }
+      });
+
+      mapInst.addLayer({
+        id: 'provinces-line-layer',
+        type: 'line',
+        source: 'northern-provinces-source',
+        paint: {
+          'line-color': '#06b6d4',
+          'line-width': 1.6,
+          'line-dasharray': [4, 3],
+          'line-opacity': 0.75
+        }
+      });
+
+      mapInst.on('click', 'provinces-fill-layer', (e) => {
+        if (!e.features || !e.features.length) return;
+        const name = e.features[0].properties.name;
+        onFeatureClick(e, name);
+      });
+
+      mapInst.on('mouseenter', 'provinces-fill-layer', () => {
+        mapInst.getCanvas().style.cursor = 'pointer';
+      });
+      mapInst.on('mouseleave', 'provinces-fill-layer', () => {
+        mapInst.getCanvas().style.cursor = '';
+      });
+    }
+  }  // Tự động làm mới dữ liệu sau mỗi 10 phút
     setInterval(fetchLiveOpenMeteo, 10 * 60 * 1000);
 
     console.log('[ProvinceWeather] Lớp Phân vùng Tỉnh thành khổng lồ (Interactive Tactical Regions) đã kích hoạt thành công.');

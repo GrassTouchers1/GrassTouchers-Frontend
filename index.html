@@ -36,17 +36,10 @@
     };
   </script>
 
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <!-- MapLibre GL JS (BSD-3-Clause - OSI Approved Open-Source 3D Vector Map Engine) -->
   <link rel="stylesheet" href="css/maplibre-gl.css" />
-
-  <!-- Leaflet MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="js/vendor/maplibre-gl.js"></script>
+  
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -85,7 +78,7 @@
       pointer-events: auto !important;
       user-select: none;
     }
-    /* Giao diện Popup MapLibre GL Tác Chiến (Chuẩn C2 Dark Glass - Đồng bộ 100% với Leaflet) */
+    /* Giao diện Popup MapLibre GL Tác Chiến (Chuẩn C2 Dark Glass) */
     .maplibregl-popup {
       z-index: 1000 !important;
       max-width: 360px !important;
@@ -1147,7 +1140,7 @@
         <div id="pane-cmd_maplibre_3d" class="cmd-view-pane hidden w-full h-full relative overflow-hidden bg-slate-950">
           <div id="maplibre-container" class="w-full h-full"></div>
 
-          <!-- Floating Viewport Situation Alert Banner (Đồng bộ 100% với Leaflet) -->
+          <!-- Floating Viewport Situation Alert Banner (Đồng bộ 100% với MapLibre GL JS) -->
           <div id="maplibre-viewport-alert" class="hidden absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-xl text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-slate-700/80 bg-slate-900/90 text-slate-200 transition-all duration-300">
             <div id="maplibre-alert-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 flex-shrink-0 animate-pulse"></div>
             <div class="flex-1 truncate text-[11px]" id="maplibre-viewport-alert-text">
@@ -1229,10 +1222,10 @@
                 </button>
               </div>
 
-              <!-- Return to Leaflet -->
+              <!-- Return to 2D Dashboard -->
               <button onclick="CommandUIController.switchView('cmd_dashboard')" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold shadow-2xl flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0" title="Trở về trung tâm chỉ huy 2D Leaflet">
                 <i data-lucide="arrow-left" class="w-3 h-3"></i>
-                <span>2D Leaflet</span>
+                <span>2D Chuẩn</span>
               </button>
             </div>
           </div>
@@ -3665,9 +3658,7 @@
   <script src="js/storm_simulator.js?v=20261118_v17"></script>
   <script src="js/voice_sos.js?v=20261118_v17"></script>
 
-  <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
-  <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261120_clean_zen_v3"></script>
+  <!-- MapLibre GL JS Map Engine Loaded in Head -->
 
   <!-- Complete Initialization Lifecycle -->
   <script>
@@ -3676,7 +3667,7 @@
       if (window.lucide) lucide.createIcons();
 
       try { localStorage.setItem('floodnav_tour_seen', 'true'); } catch (e) {}
-      // 2. Khởi tạo Bản đồ Leaflet trung tâm
+      // 2. Khởi tạo Bản đồ MapLibre GL JS trung tâm
       if (typeof initMap === 'function') {
         initMap();
       }

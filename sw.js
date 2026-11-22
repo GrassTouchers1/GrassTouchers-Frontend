@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for local assets and third-party libraries (Leaflet, Tailwind, Lucide)
+  // Stale-while-revalidate for local assets and third-party libraries (MapLibre GL, Tailwind, Lucide)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {

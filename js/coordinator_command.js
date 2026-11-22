@@ -109,7 +109,7 @@ const CoordinatorCommand = (function () {
   // =========================================================================
   async function init(mapInstance) {
     if (mapInstance && !tacticalLayerGroup) {
-      tacticalLayerGroup = L.layerGroup().addTo(mapInstance);
+      // tacticalLayerGroup converted to MapLibre
     }
 
     // Nạp dữ liệu đồng thời từ backend
@@ -728,20 +728,25 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
   // =========================================================================
   function flyToIncident(lat, lng, id) {
     if (!window.map) return;
-    window.map.flyTo([lat, lng], 15, { duration: 1.2 });
+    const mapInst = window.map._maplibre || window.map;
+    if (typeof mapInst.flyTo === 'function') {
+      mapInst.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+    }
 
-    // Hiển thị vòng tròn nhấp nháy tại mục tiêu
-    const pulseMarker = L.circleMarker([lat, lng], {
-      radius: 20,
-      color: '#e11d48',
-      fillColor: '#fb7185',
-      fillOpacity: 0.5,
-      weight: 3
-    }).addTo(window.map);
+    // Hiển thị vòng tròn nhấp nháy tại mục tiêu bằng MapLibre Marker
+    if (window.maplibregl && mapInst) {
+      const el = document.createElement('div');
+      el.className = 'w-10 h-10 rounded-full border-4 border-rose-500 bg-rose-500/30 animate-ping pointer-events-none';
+      const pulseMarker = new window.maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([lng, lat])
+        .addTo(mapInst);
 
-    setTimeout(() => {
-      if (window.map) window.map.removeLayer(pulseMarker);
-    }, 4000);
+      setTimeout(() => {
+        if (pulseMarker && typeof pulseMarker.remove === 'function') {
+          pulseMarker.remove();
+        }
+      }, 4000);
+    }
   }
 
   function verifyIncident(itemId) {
@@ -875,9 +880,9 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
       if (unit) unit.status = 'ready';
 
       // Xóa đường polyline điều phối cũ
-      if (activeDispatchRouteLayer && window.map) {
-        window.map.removeLayer(activeDispatchRouteLayer);
-        activeDispatchRouteLayer = null;
+      const mapInst = window.map ? (window.map._maplibre || window.map) : null;
+      if (mapInst && mapInst.getSource('coordinator-mission-route-source')) {
+        mapInst.getSource('coordinator-mission-route-source').setData({ type: 'FeatureCollection', features: [] });
       }
 
       // Cập nhật backend
@@ -895,42 +900,77 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
     renderAllViews();
   }
 
+  // Quản lý markers đơn vị cứu hộ tác chiến MapLibre
+  let tacticalUnitMarkers = [];
+
   // Vẽ lộ trình tác chiến (Đội cứu hộ -> Nạn nhân -> Trạm sơ tán)
   function drawMissionRoute(missionId) {
     const mission = dispatchMissions.find(m => m.id === missionId);
     if (!mission || !window.map) return;
+    const mapInst = window.map._maplibre || window.map;
 
     const unit = rescueUnits.find(u => u.id === mission.assigned_unit_id);
-    const unitLatLng = unit ? [unit.lat, unit.lng] : [mission.victim_lat + 0.02, mission.victim_lng + 0.02];
-    const victimLatLng = [mission.victim_lat, mission.victim_lng];
-    const shelterLatLng = [mission.shelter_lat, mission.shelter_lng];
+    const unitCoord = unit ? [unit.lng, unit.lat] : [mission.victim_lng + 0.02, mission.victim_lat + 0.02];
+    const victimCoord = [mission.victim_lng, mission.victim_lat];
+    const shelterCoord = [mission.shelter_lng, mission.shelter_lat];
 
-    if (activeDispatchRouteLayer) {
-      window.map.removeLayer(activeDispatchRouteLayer);
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [unitCoord, victimCoord, shelterCoord]
+        }
+      }]
+    };
+
+    if (mapInst.getSource('coordinator-mission-route-source')) {
+      mapInst.getSource('coordinator-mission-route-source').setData(geojson);
+    } else if (typeof mapInst.addSource === 'function') {
+      mapInst.addSource('coordinator-mission-route-source', {
+        type: 'geojson',
+        data: geojson
+      });
+      mapInst.addLayer({
+        id: 'coordinator-mission-route-layer',
+        type: 'line',
+        source: 'coordinator-mission-route-source',
+        paint: {
+          'line-color': '#e11d48',
+          'line-width': 5,
+          'line-dasharray': [3, 2],
+          'line-opacity': 0.95
+        }
+      });
     }
 
-    // Polyline nét đứt màu đỏ cam
-    activeDispatchRouteLayer = L.polyline([unitLatLng, victimLatLng, shelterLatLng], {
-      color: '#e11d48',
-      weight: 5,
-      dashArray: '8, 8',
-      opacity: 0.9,
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(window.map);
-
-    window.map.fitBounds(activeDispatchRouteLayer.getBounds(), { padding: [60, 60] });
+    // Fit bounds
+    const coords = [unitCoord, victimCoord, shelterCoord];
+    let minLng = Math.min(...coords.map(c => c[0])), maxLng = Math.max(...coords.map(c => c[0]));
+    let minLat = Math.min(...coords.map(c => c[1])), maxLat = Math.max(...coords.map(c => c[1]));
+    if (typeof mapInst.fitBounds === 'function') {
+      mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, duration: 800 });
+    }
     showToast('🗺️ ĐÃ CẮM LỘ TRÌNH TÁC CHIẾN', `Hiển thị tuyến cứu nạn từ ${mission.assigned_unit_name} tới hiện trường`, 'info');
   }
 
-  // Vẽ các đội cứu nạn lên bản đồ Leaflet
+  // Vẽ các đội cứu nạn lên bản đồ MapLibre GL
   function renderTacticalUnitsOnMap() {
-    if (!tacticalLayerGroup || !window.map) return;
-    tacticalLayerGroup.clearLayers();
+    tacticalUnitMarkers.forEach(m => {
+      if (m && typeof m.remove === 'function') m.remove();
+    });
+    tacticalUnitMarkers = [];
+
+    const mapInst = window.map ? (window.map._maplibre || window.map) : null;
+    if (!mapInst || !window.maplibregl) return;
 
     rescueUnits.forEach(u => {
       const isBoat = u.type === 'boat';
-      const iconHtml = `
+      const el = document.createElement('div');
+      el.className = 'tactical-unit-icon';
+      el.style.cursor = 'pointer';
+      el.innerHTML = `
         <div class="relative flex items-center justify-center">
           <div class="w-8 h-8 rounded-full ${isBoat ? 'bg-cyan-600' : 'bg-blue-600'} text-white shadow-lg border-2 border-white flex items-center justify-center text-sm font-black">
             ${isBoat ? '🚤' : '🚛'}
@@ -939,25 +979,24 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
         </div>
       `;
 
-      const customIcon = L.divIcon({
-        className: 'tactical-unit-icon',
-        html: iconHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      const m = L.marker([u.lat, u.lng], { icon: customIcon });
-      m.bindPopup(`
-        <div class="p-2 text-xs font-sans space-y-1">
-          <div class="font-extrabold text-blue-900">${u.name}</div>
-          <div class="text-slate-600">${u.commander}</div>
-          <div class="text-slate-500 text-[10px]">${u.vehicle}</div>
-          <div class="pt-1 border-t text-[11px] font-bold ${u.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}">
-            Trạng thái: ${u.status === 'ready' ? 'Sẵn sàng xuất kích' : 'Đang làm nhiệm vụ'}
+      const popup = new window.maplibregl.Popup({ offset: 16, className: 'c2-dark-glass-popup' })
+        .setHTML(`
+          <div class="p-2 text-xs font-sans space-y-1 text-slate-800">
+            <div class="font-extrabold text-blue-900">${u.name}</div>
+            <div class="text-slate-600">${u.commander}</div>
+            <div class="text-slate-500 text-[10px]">${u.vehicle}</div>
+            <div class="pt-1 border-t text-[11px] font-bold ${u.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}">
+              Trạng thái: ${u.status === 'ready' ? 'Sẵn sàng xuất kích' : 'Đang làm nhiệm vụ'}
+            </div>
           </div>
-        </div>
-      `);
-      tacticalLayerGroup.addLayer(m);
+        `);
+
+      const m = new window.maplibregl.Marker({ element: el })
+        .setLngLat([u.lng, u.lat])
+        .setPopup(popup)
+        .addTo(mapInst);
+
+      tacticalUnitMarkers.push(m);
     });
   }
 

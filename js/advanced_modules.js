@@ -116,53 +116,91 @@ const TimelineSimulator = (function () {
 // 2. SAR FLOOD MANAGER (VIỄN THÁM VỆ TINH SENTINEL-1 SAR C-BAND)
 // ============================================================================
 const SarFloodManager = (function () {
-  let sarLayerGroup = null;
   let isVisible = false;
+  let sarData = null;
+  let activePopup = null;
+
+  function getMapInstance() {
+    if (!window.map) return null;
+    return window.map._maplibre || window.map;
+  }
+
+  function setupSarLayers(mapInst) {
+    if (!mapInst || !sarData) return;
+    if (!mapInst.getSource('sar-flood-source')) {
+      mapInst.addSource('sar-flood-source', {
+        type: 'geojson',
+        data: sarData
+      });
+
+      mapInst.addLayer({
+        id: 'sar-flood-fill',
+        type: 'fill',
+        source: 'sar-flood-source',
+        layout: { visibility: isVisible ? 'visible' : 'none' },
+        paint: {
+          'fill-color': '#38bdf8',
+          'fill-opacity': 0.35
+        }
+      });
+
+      mapInst.addLayer({
+        id: 'sar-flood-line',
+        type: 'line',
+        source: 'sar-flood-source',
+        layout: { visibility: isVisible ? 'visible' : 'none' },
+        paint: {
+          'line-color': '#0284c7',
+          'line-width': 2.5,
+          'line-dasharray': [3, 2],
+          'line-opacity': 0.9
+        }
+      });
+
+      mapInst.on('click', 'sar-flood-fill', (e) => {
+        if (!e.features || !e.features.length) return;
+        const p = e.features[0].properties;
+        const popupContent = `
+          <div class="p-2 text-slate-800 font-sans max-w-xs">
+            <div class="flex items-center justify-between text-cyan-700 font-bold text-xs pb-1 border-b border-cyan-100">
+              <span class="flex items-center gap-1">🛰️ SENTINEL-1 SAR</span>
+              <span class="text-[9.5px] px-1.5 py-0.2 rounded bg-cyan-100 text-cyan-800 font-extrabold uppercase">${p.severity || 'C-BAND'}</span>
+            </div>
+            <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.title || 'Vùng ngập SAR'}</h4>
+            <p class="text-xs text-slate-600 mt-1">${p.description || ''}</p>
+            <div class="mt-2 text-[11px] bg-cyan-50/80 p-2 rounded border border-cyan-200/80 space-y-0.5">
+              <div><b>Độ tin cậy mặt nước:</b> <span class="text-cyan-800 font-bold">${p.water_confidence || 95}%</span></div>
+              <div><b>Ước tính diện tích:</b> ~${p.area_km2 || 12.5} km²</div>
+              <div><b>Mực nước ước đoán:</b> ${p.water_depth_est || '1.2m'}</div>
+              <div><b>Cảm biến:</b> ${p.sensor || 'Sentinel-1A'} (${p.satellite_pass || 'Descending'})</div>
+            </div>
+          </div>
+        `;
+        if (activePopup) activePopup.remove();
+        if (window.maplibregl) {
+          activePopup = new window.maplibregl.Popup({ maxWidth: '320px', className: 'c2-dark-glass-popup' })
+            .setLngLat(e.lngLat)
+            .setHTML(popupContent)
+            .addTo(mapInst);
+        }
+      });
+
+      mapInst.on('mouseenter', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = 'pointer'; });
+      mapInst.on('mouseleave', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = ''; });
+    }
+  }
 
   async function init() {
-    if (!window.map) return;
-    sarLayerGroup = L.layerGroup();
+    const mapInst = getMapInstance();
+    if (!mapInst) return;
     try {
       const res = await fetch(getApiUrl('/api/satellite/sar-flood-polygons'));
       if (!res.ok) return;
-      const data = await res.json();
-
-      L.geoJSON(data, {
-        style: function (feature) {
-          return {
-            color: '#0284c7',
-            weight: 2.5,
-            opacity: 0.9,
-            fillColor: '#38bdf8',
-            fillOpacity: 0.35,
-            dashArray: '6, 6'
-          };
-        },
-        onEachFeature: function (feature, layer) {
-          const p = feature.properties;
-          const popupContent = `
-            <div class="p-2 text-slate-800 font-sans max-w-xs">
-              <div class="flex items-center justify-between text-cyan-700 font-bold text-xs pb-1 border-b border-cyan-100">
-                <span class="flex items-center gap-1">🛰️ SENTINEL-1 SAR</span>
-                <span class="text-[9.5px] px-1.5 py-0.2 rounded bg-cyan-100 text-cyan-800 font-extrabold uppercase">${p.severity}</span>
-              </div>
-              <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.title}</h4>
-              <p class="text-xs text-slate-600 mt-1">${p.description}</p>
-              <div class="mt-2 text-[11px] bg-cyan-50/80 p-2 rounded border border-cyan-200/80 space-y-0.5">
-                <div><b>Độ tin cậy mặt nước:</b> <span class="text-cyan-800 font-bold">${p.water_confidence}%</span></div>
-                <div><b>Ước tính diện tích:</b> ~${p.area_km2} km²</div>
-                <div><b>Mực nước ước đoán:</b> ${p.water_depth_est}</div>
-                <div><b>Cảm biến:</b> ${p.sensor} (${p.satellite_pass})</div>
-              </div>
-            </div>
-          `;
-          layer.bindPopup(popupContent, { maxWidth: 300 });
-        }
-      }).addTo(sarLayerGroup);
-
-      // Thêm vào bản đồ nếu đang được bật
-      if (isVisible) {
-        sarLayerGroup.addTo(window.map);
+      sarData = await res.json();
+      if (mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
+        setupSarLayers(mapInst);
+      } else if (mapInst.once) {
+        mapInst.once('load', () => setupSarLayers(mapInst));
       }
     } catch (e) {
       console.warn("Lỗi tải lớp viễn thám SAR:", e);
@@ -171,32 +209,76 @@ const SarFloodManager = (function () {
 
   function toggle(enabled) {
     isVisible = enabled;
-    if (!sarLayerGroup || !window.map) return;
-    if (enabled) {
-      sarLayerGroup.addTo(window.map);
-      if (window.showToast) {
-        showToast("🛰️ Đã bật Lớp Vùng ngập Vệ tinh", "Hiển thị 5 đa giác viễn thám Sentinel-1 SAR C-Band", "info");
-      }
-    } else {
-      window.map.removeLayer(sarLayerGroup);
+    const mapInst = getMapInstance();
+    if (!mapInst) return;
+    if (!mapInst.getSource('sar-flood-source') && sarData) {
+      setupSarLayers(mapInst);
+    }
+    const vis = enabled ? 'visible' : 'none';
+    if (mapInst.getLayer('sar-flood-fill')) mapInst.setLayoutProperty('sar-flood-fill', 'visibility', vis);
+    if (mapInst.getLayer('sar-flood-line')) mapInst.setLayoutProperty('sar-flood-line', 'visibility', vis);
+
+    if (enabled && window.showToast) {
+      showToast("🛰️ Đã bật Lớp Vùng ngập Vệ tinh", "Hiển thị các đa giác viễn thám Sentinel-1 SAR C-Band", "info");
     }
   }
 
   return {
     init,
-    toggle
+    toggle,
+    get isVisible() { return isVisible; }
   };
 })();
 
 // ============================================================================
-// 3. RESCUE DISPATCH MANAGER (ĐIỀU PHỐI CỨU HỘ ĐA ĐIỂM TSP)
+// 3. RESCUE DISPATCH MANAGER (ĐIỀU PHỐI CỨU HỘ ĐA ĐIỂM TSP/VRP)
 // ============================================================================
 const RescueDispatchManager = (function () {
-  let dispatchPolyline = null;
   let dispatchMarkers = [];
 
+  function getMapInstance() {
+    if (!window.map) return null;
+    return window.map._maplibre || window.map;
+  }
+
+  function setupDispatchRouteLayer(mapInst, coords) {
+    if (!mapInst) return;
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: coords // [[lng, lat], ...]
+        }
+      }]
+    };
+
+    if (mapInst.getSource('dispatch-route-source')) {
+      mapInst.getSource('dispatch-route-source').setData(geojson);
+    } else {
+      mapInst.addSource('dispatch-route-source', {
+        type: 'geojson',
+        data: geojson
+      });
+      mapInst.addLayer({
+        id: 'dispatch-route-layer',
+        type: 'line',
+        source: 'dispatch-route-source',
+        paint: {
+          'line-color': '#e11d48',
+          'line-width': 4.5,
+          'line-dasharray': [3, 2],
+          'line-opacity': 0.95
+        }
+      });
+    }
+  }
+
   async function runOptimization() {
-    const vehicle = document.getElementById('dispatch-vehicle-select')?.value || 'truck';
+    const mapInst = getMapInstance();
+    const vehicleSelect = document.getElementById('dispatch-vehicle-type');
+    const vehicle = vehicleSelect ? vehicleSelect.value : 'boat';
     const statusEl = document.getElementById('dispatch-result-box');
 
     if (statusEl) {
@@ -210,11 +292,13 @@ const RescueDispatchManager = (function () {
     }
 
     try {
-      // Lấy vị trí xuất phát từ toạ độ hiện tại hoặc tâm bản đồ
-      const center = window.map ? window.map.getCenter() : { lat: 21.0285, lng: 105.8542 };
+      const center = mapInst && typeof mapInst.getCenter === 'function' ? mapInst.getCenter() : { lat: 21.0285, lng: 105.8542 };
+      const centerLat = center.lat !== undefined ? center.lat : center[1];
+      const centerLng = center.lng !== undefined ? center.lng : center[0];
+
       const payload = {
-        start_lat: center.lat,
-        start_lng: center.lng,
+        start_lat: centerLat,
+        start_lng: centerLng,
         vehicle_type: vehicle,
         team_name: "Đội Cứu nạn Phản ứng Nhanh NorthStar"
       };
@@ -228,45 +312,57 @@ const RescueDispatchManager = (function () {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      // Xóa các marker và route cũ nếu có
-      if (dispatchPolyline && window.map) window.map.removeLayer(dispatchPolyline);
-      dispatchMarkers.forEach(m => window.map.removeLayer(m));
-      dispatchMarkers = [];
+      // Xóa các marker cũ
+      clearDispatch();
 
-      // Vẽ đường lộ trình tuần tự
-      if (data.route_polyline && window.map) {
-        dispatchPolyline = L.polyline(data.route_polyline, {
-          color: '#e11d48',
-          weight: 4,
-          dashArray: '8, 8',
-          opacity: 0.9
-        }).addTo(window.map);
-        window.map.fitBounds(dispatchPolyline.getBounds(), { padding: [40, 40] });
+      // Vẽ đường lộ trình tuần tự bằng MapLibre LineString
+      if (data.route_polyline && data.route_polyline.length && mapInst) {
+        const lineCoords = data.route_polyline.map(p => [p[1], p[0]]); // [lng, lat]
+        setupDispatchRouteLayer(mapInst, lineCoords);
+
+        // Fit bounds
+        let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+        lineCoords.forEach(c => {
+          if (c[0] < minLng) minLng = c[0];
+          if (c[0] > maxLng) maxLng = c[0];
+          if (c[1] < minLat) minLat = c[1];
+          if (c[1] > maxLat) maxLat = c[1];
+        });
+        if (minLng !== Infinity && typeof mapInst.fitBounds === 'function') {
+          mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
+        }
       }
 
-      // Đánh dấu các mốc thứ tự 1, 2, 3...
-      data.ordered_stops.forEach(s => {
-        const badgeColor = s.type === 'start' ? '#2563eb' : (s.type === 'shelter' ? '#059669' : '#e11d48');
-        const markerIcon = L.divIcon({
-          className: 'dispatch-stop-icon',
-          html: `
+      // Đánh dấu các mốc thứ tự 1, 2, 3... bằng maplibregl.Marker
+      if (data.ordered_stops && window.maplibregl && mapInst) {
+        data.ordered_stops.forEach(s => {
+          const badgeColor = s.type === 'start' ? '#2563eb' : (s.type === 'shelter' ? '#059669' : '#e11d48');
+          const el = document.createElement('div');
+          el.className = 'dispatch-stop-icon';
+          el.style.cursor = 'pointer';
+          el.innerHTML = `
             <div style="background-color: ${badgeColor};" class="w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white">
               ${s.step}
             </div>
-          `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
+          `;
+
+          const popup = new window.maplibregl.Popup({ offset: 12, className: 'c2-dark-glass-popup' })
+            .setHTML(`
+              <div class="p-1.5 text-xs font-sans text-slate-800">
+                <b>Chặng ${s.step}: ${s.title}</b>
+                <div class="text-slate-600 mt-1">${s.action}</div>
+                <div class="text-[10px] text-slate-400 mt-1">Cách chặng trước: ~${s.distance_from_prev_km} km</div>
+              </div>
+            `);
+
+          const m = new window.maplibregl.Marker({ element: el })
+            .setLngLat([s.lng, s.lat])
+            .setPopup(popup)
+            .addTo(mapInst);
+
+          dispatchMarkers.push(m);
         });
-        const m = L.marker([s.lat, s.lng], { icon: markerIcon }).addTo(window.map);
-        m.bindPopup(`
-          <div class="p-1.5 text-xs font-sans">
-            <b>Chặng ${s.step}: ${s.title}</b>
-            <div class="text-slate-600 mt-1">${s.action}</div>
-            <div class="text-[10px] text-slate-400 mt-1">Cách chặng trước: ~${s.distance_from_prev_km} km</div>
-          </div>
-        `);
-        dispatchMarkers.push(m);
-      });
+      }
 
       // Hiển thị kết quả tóm tắt trên sidebar
       if (statusEl) {
@@ -290,7 +386,7 @@ const RescueDispatchManager = (function () {
                 </div>
               `).join('')}
             </div>
-            <button onclick="RescueDispatchManager.clearDispatch()" class="w-full mt-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded border transition">
+            <button onclick="RescueDispatchManager.clearDispatch()" class="w-full mt-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded border transition cursor-pointer">
               Xóa lộ trình điều phối
             </button>
           </div>
@@ -309,8 +405,13 @@ const RescueDispatchManager = (function () {
   }
 
   function clearDispatch() {
-    if (dispatchPolyline && window.map) window.map.removeLayer(dispatchPolyline);
-    dispatchMarkers.forEach(m => window.map.removeLayer(m));
+    const mapInst = getMapInstance();
+    if (mapInst && mapInst.getSource('dispatch-route-source')) {
+      mapInst.getSource('dispatch-route-source').setData({ type: 'FeatureCollection', features: [] });
+    }
+    dispatchMarkers.forEach(m => {
+      if (m && typeof m.remove === 'function') m.remove();
+    });
     dispatchMarkers = [];
     const statusEl = document.getElementById('dispatch-result-box');
     if (statusEl) {
