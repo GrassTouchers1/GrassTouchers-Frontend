@@ -6,7 +6,13 @@
   --font-main: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-html, body, button, input, select, textarea, .font-sans {
+html,
+body,
+button,
+input,
+select,
+textarea,
+.font-sans {
   font-family: var(--font-main) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -54,15 +60,33 @@ html, body, button, input, select, textarea, .font-sans {
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.9; }
-  100% { transform: scale(2.4); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 /* Hiệu ứng sóng ngập lan tỏa động (FE-04) */
 @keyframes pulse-wave {
-  0% { stroke-width: 1.5; stroke-opacity: 0.9; }
-  50% { stroke-width: 3.5; stroke-opacity: 0.35; }
-  100% { stroke-width: 1.5; stroke-opacity: 0.9; }
+  0% {
+    stroke-width: 1.5;
+    stroke-opacity: 0.9;
+  }
+
+  50% {
+    stroke-width: 3.5;
+    stroke-opacity: 0.35;
+  }
+
+  100% {
+    stroke-width: 1.5;
+    stroke-opacity: 0.9;
+  }
 }
 
 .animated-flood-ring {
@@ -73,6 +97,7 @@ html, body, button, input, select, textarea, .font-sans {
 .flood-pulse-danger {
   position: relative;
 }
+
 .flood-pulse-danger::after {
   content: '';
   position: absolute;
@@ -90,6 +115,7 @@ html, body, button, input, select, textarea, .font-sans {
 .flood-pulse-warning {
   position: relative;
 }
+
 .flood-pulse-warning::after {
   content: '';
   position: absolute;
@@ -116,6 +142,7 @@ html, body, button, input, select, textarea, .font-sans {
   border: 2px solid #ffffff;
   transition: transform 0.2s ease;
 }
+
 .custom-marker:hover {
   transform: scale(1.2);
   z-index: 1000 !important;
@@ -126,11 +153,13 @@ body.dark-mode {
   background-color: #090d16;
   color: #f8fafc;
 }
+
 body.dark-mode aside {
   background-color: #111827;
   border-color: #1f2937;
   color: #f8fafc;
 }
+
 body.dark-mode .bg-white,
 body.dark-mode .bg-white\/95,
 body.dark-mode .bg-white\/90,
@@ -186,18 +215,22 @@ body.dark-mode #btn-toggle-hazard-layers-float,
   color: #38bdf8 !important;
   border-color: #334155 !important;
 }
+
 body.dark-mode .bg-slate-50 {
   background-color: #0b1120 !important;
   color: #e2e8f0 !important;
 }
+
 body.dark-mode .border-slate-200,
 body.dark-mode .border-slate-300 {
   border-color: #1f2937 !important;
 }
+
 body.dark-mode .text-slate-800,
 body.dark-mode .text-slate-900 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .text-slate-700,
 body.dark-mode .text-slate-600 {
   color: #94a3b8 !important;
@@ -207,7 +240,9 @@ body.dark-mode .text-slate-600 {
    Cố định màu chữ & độ tương phản cho Form Input / Textarea / Select
    Khắc phục triệt để lỗi gõ không hiện chữ do chữ trắng trên nền trắng
    ======================================================== */
-input, textarea, select {
+input,
+textarea,
+select {
   color: #0f172a;
 }
 
@@ -235,7 +270,8 @@ textarea::placeholder,
 #sos-input-notes::placeholder,
 #origin-text::placeholder,
 #dest-text::placeholder {
-  color: #64748b !important; /* Slate 500 */
+  color: #64748b !important;
+  /* Slate 500 */
   opacity: 1 !important;
 }
 
@@ -252,13 +288,16 @@ body.dark-mode select:not(.bg-white) {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
 }
+
 body.dark-mode ::-webkit-scrollbar-thumb {
   background: #374151;
 }
@@ -270,14 +309,17 @@ body.dark-mode #dest-suggestions {
   border-color: #374151 !important;
   color: #f8fafc !important;
 }
-body.dark-mode #origin-suggestions > div:hover,
-body.dark-mode #dest-suggestions > div:hover {
+
+body.dark-mode #origin-suggestions>div:hover,
+body.dark-mode #dest-suggestions>div:hover {
   background-color: #1f2937 !important;
 }
+
 body.dark-mode #origin-suggestions p.text-slate-800,
 body.dark-mode #dest-suggestions p.text-slate-800 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #origin-suggestions p.text-slate-500,
 body.dark-mode #dest-suggestions p.text-slate-500 {
   color: #94a3b8 !important;
@@ -289,6 +331,7 @@ body.dark-mode #dest-suggestions p.text-slate-500 {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -301,6 +344,7 @@ body.dark-mode #dest-suggestions p.text-slate-500 {
     margin-right: 8px !important;
     max-height: 48px !important;
   }
+
   #sidebar-panel {
     top: 58px !important;
     height: calc(100vh - 58px) !important;
@@ -315,16 +359,19 @@ body.dark-mode #sidebar-panel {
   background-color: #111827 !important;
   border-color: #1f2937 !important;
 }
+
 body.dark-mode #sidebar-panel .bg-slate-100 {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #mobile-route-floating-card {
   background-color: rgba(17, 24, 39, 0.95) !important;
   border-color: #374151 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode #mobile-route-floating-card #mobile-card-title {
   color: #f1f5f9 !important;
 }
@@ -335,51 +382,64 @@ body.dark-mode .bg-blue-50 {
   border-color: rgba(59, 130, 246, 0.3) !important;
   color: #93c5fd !important;
 }
+
 body.dark-mode .bg-blue-50\/50 {
   background-color: rgba(30, 58, 138, 0.25) !important;
 }
+
 body.dark-mode .text-blue-800 {
   color: #93c5fd !important;
 }
+
 body.dark-mode .border-blue-100 {
   border-color: rgba(59, 130, 246, 0.2) !important;
 }
+
 body.dark-mode label.border-slate-200 {
   border-color: #334155 !important;
 }
+
 body.dark-mode label.border-slate-200:hover {
   background-color: #1e293b !important;
 }
+
 body.dark-mode button.bg-white {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode button.bg-white:hover {
   background-color: #334155 !important;
 }
+
 body.dark-mode .leaflet-bar a,
 body.dark-mode .leaflet-control-layers {
   background-color: #111827 !important;
   color: #f1f5f9 !important;
   border-color: #374151 !important;
 }
+
 body.dark-mode .leaflet-bar a {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .leaflet-control-layers-expanded {
   background-color: #111827 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .leaflet-control-attribution {
   background-color: rgba(17, 24, 39, 0.8) !important;
   color: #94a3b8 !important;
 }
+
 body.dark-mode .leaflet-control-attribution a {
   color: #60a5fa !important;
 }
-body.dark-mode #onboarding-modal > div > div,
-body.dark-mode #dashboard-modal > div {
+
+body.dark-mode #onboarding-modal>div>div,
+body.dark-mode #dashboard-modal>div {
   background-color: #111827 !important;
   color: #f8fafc !important;
   border-color: #374151 !important;
@@ -396,6 +456,7 @@ body.dark-mode #dashboard-modal > div {
     opacity: 0;
     transform: translate(-50%, -12px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
@@ -547,9 +608,20 @@ body.dark-mode .floating-header {
 }
 
 @keyframes cluster-pulse-danger {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.8; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
 }
 
 /* Hiệu ứng spiderfy đường nối của Leaflet MarkerCluster */
@@ -574,9 +646,17 @@ body.dark-mode .cluster-danger-dot {
   transform-origin: top right;
   animation: dropdown-pop 0.15s ease-out;
 }
+
 @keyframes dropdown-pop {
-  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 body.dark-mode #header-more-dropdown {
@@ -584,6 +664,7 @@ body.dark-mode #header-more-dropdown {
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #header-more-dropdown button:hover {
   background-color: #1e293b !important;
 }
@@ -593,38 +674,47 @@ body.dark-mode #flood-summary-card h3,
 body.dark-mode #route-results h3 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #summary-loading-view {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
   color: #94a3b8 !important;
 }
+
 body.dark-mode #summary-content-view .bg-slate-50 {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
   color: #cbd5e1 !important;
 }
+
 body.dark-mode #summary-content-view .bg-cyan-50\/70 {
   background-color: rgba(8, 51, 68, 0.4) !important;
   border-color: rgba(6, 182, 212, 0.3) !important;
   color: #a5f3fc !important;
 }
+
 body.dark-mode #card-safe-route {
   background: linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(15, 118, 110, 0.3)) !important;
   border-color: #059669 !important;
 }
+
 body.dark-mode #card-safe-route span.text-slate-900 {
   color: #ffffff !important;
 }
+
 body.dark-mode #card-safe-route span.text-slate-500 {
   color: #94a3b8 !important;
 }
+
 body.dark-mode #card-fastest-route {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
 }
+
 body.dark-mode #card-fastest-route span.text-slate-900 {
   color: #ffffff !important;
 }
+
 body.dark-mode #card-fastest-route span.text-slate-500 {
   color: #94a3b8 !important;
 }
@@ -640,11 +730,13 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.75), 0 0 15px rgba(14, 165, 233, 0.2) !important;
   color: #f8fafc !important;
 }
+
 .flood-custom-popup .leaflet-popup-content {
   margin: 8px 10px;
   line-height: 1.4;
   color: #f8fafc !important;
 }
+
 .flood-custom-popup a.leaflet-popup-close-button {
   top: 8px;
   right: 8px;
@@ -660,24 +752,30 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   transition: all 0.15s ease;
   z-index: 10;
 }
+
 .flood-custom-popup a.leaflet-popup-close-button:hover {
   color: #ffffff !important;
   background-color: #334155 !important;
 }
+
 .flood-custom-popup .leaflet-popup-tip {
   background: #0f172a !important;
   box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.5);
 }
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
@@ -770,9 +868,11 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   background-color: rgba(49, 46, 129, 0.35) !important;
   border-color: rgba(99, 102, 241, 0.4) !important;
 }
+
 .flood-custom-popup .text-indigo-900 {
   color: #c7d2fe !important;
 }
+
 .flood-custom-popup .text-indigo-600 {
   color: #818cf8 !important;
 }
@@ -914,10 +1014,12 @@ body.command-mode-active .floating-header {
     transform: scale(0.9);
     opacity: 0.8;
   }
+
   70% {
     transform: scale(2.2);
     opacity: 0;
   }
+
   100% {
     transform: scale(2.4);
     opacity: 0;
@@ -961,7 +1063,7 @@ body.command-mode-active .floating-header {
   justify-content: center !important;
 }
 
-.maplibregl-ctrl-group button + button {
+.maplibregl-ctrl-group button+button {
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
@@ -996,122 +1098,4 @@ body.command-mode-active .floating-header {
   border-radius: 0 0 6px 6px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
-
-/* =========================================================================
- * C2 TACTICAL PROVINCE FLOOD CLUSTER BADGES (LEAFLET-STYLE MAPLIBRE CLUSTERING)
- * ========================================================================= */
-.c2-province-cluster-badge {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  margin: 0 !important;
-  pointer-events: auto !important;
-  z-index: 35 !important;
-  cursor: pointer !important;
-  user-select: none;
-  transform: translate(-50%, -50%);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.c2-province-cluster-badge:hover {
-  transform: translate(-50%, -50%) scale(1.12);
-  z-index: 45 !important;
-}
-
-.c2-province-cluster-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 12px 5px 9px;
-  background: rgba(11, 15, 25, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(56, 189, 248, 0.7);
-  border-radius: 9999px;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.85), 0 0 18px rgba(56, 189, 248, 0.35);
-  color: #fff;
-  transition: all 0.2s ease;
-}
-
-.c2-province-cluster-badge:hover .c2-province-cluster-inner {
-  border-color: #38bdf8;
-  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.95), 0 0 25px rgba(56, 189, 248, 0.6);
-}
-
-.c2-province-cluster-icon {
-  font-size: 15px;
-  line-height: 1;
-}
-
-.c2-province-cluster-name {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #f1f5f9;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.c2-province-cluster-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 900;
-  line-height: 1.2;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-
-.c2-province-cluster-count.danger {
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-  color: #fff;
-  border: 1px solid rgba(254, 202, 202, 0.5);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
-}
-
-.c2-province-cluster-count.warning {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-  color: #fff;
-  border: 1px solid rgba(254, 240, 138, 0.5);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
-}
-
-.c2-province-cluster-count.safe {
-  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
-  color: #fff;
-  border: 1px solid rgba(186, 230, 253, 0.5);
-  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
-}
-
-.c2-province-cluster-pulse {
-  position: absolute;
-  inset: -6px;
-  border-radius: 9999px;
-  pointer-events: none;
-  animation: provinceClusterPulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-}
-
-.c2-province-cluster-pulse.danger {
-  background: rgba(239, 68, 68, 0.35);
-}
-
-.c2-province-cluster-pulse.warning {
-  background: rgba(245, 158, 11, 0.3);
-}
-
-.c2-province-cluster-pulse.safe {
-  background: rgba(6, 182, 212, 0.25);
-}
-
-@keyframes provinceClusterPulse {
-  0% { transform: scale(0.92); opacity: 0.9; }
-  70% { transform: scale(1.25); opacity: 0; }
-  100% { transform: scale(1.28); opacity: 0; }
-}
-
-
-
-
 

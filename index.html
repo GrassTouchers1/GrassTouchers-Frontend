@@ -37,7 +37,7 @@
   </script>
 
   <!-- MapLibre GL JS (BSD-3-Clause - OSI Approved Open-Source 3D Vector Map Engine) -->
-  <link rel="stylesheet" href="css/maplibre-gl.css?v=20261122_opt_v6" />
+  <link rel="stylesheet" href="css/maplibre-gl.css?v=20261122_opt_v7" />
   <script src="js/vendor/maplibre-gl.js"></script>
 
   <!-- Lucide Icons -->
@@ -47,7 +47,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css?v=20261122_opt_v6" />
+  <link rel="stylesheet" href="css/style.css?v=20261122_opt_v7" />
   <style>
     /* Command Interface Specific Overrides */
     .cmd-nav-item {
@@ -202,103 +202,6 @@
       padding: 1px 6px !important;
       border-radius: 0 0 6px 6px !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
-    }
-    /* C2 Tactical Province Flood Cluster Badge (Leaflet-Style Clustering) */
-    .c2-province-cluster-badge {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      margin: 0 !important;
-      pointer-events: auto !important;
-      z-index: 35 !important;
-      cursor: pointer !important;
-      user-select: none;
-      transform: translate(-50%, -50%);
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .c2-province-cluster-badge:hover {
-      transform: translate(-50%, -50%) scale(1.12);
-      z-index: 45 !important;
-    }
-    .c2-province-cluster-inner {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 5px 12px 5px 9px;
-      background: rgba(11, 15, 25, 0.94);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1.5px solid rgba(56, 189, 248, 0.7);
-      border-radius: 9999px;
-      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.85), 0 0 18px rgba(56, 189, 248, 0.35);
-      color: #fff;
-      transition: all 0.2s ease;
-    }
-    .c2-province-cluster-badge:hover .c2-province-cluster-inner {
-      border-color: #38bdf8;
-      box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.95), 0 0 25px rgba(56, 189, 248, 0.6);
-    }
-    .c2-province-cluster-icon {
-      font-size: 15px;
-      line-height: 1;
-    }
-    .c2-province-cluster-name {
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #f1f5f9;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-    }
-    .c2-province-cluster-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 8px;
-      border-radius: 9999px;
-      font-size: 11px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-weight: 900;
-      line-height: 1.2;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-    .c2-province-cluster-count.danger {
-      background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-      color: #fff;
-      border: 1px solid rgba(254, 202, 202, 0.5);
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
-    }
-    .c2-province-cluster-count.warning {
-      background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-      color: #fff;
-      border: 1px solid rgba(254, 240, 138, 0.5);
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
-    }
-    .c2-province-cluster-count.safe {
-      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
-      color: #fff;
-      border: 1px solid rgba(186, 230, 253, 0.5);
-      box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
-    }
-    .c2-province-cluster-pulse {
-      position: absolute;
-      inset: -6px;
-      border-radius: 9999px;
-      pointer-events: none;
-      animation: provinceClusterPulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-    }
-    .c2-province-cluster-pulse.danger {
-      background: rgba(239, 68, 68, 0.35);
-    }
-    .c2-province-cluster-pulse.warning {
-      background: rgba(245, 158, 11, 0.3);
-    }
-    .c2-province-cluster-pulse.safe {
-      background: rgba(6, 182, 212, 0.25);
-    }
-    @keyframes provinceClusterPulse {
-      0% { transform: scale(0.92); opacity: 0.9; }
-      70% { transform: scale(1.25); opacity: 0; }
-      100% { transform: scale(1.28); opacity: 0; }
     }
     .animated-marker-pulse {
       animation: markerPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
@@ -3789,20 +3692,20 @@
   <!-- ========================================== -->
   <!-- 4. CORE JAVASCRIPT MODULES PIPELINE        -->
   <!-- ========================================== -->
-  <script src="js/config.js?v=20261122_opt_v6"></script>
-  <script src="js/offline_sync_manager.js?v=20261122_opt_v6"></script>
-  <script src="js/command_ui_controller.js?v=20261122_opt_v6"></script>
-  <script src="js/coordinator_command.js?v=20261122_opt_v6"></script>
-  <script src="js/map_core.js?v=20261122_opt_v6"></script>
-  <script src="js/provinces_weather_layer.js?v=20261122_opt_v6"></script>
-  <script src="js/rescue_manager.js?v=20261122_opt_v6"></script>
-  <script src="js/advanced_modules.js?v=20261122_opt_v6"></script>
-  <script src="js/storm_simulator.js?v=20261122_opt_v6"></script>
-  <script src="js/voice_sos.js?v=20261122_opt_v6"></script>
+  <script src="js/config.js?v=20261122_opt_v7"></script>
+  <script src="js/offline_sync_manager.js?v=20261122_opt_v7"></script>
+  <script src="js/command_ui_controller.js?v=20261122_opt_v7"></script>
+  <script src="js/coordinator_command.js?v=20261122_opt_v7"></script>
+  <script src="js/map_core.js?v=20261122_opt_v7"></script>
+  <script src="js/provinces_weather_layer.js?v=20261122_opt_v7"></script>
+  <script src="js/rescue_manager.js?v=20261122_opt_v7"></script>
+  <script src="js/advanced_modules.js?v=20261122_opt_v7"></script>
+  <script src="js/storm_simulator.js?v=20261122_opt_v7"></script>
+  <script src="js/voice_sos.js?v=20261122_opt_v7"></script>
 
   <!-- MapLibre GL JS 3D Vector Engine (BSD-3-Clause - OSI Approved) -->
   <script src="js/vendor/maplibre-gl.js"></script>
-  <script src="js/maplibre_engine.js?v=20261122_opt_v6"></script>
+  <script src="js/maplibre_engine.js?v=20261122_opt_v7"></script>
 
   <!-- Complete Initialization Lifecycle -->
   <script>

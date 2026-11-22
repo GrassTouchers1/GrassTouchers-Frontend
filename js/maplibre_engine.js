@@ -2175,10 +2175,8 @@ window.NorthStarMapLibre = (function () {
   }
 
   /**
-   * HIỂN THỊ CỤM ĐIỂM NGẬP THÔNG MINH (LEAFLET-STYLE MAPLIBRE CLUSTERING)
-   * - Zoom < 11.2 (Toàn cảnh / Cấp tỉnh): Huy hiệu tổng hợp số điểm ngập từng Tỉnh/Thành (VD: 🏛️ Hà Nội [130])
-   * - Nhấp vào huy hiệu: Camera flyTo/fitBounds phóng to mượt mà vào trung tâm tỉnh.
-   * - Zoom >= 11.2 (Chi tiết đô thị / quận huyện): Tự động bung toàn bộ các điểm ngập chi tiết kèm mực nước (cm) & sóng radar.
+   * HIỂN THỊ ĐIỂM NGẬP LỤT TÁC CHIẾN (VIEWPORT CULLING 60 FPS)
+   * Render trực tiếp các điểm ngập kèm mực nước (cm) & sóng radar, loại bỏ hoàn toàn huy hiệu cụm rườm rà.
    */
   function renderClusteredFloodMarkers() {
     if (!mapInstance || !layerVisibility.floodPoints) return;
@@ -2189,126 +2187,19 @@ window.NorthStarMapLibre = (function () {
     const validPoints = cachedRawFloodPoints;
     if (!validPoints.length) return;
 
-    const currentZoom = mapInstance.getZoom();
-    const CLUSTER_THRESHOLD_ZOOM = 11.0;
-
-    if (currentZoom < CLUSTER_THRESHOLD_ZOOM) {
-      // CẤP ĐỘ 1: TOÀN CẢNH MIỀN BẮC / TỈNH THÀNH (ZOOM < 11.0)
-      // Gom nhóm điểm ngập theo từng Tỉnh Thành để hiển thị số lượng cụm (như Leaflet MarkerCluster)
-      const provGroups = {};
-      validPoints.forEach(pt => {
-        const prov = getProvinceForFloodPoint(pt);
-        if (!provGroups[prov]) provGroups[prov] = [];
-        provGroups[prov].push(pt);
-      });
-
-      Object.entries(provGroups).forEach(([provName, groupPts]) => {
-        createProvinceClusterMarker(provName, groupPts);
-      });
-    } else {
-      // CẤP ĐỘ 2: PHÓNG TO CHI TIẾT ĐÔ THỊ / QUẬN HUYỆN (ZOOM >= 11.0)
-      // Tối ưu hóa Viewport Culling: Chỉ tạo DOM marker cho các điểm ngập trong khung nhìn (+25% lề an toàn)
-      const bounds = mapInstance.getBounds();
-      let ptsToRender = validPoints;
-      if (bounds) {
-        const lngSpan = bounds.getEast() - bounds.getWest();
-        const latSpan = bounds.getNorth() - bounds.getSouth();
-        const minLng = bounds.getWest() - lngSpan * 0.25;
-        const maxLng = bounds.getEast() + lngSpan * 0.25;
-        const minLat = bounds.getSouth() - latSpan * 0.25;
-        const maxLat = bounds.getNorth() + latSpan * 0.25;
-        ptsToRender = validPoints.filter(pt => pt.lng >= minLng && pt.lng <= maxLng && pt.lat >= minLat && pt.lat <= maxLat);
-      }
-      ptsToRender.forEach(pt => createIndividualFloodMarker(pt));
+    // Tối ưu hóa Viewport Culling: Chỉ tạo DOM marker cho các điểm ngập trong khung nhìn (+25% lề an toàn)
+    const bounds = mapInstance.getBounds();
+    let ptsToRender = validPoints;
+    if (bounds) {
+      const lngSpan = bounds.getEast() - bounds.getWest();
+      const latSpan = bounds.getNorth() - bounds.getSouth();
+      const minLng = bounds.getWest() - lngSpan * 0.25;
+      const maxLng = bounds.getEast() + lngSpan * 0.25;
+      const minLat = bounds.getSouth() - latSpan * 0.25;
+      const maxLat = bounds.getNorth() + latSpan * 0.25;
+      ptsToRender = validPoints.filter(pt => pt.lng >= minLng && pt.lng <= maxLng && pt.lat >= minLat && pt.lat <= maxLat);
     }
-  }
-
-  /**
-   * TẠO HUY HIỆU CỤM ĐIỂM NGẬP CẤP TỈNH THÀNH (PROVINCE FLOOD CLUSTER BADGE)
-   * Hiển thị biểu tượng, tên tỉnh, số lượng vùng ngập, viền phát sáng cảnh báo, nhấp để phóng to bung điểm.
-   */
-  function createProvinceClusterMarker(provName, group) {
-    const count = group.length;
-    const hasDanger = group.some(pt => pt.depth >= 20 || pt.status === 'danger');
-    const hasWarning = group.some(pt => pt.depth >= 5 || pt.status === 'warning');
-
-    let threatClass = 'safe';
-    if (hasDanger) threatClass = 'danger';
-    else if (hasWarning) threatClass = 'warning';
-
-    const meta = (window.ProvinceWeatherLayer && window.ProvinceWeatherLayer.metadata && window.ProvinceWeatherLayer.metadata[provName]) || {};
-    const icon = meta.icon || (provName === 'Hà Nội' ? '🏛️' : '📍');
-
-    // Tính tọa độ trung tâm cụm điểm ngập
-    let avgLat = 0, avgLng = 0;
-    group.forEach(pt => {
-      avgLat += pt.lat;
-      avgLng += pt.lng;
-    });
-    avgLat /= count;
-    avgLng /= count;
-
-    // Định vị tối ưu
-    const provTarget = NORTHERN_PROVINCE_TARGETS[provName];
-    if (count <= 2 && provTarget) {
-      avgLng = provTarget.center[0];
-      avgLat = provTarget.center[1];
-    } else if (provName === 'Hà Nội') {
-      avgLng = 105.825;
-      avgLat = 21.025;
-    }
-
-    const el = document.createElement('div');
-    el.className = 'c2-province-cluster-badge group';
-    el.title = `${icon} ${provName}: ${count} vùng ngập lụt. Nhấp để phóng to chi tiết!`;
-    el.innerHTML = `
-      <span class="c2-province-cluster-pulse ${threatClass}"></span>
-      <div class="c2-province-cluster-inner">
-        <span class="c2-province-cluster-icon">${icon}</span>
-        <span class="c2-province-cluster-name">${provName}</span>
-        <span class="c2-province-cluster-count ${threatClass}">${count}</span>
-      </div>
-    `;
-
-    // Nhấp huy hiệu: Phóng to mượt mà bay vào tỉnh thành (zoom 12.8), tự động bung toàn bộ các điểm ngập chi tiết ra!
-    el.onclick = (e) => {
-      e.stopPropagation();
-      closeCurrentPopup();
-
-      const targetZoom = provName === 'Hà Nội' ? 12.8 : (count > 1 ? 12.5 : 12.2);
-      mapInstance.flyTo({
-        center: [avgLng, avgLat],
-        zoom: targetZoom,
-        duration: 800,
-        essential: true
-      });
-
-      // Đồng bộ vào dropdown tỉnh thành
-      const provSel = document.getElementById('ml-province-selector');
-      if (provSel) {
-        for (let i = 0; i < provSel.options.length; i++) {
-          if (provSel.options[i].value === provName) {
-            provSel.selectedIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (typeof window.showNorthStarToast === 'function') {
-        window.showNorthStarToast(`🔍 Phóng to tiêu điểm ${icon} ${provName} (${count} điểm ngập)`, 'info', 2000);
-      }
-    };
-
-    const marker = new maplibregl.Marker({
-      element: el,
-      anchor: 'center',
-      rotationAlignment: 'viewport',
-      pitchAlignment: 'viewport'
-    })
-      .setLngLat([avgLng, avgLat])
-      .addTo(mapInstance);
-
-    markersRegistry.floodPoints.push(marker);
+    ptsToRender.forEach(pt => createIndividualFloodMarker(pt));
   }
 
   function createIndividualFloodMarker(pt) {
