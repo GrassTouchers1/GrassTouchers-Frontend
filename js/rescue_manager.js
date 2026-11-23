@@ -717,7 +717,6 @@ const NorthStarRescue = (function () {
       mapInst.flyTo({ center: [lng, lat], zoom: 15.5, duration: 1200 });
     }
   }
-  }
 
   function toggleLayer(layerType, show) {
     if (!window.map) return;

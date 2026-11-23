@@ -485,6 +485,7 @@
     }
 
     fetchLiveOpenMeteo();
+    setInterval(fetchLiveOpenMeteo, 10 * 60 * 1000);
   }
 
   function setupProvincesLayers(mapInst) {
@@ -538,8 +539,6 @@
         mapInst.getCanvas().style.cursor = '';
       });
     }
-  }  // Tự động làm mới dữ liệu sau mỗi 10 phút
-    setInterval(fetchLiveOpenMeteo, 10 * 60 * 1000);
 
     console.log('[ProvinceWeather] Lớp Phân vùng Tỉnh thành khổng lồ (Interactive Tactical Regions) đã kích hoạt thành công.');
   }

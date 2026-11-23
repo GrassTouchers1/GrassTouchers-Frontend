@@ -1350,6 +1350,724 @@ function zoomToAllPoints() {
     mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
   }
 }
+
+function updateViewportFloodAlert() {
+  if (!floodPoints || floodPoints.length === 0) return;
+
+  const alertEl = document.getElementById('viewport-flood-alert');
+  const alertText = document.getElementById('viewport-alert-text');
+  const alertBtn = document.getElementById('viewport-alert-btn');
+  const alertIcon = document.getElementById('viewport-alert-icon');
+  if (!alertEl || !alertText || !alertBtn || !alertIcon) return;
+
+  let inView = [];
+  if (mapInstance && typeof mapInstance.getBounds === 'function') {
+    const b = mapInstance.getBounds();
+    inView = floodPoints.filter(fp => fp.lng >= b.getWest() && fp.lng <= b.getEast() && fp.lat >= b.getSouth() && fp.lat <= b.getNorth());
+  } else if (map && typeof map.getBounds === 'function') {
+    inView = floodPoints.filter(fp => map.getBounds().contains([fp.lat, fp.lng]));
+  } else {
+    inView = floodPoints;
+  }
+
+  const dangerInView = inView.filter(fp => fp.status === 'danger');
+  const warningInView = inView.filter(fp => fp.status === 'warning');
+  const offlineOrNoDataInView = inView.filter(fp => fp.status === 'offline' || fp.status === 'no_data' || fp.status === 'invalid' || fp.status === 'stale');
+  const safeInView = inView.filter(fp => fp.status === 'safe');
+
+  alertEl.classList.remove('hidden');
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+  const baseClass = isDark
+    ? 'pointer-events-auto max-w-lg px-3 py-1.5 rounded-xl shadow-2xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 '
+    : 'pointer-events-auto max-w-lg px-3 py-1.5 rounded-xl shadow-xl text-xs font-semibold backdrop-blur-md flex items-center gap-2 border transition-all duration-300 ';
+
+  if (dangerInView.length > 0) {
+    dangerInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
+    viewportAlertTargetPoint = dangerInView[0];
+    alertEl.className = baseClass + (isDark ? 'bg-rose-950/90 border-rose-700/80 text-rose-200' : 'bg-rose-50/95 border-rose-300 text-rose-900 shadow-rose-200/50');
+    alertIcon.className = 'p-1 rounded-full bg-rose-200 dark:bg-rose-900 text-rose-700 dark:text-rose-300 animate-pulse flex-shrink-0';
+    alertIcon.innerHTML = '<i data-lucide="alert-octagon" class="w-4 h-4"></i>';
+
+    const spotNames = dangerInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
+    const more = dangerInView.length > 2 ? ` và ${dangerInView.length - 2} điểm khác` : '';
+    alertText.innerHTML = `<span class="font-bold text-rose-400">Nguy hiểm:</span> ${dangerInView.length} điểm ngập sâu: <b>${spotNames}</b>${more}`;
+
+    alertBtn.classList.remove('hidden');
+    alertBtn.className = 'px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow cursor-pointer';
+    alertBtn.innerText = 'Xem điểm ngập';
+
+    const now = Date.now();
+    if (window.VoiceWarning && (now - lastVoiceViewportAlertTime > 15000)) {
+      lastVoiceViewportAlertTime = now;
+      VoiceWarning.speak(`Khu vực này có điểm ngập sâu nguy hiểm tại ${viewportAlertTargetPoint.name}, mực nước ${viewportAlertTargetPoint.depth_cm} centimet.`);
+    }
+  } else if (warningInView.length > 0) {
+    warningInView.sort((a, b) => (Number(b.depth_cm) || 0) - (Number(a.depth_cm) || 0));
+    viewportAlertTargetPoint = warningInView[0];
+    alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-amber-600/70 text-amber-200 shadow-slate-950/60' : 'bg-amber-50/95 border-amber-300 text-amber-900 shadow-amber-200/50');
+    alertIcon.className = 'p-1 rounded-full bg-amber-200 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex-shrink-0';
+    alertIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i>';
+
+    const spotNames = warningInView.slice(0, 2).map(p => `${p.name} (${p.depth_cm}cm)`).join(', ');
+    const more = warningInView.length > 2 ? ` và ${warningInView.length - 2} điểm khác` : '';
+    alertText.innerHTML = `<span class="font-bold text-amber-400">Chú ý:</span> ${warningInView.length} điểm ngập nhẹ: <b>${spotNames}</b>${more}`;
+
+    alertBtn.classList.remove('hidden');
+    alertBtn.className = 'px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow cursor-pointer';
+    alertBtn.innerText = 'Xem vị trí';
+  } else if (inView.length > 0) {
+    viewportAlertTargetPoint = null;
+    if (offlineOrNoDataInView.length === 0) {
+      alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-emerald-700/80 text-emerald-200' : 'bg-emerald-50/95 border-emerald-300 text-emerald-900 shadow-emerald-200/50');
+      alertIcon.className = 'p-1 rounded-full bg-emerald-200 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex-shrink-0';
+      alertIcon.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i>';
+      alertText.innerHTML = `Khu vực đang xem có <b>${inView.length}</b> trạm quan trắc, tất cả đều an toàn (&lt;5cm)`;
+    } else {
+      alertEl.className = baseClass + (isDark ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-slate-50/95 border-slate-300 text-slate-800 shadow-slate-200/50');
+      alertIcon.className = 'p-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex-shrink-0';
+      alertIcon.innerHTML = '<i data-lucide="info" class="w-4 h-4"></i>';
+      alertText.innerHTML = `Khu vực có <b>${safeInView.length}</b> trạm an toàn, <b>${offlineOrNoDataInView.length}</b> trạm chưa có dữ liệu`;
+    }
+    alertBtn.classList.add('hidden');
+  } else {
+    let centerLng = 105.8542, centerLat = 21.0285;
+    if (mapInstance && typeof mapInstance.getCenter === 'function') {
+      const c = mapInstance.getCenter();
+      centerLng = c.lng;
+      centerLat = c.lat;
+    }
+    let minDist = Infinity;
+    let nearest = null;
+    floodPoints.forEach(fp => {
+      const d = Math.sqrt(Math.pow((fp.lat - centerLat) * 111000, 2) + Math.pow((fp.lng - centerLng) * 103000, 2));
+      if (d < minDist) {
+        minDist = d;
+        nearest = fp;
+      }
+    });
+
+    if (nearest) {
+      viewportAlertTargetPoint = nearest;
+      alertEl.className = baseClass + 'bg-slate-900/90 border-slate-700 text-white shadow-xl';
+      alertIcon.className = 'p-1 rounded-full bg-slate-800 text-cyan-300 flex-shrink-0';
+      alertIcon.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i>';
+      const distKm = (minDist / 1000).toFixed(1);
+      alertText.innerHTML = `Chưa có điểm ngập trong khung nhìn. Gần nhất: <b>${nearest.name}</b> (${distKm} km)`;
+      alertBtn.classList.remove('hidden');
+      alertBtn.className = 'px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition flex-shrink-0 shadow';
+      alertBtn.innerText = 'Đến xem';
+    }
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function flyToPoint(lat, lng) {
+  if (mapInstance && typeof mapInstance.flyTo === 'function') {
+    mapInstance.flyTo({ center: [lng, lat], zoom: 16, duration: 1000 });
+  } else if (map && typeof map.flyTo === 'function') {
+    map.flyTo([lat, lng], 16, { duration: 1 });
+  }
+}
+
+async function updateSensorDepth(pointId, depthCm) {
+  try {
+    const res = await fetch(getApiUrl('/api/readings'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        point_id: Number(pointId),
+        depth_cm: Number(depthCm),
+        source: 'sensor'
+      })
+    });
+    if (res.ok) {
+      await loadFloodPoints();
+      if (coords.origin && coords.destination) {
+        calculateRoute();
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi cập nhật số đo cảm biến:', err);
+  }
+}
+
+function toggleMobilePanel(show) {
+  const panel = document.getElementById('sidebar-panel');
+  const openBtn = document.getElementById('btn-mobile-open-panel');
+  if (!panel) return;
+
+  if (show) {
+    panel.classList.remove('translate-y-full');
+    panel.classList.add('translate-y-0');
+    if (openBtn) openBtn.classList.add('hidden');
+  } else {
+    panel.classList.add('translate-y-full');
+    panel.classList.remove('translate-y-0');
+    if (openBtn) openBtn.classList.remove('hidden');
+  }
+
+  setTimeout(() => {
+    if (mapInstance && typeof mapInstance.resize === 'function') mapInstance.resize();
+    if (window.map && typeof window.map.invalidateSize === 'function') window.map.invalidateSize();
+  }, 320);
+}
+
+function toggleSidebarCollapse() {
+  const panel = document.getElementById('sidebar-panel');
+  const icon = document.getElementById('sidebar-collapse-icon');
+  if (!panel) return;
+
+  if (window.innerWidth < 640) {
+    const isClosed = panel.classList.contains('translate-y-full');
+    toggleMobilePanel(isClosed);
+    return;
+  }
+
+  const isCollapsed = panel.classList.contains('sm:-ml-[420px]');
+  if (isCollapsed) {
+    panel.classList.remove('sm:-ml-[420px]');
+    if (icon) icon.setAttribute('data-lucide', 'chevron-left');
+  } else {
+    panel.classList.add('sm:-ml-[420px]');
+    if (icon) icon.setAttribute('data-lucide', 'chevron-right');
+  }
+
+  if (window.lucide) lucide.createIcons();
+
+  setTimeout(() => {
+    if (mapInstance && typeof mapInstance.resize === 'function') mapInstance.resize();
+    if (window.map && typeof window.map.invalidateSize === 'function') window.map.invalidateSize();
+  }, 320);
+}
+window.toggleSidebarCollapse = toggleSidebarCollapse;
+
+function setPickMode(mode) {
+  currentPickMode = mode;
+  const hint = document.getElementById('pick-hint');
+  const hintText = document.getElementById('pick-hint-text');
+  if (hint) hint.classList.remove('hidden');
+
+  if (hintText) {
+    if (mode === 'origin') {
+      hintText.innerText = 'Nhấp lên bản đồ để chọn Điểm xuất phát...';
+    } else if (mode === 'destination') {
+      hintText.innerText = 'Nhấp lên bản đồ để chọn Điểm đến...';
+    } else if (mode === 'report') {
+      hintText.innerText = 'Nhấp lên vị trí ngập bạn muốn báo cáo...';
+    }
+  }
+
+  if (window.innerWidth < 640) {
+    toggleMobilePanel(false);
+  }
+}
+
+function cancelPickMode() {
+  currentPickMode = null;
+  const hint = document.getElementById('pick-hint');
+  if (hint) hint.classList.add('hidden');
+
+  if (window.innerWidth < 640) {
+    toggleMobilePanel(true);
+  }
+}
+
+function onMapClick(e) {
+  if (!currentPickMode) return;
+  const lat = e.lngLat ? e.lngLat.lat : (e.latlng ? e.latlng.lat : (e.lat !== undefined ? e.lat : undefined));
+  const lng = e.lngLat ? e.lngLat.lng : (e.latlng ? e.latlng.lng : (e.lng !== undefined ? e.lng : undefined));
+  if (lat === undefined || lng === undefined) return;
+
+  if (currentPickMode === 'origin') {
+    coords.origin = { lat, lng };
+    const el = document.getElementById('origin-text');
+    if (el) el.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    const clr = document.getElementById('btn-clear-origin');
+    if (clr) clr.classList.remove('hidden');
+    updatePickMarker('origin', lat, lng, '#10b981', 'Điểm xuất phát');
+  } else if (currentPickMode === 'destination') {
+    coords.destination = { lat, lng };
+    const el = document.getElementById('dest-text');
+    if (el) el.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    const clr = document.getElementById('btn-clear-dest');
+    if (clr) clr.classList.remove('hidden');
+    updatePickMarker('destination', lat, lng, '#ef4444', 'Điểm đến');
+  } else if (currentPickMode === 'report') {
+    coords.report = { lat, lng };
+    const repEl = document.getElementById('report-coord-text');
+    if (repEl) repEl.innerText = `Toạ độ: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    updatePickMarker('report', lat, lng, '#f43f5e', 'Vị trí báo ngập');
+  }
+
+  cancelPickMode();
+
+  if (window.innerWidth < 640) {
+    toggleMobilePanel(true);
+  }
+
+  if (coords.origin && coords.destination) {
+    calculateRoute();
+  }
+}
+
+function updatePickMarker(type, lat, lng, color, label) {
+  if (pickMarkers[type]) {
+    if (typeof pickMarkers[type].remove === 'function') {
+      pickMarkers[type].remove();
+    } else if (map && typeof map.removeLayer === 'function') {
+      map.removeLayer(pickMarkers[type]);
+    }
+    pickMarkers[type] = null;
+  }
+
+  if (mapInstance && window.maplibregl) {
+    const el = document.createElement('div');
+    el.className = 'w-7 h-7 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-white font-bold text-xs ring-2 ring-black/20';
+    el.style.backgroundColor = color;
+    el.title = label;
+    el.innerText = type === 'origin' ? 'A' : (type === 'destination' ? 'B' : '⚠️');
+    pickMarkers[type] = new window.maplibregl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(mapInstance);
+  }
+}
+
+function setPresetRoute(oLng, oLat, dLng, dLat, name) {
+  coords.origin = { lng: oLng, lat: oLat };
+  coords.destination = { lng: dLng, lat: dLat };
+
+  if (name && name.includes('➔')) {
+    const parts = name.split('➔').map(s => s.trim());
+    const originEl = document.getElementById('origin-text');
+    const destEl = document.getElementById('dest-text');
+    if (originEl) originEl.value = parts[0] || `${oLat.toFixed(4)}, ${oLng.toFixed(4)}`;
+    if (destEl) destEl.value = parts[1] || `${dLat.toFixed(4)}, ${dLng.toFixed(4)}`;
+  } else {
+    const originEl = document.getElementById('origin-text');
+    const destEl = document.getElementById('dest-text');
+    if (originEl) originEl.value = `${oLat.toFixed(4)}, ${oLng.toFixed(4)}`;
+    if (destEl) destEl.value = `${dLat.toFixed(4)}, ${dLng.toFixed(4)}`;
+  }
+
+  const clrO = document.getElementById('btn-clear-origin');
+  if (clrO) clrO.classList.remove('hidden');
+  const clrD = document.getElementById('btn-clear-dest');
+  if (clrD) clrD.classList.remove('hidden');
+
+  updatePickMarker('origin', oLat, oLng, '#10b981', 'Điểm xuất phát');
+  updatePickMarker('destination', dLat, dLng, '#ef4444', 'Điểm đến');
+
+  calculateRoute();
+}
+
+window.setDestinationPoint = function(lng, lat, name) {
+  coords.destination = { lng: Number(lng), lat: Number(lat) };
+  const destEl = document.getElementById('dest-text');
+  if (destEl) destEl.value = name || `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}`;
+  const clrD = document.getElementById('btn-clear-dest');
+  if (clrD) clrD.classList.remove('hidden');
+  updatePickMarker('destination', Number(lat), Number(lng), '#ef4444', name || 'Điểm đến');
+  if (coords.origin && coords.destination) {
+    calculateRoute();
+  }
+};
+
+async function fetchExtendedOsrmRoute(origin, destination, vehicle) {
+  if (!origin || !destination) return null;
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return null;
+
+    const r = data.routes[0];
+    const distM = Math.round(r.distance);
+    const speedKmh = vehicle === 'car' ? 30 : 25;
+    const durationMin = Math.round((distM / (speedKmh * 1000 / 60)) * 10) / 10;
+
+    const warnings = [];
+    const coordinates = (r.geometry && r.geometry.coordinates) ? r.geometry.coordinates : [];
+    if (Array.isArray(window.floodPoints)) {
+      window.floodPoints.forEach(pt => {
+        const depth = Number(pt.current_depth_cm || 0);
+        if (depth >= 5) {
+          for (let i = 0; i < coordinates.length; i += 3) {
+            const dLng = coordinates[i][0] - pt.lng;
+            const dLat = coordinates[i][1] - pt.lat;
+            const distApprox = Math.sqrt(Math.pow(dLat * 111000, 2) + Math.pow(dLng * 103000, 2));
+            if (distApprox < 80) {
+              warnings.push({
+                street: pt.name || pt.location_desc || 'Điểm ngập trên tuyến',
+                depth_cm: depth
+              });
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    const routeObj = {
+      found: true,
+      mode: 'safe',
+      distance_m: distM,
+      duration_min: durationMin,
+      geometry: r.geometry,
+      flood_warnings: warnings
+    };
+
+    return {
+      vehicle: vehicle,
+      ai_prediction_applied: false,
+      same_route: true,
+      fastest: routeObj,
+      safe: routeObj,
+      flood_sources_used: (window.floodPoints || []).length,
+      affected_road_segments: warnings.length,
+      is_extended_route: true
+    };
+  } catch (e) {
+    console.debug("Extended OSRM error:", e);
+    return null;
+  }
+}
+
+async function calculateRoute() {
+  const btn = document.getElementById('btn-submit-route');
+
+  if (!coords.origin) {
+    await resolveAddressFromInput('origin');
+  }
+  if (!coords.destination) {
+    await resolveAddressFromInput('destination');
+  }
+
+  if (!coords.origin || !coords.destination) {
+    alert('Vui lòng chọn hoặc nhập cả Điểm xuất phát và Điểm đến!');
+    return;
+  }
+
+  const vRadio = document.querySelector('input[name="vehicle"]:checked');
+  const vehicle = vRadio ? vRadio.value : 'motorbike';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang tính toán lộ trình A*...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  currentRouteGeoJson.safe = { type: 'FeatureCollection', features: [] };
+  currentRouteGeoJson.fastest = { type: 'FeatureCollection', features: [] };
+  if (mapInstance) {
+    if (mapInstance.getSource('route-safe-source')) {
+      mapInstance.getSource('route-safe-source').setData(currentRouteGeoJson.safe);
+    }
+    if (mapInstance.getSource('route-fastest-source')) {
+      mapInstance.getSource('route-fastest-source').setData(currentRouteGeoJson.fastest);
+    }
+  }
+  if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
+    VehicleSim.stop();
+  }
+
+  try {
+    const res = await fetch(getApiUrl('/api/route'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origin: coords.origin,
+        destination: coords.destination,
+        vehicle: vehicle,
+        use_ai_prediction: true
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      displayRouteResults(data);
+      return;
+    }
+
+    const osrmData = await fetchExtendedOsrmRoute(coords.origin, coords.destination, vehicle);
+    if (osrmData) {
+      displayRouteResults(osrmData);
+      return;
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Không thể tìm thấy lộ trình');
+  } catch (err) {
+    const osrmData = await fetchExtendedOsrmRoute(coords.origin, coords.destination, vehicle);
+    if (osrmData) {
+      displayRouteResults(osrmData);
+      return;
+    }
+
+    const resultCard = document.getElementById('route-results');
+    if (resultCard) resultCard.classList.add('hidden');
+    const summaryCard = document.getElementById('flood-summary-card');
+    if (summaryCard) summaryCard.classList.remove('hidden');
+    alert('Lỗi tìm đường: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="compass" class="w-5 h-5"></i><span>Tìm Lộ Trình Né Ngập</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+function onVehicleChange() {
+  if (coords.origin && coords.destination) {
+    calculateRoute();
+  }
+}
+
+let currentRouteData = null;
+let activeRouteMode = 'safe';
+
+function extractValidLatLngs(routeObj) {
+  if (!routeObj || typeof routeObj !== 'object') return null;
+  if (!routeObj.geometry || routeObj.geometry.type !== 'LineString') return null;
+  const rawCoords = routeObj.geometry.coordinates;
+  if (!Array.isArray(rawCoords) || rawCoords.length < 2) return null;
+
+  const latlngs = [];
+  for (let i = 0; i < rawCoords.length; i++) {
+    const pt = rawCoords[i];
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const lng = Number(pt[0]);
+      const lat = Number(pt[1]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        latlngs.push([lat, lng]);
+      }
+    }
+  }
+
+  return latlngs.length >= 2 ? latlngs : null;
+}
+
+function displayRouteResults(data) {
+  currentRouteData = data;
+  window.lastRouteData = data;
+
+  const resultCard = document.getElementById('route-results');
+  const summaryCard = document.getElementById('flood-summary-card');
+
+  if (summaryCard) summaryCard.classList.add('hidden');
+  if (resultCard) resultCard.classList.remove('hidden');
+
+  currentRouteGeoJson.safe = { type: 'FeatureCollection', features: [] };
+  currentRouteGeoJson.fastest = { type: 'FeatureCollection', features: [] };
+  if (mapInstance) {
+    if (mapInstance.getSource('route-safe-source')) {
+      mapInstance.getSource('route-safe-source').setData(currentRouteGeoJson.safe);
+    }
+    if (mapInstance.getSource('route-fastest-source')) {
+      mapInstance.getSource('route-fastest-source').setData(currentRouteGeoJson.fastest);
+    }
+  }
+  if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
+    VehicleSim.stop();
+  }
+
+  const { safe, fastest, same_route } = data;
+
+  // 1. Điền thông tin cho Lộ trình An Toàn
+  const safeDistEl = document.getElementById('safe-dist');
+  const safeTimeEl = document.getElementById('safe-time');
+  const safeSafetyEl = document.getElementById('safe-safety-level');
+  const safeFloodSegsEl = document.getElementById('safe-flood-segs');
+  const safeWarnings = document.getElementById('safe-warnings');
+
+  const safeLatLngs = extractValidLatLngs(safe);
+
+  if (safe && safe.found) {
+    if (safeDistEl) safeDistEl.innerText = (safe.distance_m / 1000).toFixed(2) + ' km';
+    if (safeTimeEl) safeTimeEl.innerText = safe.duration_min.toFixed(1) + ' phút';
+
+    const safeWarnList = safe.flood_warnings || [];
+    if (safeFloodSegsEl) safeFloodSegsEl.innerText = `${safeWarnList.length} đoạn`;
+
+    if (safeSafetyEl) {
+      if (safeWarnList.length === 0) {
+        safeSafetyEl.innerText = 'Rất cao (Khô ráo)';
+        safeSafetyEl.className = 'text-[11px] font-bold text-emerald-700';
+      } else {
+        safeSafetyEl.innerText = 'Tương đối (Mép ngập)';
+        safeSafetyEl.className = 'text-[11px] font-bold text-teal-700';
+      }
+    }
+
+    if (safeWarnings) {
+      if (safeWarnList.length > 0) {
+        const warnNames = safeWarnList.map(w => typeof w === 'string' ? w : (w.street || w.source || 'Mép ngập')).join(', ');
+        safeWarnings.innerHTML = `⚠️ <em>Chú ý:</em> Tuyến đi qua mép ngập nhẹ (${warnNames}) nhưng vẫn an toàn cho xe.`;
+      } else {
+        safeWarnings.innerHTML = `✨ Tuyến đường hoàn toàn khô ráo, không bị ngập.`;
+      }
+    }
+  } else {
+    if (safeDistEl) safeDistEl.innerText = 'Không thể đi';
+    if (safeTimeEl) safeTimeEl.innerText = 'Bị chặn';
+    if (safeSafetyEl) {
+      safeSafetyEl.innerText = 'Không an toàn';
+      safeSafetyEl.className = 'text-[11px] font-bold text-rose-600';
+    }
+    if (safeFloodSegsEl) safeFloodSegsEl.innerText = 'Bị chặn';
+    if (safeWarnings) safeWarnings.innerText = (safe && safe.reason) || 'Nước ngập quá sâu, mọi ngả đường đều bị chặn!';
+  }
+
+  // 2. Điền thông tin cho Lộ trình Nhanh Nhất (Gốc)
+  const fastestDistEl = document.getElementById('fastest-dist');
+  const fastestTimeEl = document.getElementById('fastest-time');
+  const fastestSafetyEl = document.getElementById('fastest-safety-level');
+  const fastestFloodSegsEl = document.getElementById('fastest-flood-segs');
+  const badge = document.getElementById('fastest-badge');
+  const warnings = document.getElementById('fastest-warnings');
+
+  const fastestLatLngs = extractValidLatLngs(fastest);
+
+  if (fastest && fastest.found) {
+    if (fastestDistEl) fastestDistEl.innerText = (fastest.distance_m / 1000).toFixed(2) + ' km';
+    if (fastestTimeEl) fastestTimeEl.innerText = fastest.duration_min.toFixed(1) + ' phút';
+
+    const fastestWarnList = fastest.flood_warnings || [];
+    if (fastestFloodSegsEl) fastestFloodSegsEl.innerText = `${fastestWarnList.length} đoạn có nguy cơ`;
+
+    if (same_route) {
+      if (badge) {
+        badge.innerText = 'Trùng lộ trình an toàn';
+        badge.className = 'text-[10px] font-semibold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full';
+      }
+      if (fastestSafetyEl) {
+        fastestSafetyEl.innerText = 'An toàn (Khô ráo)';
+        fastestSafetyEl.className = 'text-[11px] font-bold text-emerald-700';
+      }
+      if (warnings) warnings.innerText = 'Đường ngắn nhất hiện không bị ngập.';
+    } else {
+      if (badge) {
+        badge.innerText = 'Bị ngập sâu!';
+        badge.className = 'text-[10px] font-semibold px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full';
+      }
+      if (fastestSafetyEl) {
+        fastestSafetyEl.innerText = 'Nguy hiểm (Bị ngập)';
+        fastestSafetyEl.className = 'text-[11px] font-bold text-rose-600';
+      }
+      const warnNames = fastestWarnList.map(w => {
+        const name = typeof w === 'string' ? w : (w.street || w.source || 'Đoạn trũng');
+        const d = w.depth_cm ? ` (${w.depth_cm}cm)` : '';
+        return `${name}${d}`;
+      }).join(', ');
+      if (warnings) warnings.innerHTML = `⚠️ Bị ngập tại: ${warnNames || 'Đoạn trũng'}`;
+    }
+  }
+
+  // 3. Mặc định kích hoạt hiển thị một lộ trình duy nhất
+  if (safe && safe.found && safeLatLngs) {
+    selectActiveRoute('safe');
+  } else if (fastest && fastest.found && fastestLatLngs) {
+    selectActiveRoute('fastest');
+  } else {
+    showToast('Không có dữ liệu hình học hợp lệ để hiển thị tuyến đường', 'warning');
+  }
+
+  // 4. Phát âm thanh cảnh báo
+  if (window.VoiceWarning) {
+    try {
+      if (typeof VoiceWarning.speakRouteResult === 'function') {
+        VoiceWarning.speakRouteResult(data);
+      } else if (typeof VoiceWarning.speakRoutePlan === 'function') {
+        VoiceWarning.speakRoutePlan(safe, same_route);
+      }
+    } catch (voiceErr) {
+      console.warn("Lỗi phát âm thanh cảnh báo:", voiceErr);
+    }
+  }
+
+  // 5. Mobile floating card
+  if (window.innerWidth < 640) {
+    const card = document.getElementById('mobile-route-floating-card');
+    const title = document.getElementById('mobile-card-title');
+    const sub = document.getElementById('mobile-card-subtitle');
+    if (card && title && sub) {
+      if (safe && safe.found) {
+        title.innerText = same_route ? 'Lộ trình tối ưu (Không ngập)' : 'Đã tìm thấy lộ trình né ngập';
+        sub.innerText = `${(safe.distance_m / 1000).toFixed(1)} km • ${Math.round(safe.duration_min)} phút di chuyển`;
+        card.classList.remove('hidden');
+      } else {
+        title.innerText = 'Cảnh báo: Bị chặn ngập';
+        sub.innerText = 'Không còn đường an toàn cho xe này';
+        card.classList.remove('hidden');
+      }
+    }
+    toggleMobilePanel(false);
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function selectActiveRoute(mode) {
+  if (!currentRouteData) return;
+  activeRouteMode = mode;
+
+  const cardSafe = document.getElementById('card-safe') || document.getElementById('card-safe-route');
+  const cardFastest = document.getElementById('card-fastest') || document.getElementById('card-fastest-route');
+  const badgeSafe = document.getElementById('badge-active-safe') || document.getElementById('safe-selected-badge');
+  const badgeFastest = document.getElementById('badge-active-fastest') || document.getElementById('fastest-selected-badge');
+
+  const { safe, fastest } = currentRouteData;
+
+  if (mode === 'safe') {
+    if (!safe || !safe.found) {
+      showToast('Lộ trình an toàn hiện không khả dụng để hiển thị', 'warning');
+      return;
+    }
+
+    const safeLatLngs = extractValidLatLngs(safe);
+    if (!safeLatLngs || safeLatLngs.length === 0) {
+      showToast('Dữ liệu tọa độ tuyến an toàn không hợp lệ', 'warning');
+      return;
+    }
+
+    currentRouteGeoJson.safe = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: safeLatLngs.map(ll => [ll[1], ll[0]])
+        }
+      }]
+    };
+    currentRouteGeoJson.fastest = { type: 'FeatureCollection', features: [] };
+
+    if (mapInstance) {
+      if (mapInstance.getSource('route-safe-source')) {
+        mapInstance.getSource('route-safe-source').setData(currentRouteGeoJson.safe);
+      }
+      if (mapInstance.getSource('route-fastest-source')) {
+        mapInstance.getSource('route-fastest-source').setData(currentRouteGeoJson.fastest);
+      }
+    }
+
+    try {
+      let minLng = 180, minLat = 90, maxLng = -180, maxLat = -90;
+      safeLatLngs.forEach(ll => {
+        const lat = Number(ll[0]);
+        const lng = Number(ll[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        }
+      });
+      if (minLng <= maxLng && minLat <= maxLat && mapInstance) {
+        mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
+      }
     } catch (e) {
       console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến an toàn:", e);
     }
@@ -1366,24 +2084,22 @@ function zoomToAllPoints() {
     }
     if (badgeFastest) badgeFastest.classList.add('hidden');
 
-    // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến an toàn
     if (window.VehicleSim && typeof VehicleSim.start === 'function') {
-      const latlngs = safeLatLngs;
       const v = document.querySelector('input[name="vehicle"]:checked');
-      VehicleSim.start(latlngs, v ? v.value : 'motorbike');
+      VehicleSim.start(safeLatLngs, v ? v.value : 'motorbike');
     }
   } else if (mode === 'fastest') {
-    if (!fastest || !fastest.found || !routeLayers.fastest) {
+    if (!fastest || !fastest.found) {
       showToast('Lộ trình nhanh nhất hiện không khả dụng để hiển thị', 'warning');
       return;
     }
 
-    // Gỡ bỏ lớp an toàn nếu đang hiển thị trên bản đồ (tránh chồng đè Polyline)
-    if (routeLayers.safe && map && true) {
-      
+    const fastestLatLngs = extractValidLatLngs(fastest);
+    if (!fastestLatLngs || fastestLatLngs.length === 0) {
+      showToast('Dữ liệu tọa độ tuyến nhanh nhất không hợp lệ', 'warning');
+      return;
     }
 
-    // Cập nhật GeoJSON tuyến nhanh nhất lên MapLibre
     currentRouteGeoJson.fastest = {
       type: 'FeatureCollection',
       features: [{
@@ -1394,8 +2110,34 @@ function zoomToAllPoints() {
         }
       }]
     };
-    if (mapInstance && mapInstance.getSource('route-fastest-source')) {
-      mapInstance.getSource('route-fastest-source').setData(currentRouteGeoJson.fastest);
+    currentRouteGeoJson.safe = { type: 'FeatureCollection', features: [] };
+
+    if (mapInstance) {
+      if (mapInstance.getSource('route-fastest-source')) {
+        mapInstance.getSource('route-fastest-source').setData(currentRouteGeoJson.fastest);
+      }
+      if (mapInstance.getSource('route-safe-source')) {
+        mapInstance.getSource('route-safe-source').setData(currentRouteGeoJson.safe);
+      }
+    }
+
+    try {
+      let minLng = 180, minLat = 90, maxLng = -180, maxLat = -90;
+      fastestLatLngs.forEach(ll => {
+        const lat = Number(ll[0]);
+        const lng = Number(ll[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        }
+      });
+      if (minLng <= maxLng && minLat <= maxLat && mapInstance) {
+        mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
+      }
+    } catch (e) {
+      console.warn("Lỗi căn chỉnh khung nhìn bản đồ cho tuyến nhanh nhất:", e);
     }
 
     if (cardFastest) {
@@ -1410,11 +2152,9 @@ function zoomToAllPoints() {
     }
     if (badgeSafe) badgeSafe.classList.add('hidden');
 
-    // Chạy mô phỏng di chuyển xe dọc theo các điểm uốn lượn thực tế của tuyến nhanh nhất
     if (window.VehicleSim && typeof VehicleSim.start === 'function') {
-      const latlngs = fastestLatLngs;
       const v = document.querySelector('input[name="vehicle"]:checked');
-      VehicleSim.start(latlngs, v ? v.value : 'motorbike');
+      VehicleSim.start(fastestLatLngs, v ? v.value : 'motorbike');
     }
   }
 
