@@ -57,12 +57,15 @@
     }
     .maplibregl-popup {
       z-index: 1000 !important;
-      max-width: 320px !important;
+      max-width: 350px !important;
+      pointer-events: auto !important;
     }
     .maplibregl-popup-content {
       background: transparent !important;
       box-shadow: none !important;
       padding: 0 !important;
+      max-height: 85vh !important;
+      overflow-y: auto !important;
     }
     .maplibregl-popup-close-button {
       color: #cbd5e1 !important;
@@ -899,6 +902,28 @@
         showToast(`🗺️ Đã đổi lớp bản đồ sang: ${nameMap[key] || key}`, 'info');
       }
 
+      /**
+       * Tự động di chuyển camera mượt mà đưa điểm marker và popup ra đúng trung tâm thị giác màn hình,
+       * khắc phục triệt để tình trạng popup bị tụt xuống mép dưới màn hình gây che khuất thông tin.
+       */
+      function centerMapOnPoint(m, lng, lat, customZoom = null, offsetY = 75) {
+        const targetMap = m || window.map;
+        if (!targetMap || typeof targetMap.flyTo !== 'function') return;
+
+        const currentZoom = targetMap.getZoom();
+        const targetZoom = customZoom ? Math.max(currentZoom, customZoom) : Math.max(currentZoom, 14.2);
+
+        targetMap.flyTo({
+          center: [lng, lat],
+          zoom: targetZoom,
+          offset: [0, offsetY],
+          duration: 650,
+          curve: 1.35,
+          essential: true
+        });
+      }
+      window.centerMapOnPoint = centerMapOnPoint;
+
       let sampleShelterMarkers = [];
 
       function renderSampleShelters(targetMap) {
@@ -919,7 +944,7 @@
           el.className = 'shelter-marker-icon cursor-pointer transition hover:scale-110';
           el.innerHTML = `<div class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-white shadow-md flex items-center justify-center text-white text-[10px] font-bold">🏠</div>`;
 
-          const popup = new maplibregl.Popup({ offset: 15, closeButton: true })
+          const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
             .setHTML(`
               <div class="p-2.5 bg-slate-900 border border-slate-700/80 rounded-xl shadow-xl text-slate-100 text-xs space-y-1">
                 <div class="font-bold text-white">${s.name}</div>
@@ -927,6 +952,13 @@
                 <div class="text-[10px] text-slate-400">Sức chứa: <b class="text-white">${s.capacity}</b> người</div>
               </div>
             `);
+
+          popup.on('open', () => {
+            centerMapOnPoint(m, s.lng, s.lat, 14.5, 70);
+          });
+          el.addEventListener('click', () => {
+            centerMapOnPoint(m, s.lng, s.lat, 14.5, 70);
+          });
 
           const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
             .setLngLat([s.lng, s.lat])
@@ -975,7 +1007,7 @@
             el.className = 'community-flood-marker cursor-pointer transition hover:scale-110';
             el.innerHTML = `<div class="w-6 h-6 rounded-full ${lvl.color} border-2 border-white shadow-lg flex items-center justify-center text-white text-[11px] font-bold">⚠️</div>`;
 
-            const popup = new maplibregl.Popup({ offset: 15, closeButton: true })
+            const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
               .setHTML(`
                 <div class="p-2.5 bg-slate-900 border border-slate-700/80 rounded-xl shadow-xl text-slate-100 text-xs space-y-1.5" style="min-width: 180px;">
                   <div class="font-bold text-slate-100 border-b border-slate-800 pb-1 flex items-center justify-between">
@@ -986,6 +1018,13 @@
                   <div class="text-[11px] text-slate-300">Độ sâu ước lượng: <b class="text-amber-400">${p.estimated_depth_cm || 25} cm</b></div>
                 </div>
               `);
+
+            popup.on('open', () => {
+              centerMapOnPoint(m, lng, lat, 14.5, 70);
+            });
+            el.addEventListener('click', () => {
+              centerMapOnPoint(m, lng, lat, 14.5, 70);
+            });
 
             const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
               .setLngLat([lng, lat])
@@ -1660,7 +1699,22 @@
         `;
 
         const popupHtml = buildStationPopupHtml(pt);
-        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '350px', closeButton: true }).setHTML(popupHtml);
+        const popup = new maplibregl.Popup({
+          offset: [0, -14],
+          anchor: 'bottom',
+          maxWidth: '350px',
+          closeButton: true
+        }).setHTML(popupHtml);
+
+        // Tự động di chuyển camera đưa Marker & Popup ra chính giữa màn hình khi mở
+        popup.on('open', () => {
+          centerMapOnPoint(m, pt.lng, pt.lat, 14.5, 75);
+        });
+
+        // Hỗ trợ cả khi click trực tiếp vào icon marker
+        el.addEventListener('click', () => {
+          centerMapOnPoint(m, pt.lng, pt.lat, 14.5, 75);
+        });
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([pt.lng, pt.lat])
