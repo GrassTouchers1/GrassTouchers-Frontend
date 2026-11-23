@@ -151,26 +151,24 @@
       }
     }
 
-    /* Animation tách bung điểm ngập nở hoa mượt mà (Staggered Bloom) */
+    /* Animation tách bung điểm ngập nở hoa mượt mà (chỉ áp dụng trên thẻ con, không đè transform của MapLibre) */
     @keyframes floodPinBloom {
       0% {
         opacity: 0;
-        transform: scale(0.1) translateY(12px);
+        transform: scale(0.2);
       }
-
       70% {
         opacity: 1;
-        transform: scale(1.18) translateY(-2px);
+        transform: scale(1.15);
       }
-
       100% {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: scale(1);
       }
     }
 
     .flood-pin-bloom {
-      animation: floodPinBloom 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      animation: floodPinBloom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
 
     /* Custom Marker tròn & Cluster chuẩn 100% Command Center */
@@ -1838,34 +1836,16 @@
           // 1. Đánh dấu quận này đang được mở rộng (bung các trạm ngập con)
           currentExpandedZone = zoneName;
 
-          let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
-          pts.forEach(p => {
-            minLng = Math.min(minLng, p.lng);
-            maxLng = Math.max(maxLng, p.lng);
-            minLat = Math.min(minLat, p.lat);
-            maxLat = Math.max(maxLat, p.lat);
+          // 2. Chuyển động Camera mượt mà điện ảnh bay thẳng vào Zoom 13.6 tại tâm Quận
+          m.flyTo({
+            center: [avgLng, avgLat],
+            zoom: 13.6,
+            duration: 850,
+            curve: 1.42,
+            essential: true
           });
 
-          // 2. Chuyển động Camera mượt mà điện ảnh (Smooth Cinematic Zoom)
-          if (maxLng - minLng > 0.003 || maxLat - minLat > 0.003) {
-            m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
-              padding: { top: 100, bottom: 100, left: 100, right: 100 },
-              maxZoom: 14.2,
-              duration: 900,
-              curve: 1.42,
-              essential: true
-            });
-          } else {
-            m.flyTo({
-              center: [avgLng, avgLat],
-              zoom: 14.0,
-              duration: 900,
-              curve: 1.42,
-              essential: true
-            });
-          }
-
-          // 3. Bung nở các điểm con kèm hiệu ứng chuyển động Staggered Bloom
+          // 3. Bung nở ngay lập tức các điểm ngập con của quận
           renderFloodPointsWithClustering(m, true);
         };
 
@@ -1918,11 +1898,10 @@
         const wave2Size = Math.max(75, Math.min(85 + depthVal * 0.9, 130));
         const wave3Size = Math.max(110, Math.min(130 + depthVal * 1.5, 185));
 
+        // Thẻ gốc của MapLibre Marker: Giữ nguyên để MapLibre quản lý toạ độ địa lý chính xác, không đè transform
         const el = document.createElement('div');
-        const bloomClass = isStaggered ? 'flood-pin-bloom' : '';
-        el.className = `c2-maplibre-pin ${bloomClass} flex items-center justify-center cursor-pointer select-none group`;
-        const animDelay = isStaggered ? `animation-delay: ${Math.min(index * 45, 550)}ms;` : '';
-        el.style.cssText = `position: relative; width: ${markerSize}px; height: ${markerSize}px; z-index: ${isDanger ? 28 : 25}; ${animDelay}`;
+        el.className = 'c2-maplibre-pin flex items-center justify-center cursor-pointer select-none group';
+        el.style.cssText = `position: relative; width: ${markerSize}px; height: ${markerSize}px; z-index: ${isDanger ? 28 : 25};`;
 
         // Hiệu ứng đa tầng sóng nước radar lan tỏa động biểu thị phạm vi ảnh hưởng
         let radarWavesHtml = '';
@@ -1943,14 +1922,17 @@
           ? '<span class="absolute w-10 h-10 rounded-full bg-rose-500/50 animate-ping pointer-events-none" style="animation-duration: 1.5s;"></span>'
           : '';
 
+        const bloomClass = isStaggered ? 'flood-pin-bloom' : '';
+        const animDelay = isStaggered ? `animation-delay: ${Math.min(index * 45, 550)}ms;` : '';
+
         el.innerHTML = `
           <!-- Hệ thống sóng nước radar lan tỏa động biểu thị phạm vi ảnh hưởng -->
           ${radarWavesHtml}
           ${pulsePing}
 
           <!-- Chấm tròn điểm ngập nhấp nháy chuyển động sống động (Breathe & Pulse) -->
-          <div class="custom-marker flood-marker-breathing transition-transform duration-200 group-hover:scale-125 pointer-events-auto"
-               style="width: ${markerSize}px; height: ${markerSize}px; border-radius: 9999px; background-color: ${bgColor}; border: 2.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800; font-size: ${fontSize}px; user-select: none;"
+          <div class="custom-marker flood-marker-breathing ${bloomClass} transition-transform duration-200 group-hover:scale-125 pointer-events-auto"
+               style="width: ${markerSize}px; height: ${markerSize}px; border-radius: 9999px; background-color: ${bgColor}; border: 2.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800; font-size: ${fontSize}px; user-select: none; ${animDelay}"
                title="${pt.name}: ${markerText}">
             <span style="letter-spacing: -0.3px; line-height: 1;">${markerText}</span>
           </div>
