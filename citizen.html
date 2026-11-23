@@ -1808,7 +1808,7 @@
 
         const popupHtml = buildStationPopupHtml(pt);
         const popup = new maplibregl.Popup({
-          offset: [0, -14],
+          offset: [0, -18],
           anchor: 'bottom',
           maxWidth: '360px',
           closeButton: true,
@@ -1831,10 +1831,20 @@
           }
         });
 
-        // Ngăn chặn sự kiện click lan truyền ra bản đồ
-        el.addEventListener('click', (e) => {
+        // Kích hoạt mở Popup bảng chi tiết Light Card AI trực tiếp 100% khi Click
+        el.onclick = (e) => {
           e.stopPropagation();
-        });
+          if (popup.isOpen()) {
+            popup.remove();
+          } else {
+            if (activeStationPopup && activeStationPopup !== popup) {
+              try { activeStationPopup.remove(); } catch (err) {}
+            }
+            popup.setLngLat([pt.lng, pt.lat]).addTo(m);
+            activeStationPopup = popup;
+            centerMapOnPoint(m, pt.lng, pt.lat, 14.5, 95);
+          }
+        };
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([pt.lng, pt.lat])
