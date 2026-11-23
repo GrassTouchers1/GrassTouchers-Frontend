@@ -155,6 +155,52 @@
     .flood-pin-bloom {
       animation: floodPinBloom 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
+
+    /* Custom Marker tròn & Cluster chuẩn 100% Command Center */
+    .custom-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      color: white;
+      border: 2px solid #ffffff;
+      transition: transform 0.2s ease;
+    }
+    .custom-marker:hover {
+      transform: scale(1.2);
+      z-index: 1000 !important;
+    }
+    .flood-cluster-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      color: #ffffff;
+      user-select: none;
+      transition: transform 0.2s ease;
+    }
+    .cluster-num {
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .cluster-danger-dot {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 11px;
+      height: 11px;
+      border: 2px solid #ffffff;
+      border-radius: 9999px;
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.9);
+      animation: cluster-pulse-danger 1.8s infinite;
+    }
+    @keyframes cluster-pulse-danger {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans overflow-hidden">
@@ -990,8 +1036,14 @@
 
         shelters.forEach(s => {
           const el = document.createElement('div');
-          el.className = 'shelter-marker-icon cursor-pointer transition hover:scale-110';
-          el.innerHTML = `<div class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-white shadow-md flex items-center justify-center text-white text-[10px] font-bold">🏠</div>`;
+          el.className = 'shelter-marker-icon flex items-center justify-center cursor-pointer select-none group';
+          el.style.cssText = 'position: relative; width: 44px; height: 44px; z-index: 24;';
+          el.innerHTML = `
+            <div style="position: absolute; width: 44px; height: 44px; border-radius: 9999px; background: rgba(5, 150, 105, 0.28); pointer-events: none; animation: waterRipplePulse 3s infinite;"></div>
+            <div class="transition-transform duration-200 group-hover:scale-120 pointer-events-auto" style="width: 32px; height: 32px; border-radius: 9999px; background: #059669; border: 2px solid #ffffff; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff; font-size: 14px;" title="${s.name}">
+              🛡️
+            </div>
+          `;
 
           const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
             .setHTML(`
@@ -1050,8 +1102,14 @@
               : '<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600">Chờ xác minh</span>';
 
             const el = document.createElement('div');
-            el.className = 'community-flood-marker cursor-pointer transition hover:scale-110';
-            el.innerHTML = `<div class="w-6 h-6 rounded-full ${lvl.color} border-2 border-white shadow-lg flex items-center justify-center text-white text-[11px] font-bold">⚠️</div>`;
+            el.className = 'community-flood-marker flex items-center justify-center cursor-pointer select-none group';
+            el.style.cssText = 'position: relative; width: 46px; height: 46px; z-index: 26;';
+            el.innerHTML = `
+              <div style="position: absolute; width: 46px; height: 46px; border-radius: 9999px; background: rgba(225, 29, 72, 0.32); pointer-events: none; animation: waterRipplePulse 2s infinite;"></div>
+              <div class="transition-transform duration-200 group-hover:scale-120 pointer-events-auto" style="width: 32px; height: 32px; border-radius: 9999px; background: #e11d48; border: 2px solid #ffffff; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.55); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff;" title="Điểm ngập dân sự / SOS #${p.id}">
+                <span style="font-size: 10px; font-weight: 900; font-family: 'Be Vietnam Pro', sans-serif; letter-spacing: -0.5px; line-height: 1;">SOS</span>
+              </div>
+            `;
 
             const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
               .setHTML(`
@@ -1507,25 +1565,34 @@
         const hasDanger = group.some(pt => pt.depth_cm >= 20 || pt.status === 'danger');
         const hasWarning = group.some(pt => pt.depth_cm >= 5 || pt.status === 'warning');
 
-        let clusterBg = 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)';
-        let ringColor = 'rgba(6, 182, 212, 0.45)';
+        let clusterBg = 'linear-gradient(135deg, #2563eb 0%, #0284c7 50%, #06b6d4 100%)';
+        let ringAura = 'rgba(6, 182, 212, 0.4)';
+        let dangerDotHtml = '';
+
         if (hasDanger) {
-          clusterBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)';
-          ringColor = 'rgba(239, 68, 68, 0.6)';
+          clusterBg = 'linear-gradient(135deg, #1e40af 0%, #3b82f6 30%, #ef4444 100%)';
+          ringAura = 'rgba(239, 68, 68, 0.55)';
+          dangerDotHtml = '<span class="cluster-danger-dot" style="position: absolute; top: -2px; right: -2px; width: 11px; height: 11px; border: 2px solid #ffffff; border-radius: 9999px; background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.9); animation: cluster-pulse-danger 1.8s infinite;"></span>';
         } else if (hasWarning) {
-          clusterBg = 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
-          ringColor = 'rgba(245, 158, 11, 0.5)';
+          clusterBg = 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 40%, #f59e0b 100%)';
+          ringAura = 'rgba(245, 158, 11, 0.45)';
         }
 
-        const size = count >= 50 ? 46 : (count >= 15 ? 40 : 34);
+        const size = count >= 50 ? 48 : (count >= 15 ? 42 : 36);
 
         const el = document.createElement('div');
         el.className = 'c2-province-cluster flex items-center justify-center cursor-pointer select-none group';
-        el.style.cssText = `position: relative; width: ${size}px; height: ${size}px; z-index: 30;`;
+        el.style.cssText = `position: relative; width: ${size + 16}px; height: ${size + 16}px; z-index: 30;`;
         el.innerHTML = `
-          <span class="absolute rounded-full pointer-events-none animate-ping" style="width: ${size + 8}px; height: ${size + 8}px; background: ${ringColor}; opacity: 0.8; animation-duration: 2s;"></span>
-          <div class="rounded-full text-white font-mono font-black text-xs flex items-center justify-center shadow-2xl border-2 border-white/80 relative z-10 transition-transform duration-200 group-hover:scale-115 pointer-events-auto" style="width: ${size}px; height: ${size}px; background: ${clusterBg};" title="Cụm ${provinceName} (${count} trạm quan trắc) - Bấm để phóng to bung phân vùng Quận / Huyện">
-            ${count}
+          <!-- Quầng hào quang radar sóng nước tròn lan tỏa -->
+          <div style="position: absolute; width: ${size + 16}px; height: ${size + 16}px; border-radius: 9999px; background: radial-gradient(circle, ${ringAura} 0%, transparent 70%); pointer-events: none; animation: waterRipplePulse 2.8s infinite cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
+          
+          <!-- Chấm tròn cụm chuẩn 100% Command Center -->
+          <div class="flood-cluster-badge transition-transform duration-200 group-hover:scale-115 pointer-events-auto"
+               style="width: ${size}px; height: ${size}px; border-radius: 9999px; background: ${clusterBg}; border: 2.5px solid #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff;"
+               title="Cụm ${provinceName} (${count} trạm quan trắc) - Bấm để phóng to bung phân vùng Quận / Huyện">
+            <span class="cluster-num" style="font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800; font-size: ${size >= 44 ? 14 : 12}px; letter-spacing: -0.5px; line-height: 1;">${count}</span>
+            ${dangerDotHtml}
           </div>
         `;
 
@@ -1591,45 +1658,41 @@
         const hasDanger = pts.some(pt => pt.depth_cm >= 20 || pt.status === 'danger');
         const hasWarning = pts.some(pt => pt.depth_cm >= 5 || pt.status === 'warning');
 
-        // Rút gọn tên quận/huyện để hiển thị gọn gàng trên badge
-        const shortName = zoneName
-          .replace(/^(Quận|Huyện|Tỉnh|TP)\s+/i, '')
-          .replace(/\s*\/\s*.*$/, ''); // Ví dụ: 'Hoài Đức / Quốc Oai' -> 'Hoài Đức'
-
-        let bgGradient = 'linear-gradient(135deg, rgba(3, 105, 161, 0.95), rgba(14, 116, 144, 0.95))';
-        let borderColor = 'rgba(56, 189, 248, 0.7)';
-        let shadowColor = 'rgba(14, 165, 233, 0.45)';
-        let dotColor = 'bg-cyan-400';
-        let countBg = 'bg-cyan-950 text-cyan-200 border-cyan-500/50';
-        let pulseHtml = '';
+        let clusterBg = 'linear-gradient(135deg, #2563eb 0%, #0284c7 50%, #06b6d4 100%)';
+        let ringAura = 'rgba(6, 182, 212, 0.35)';
+        let dangerDotHtml = '';
 
         if (hasDanger) {
-          bgGradient = 'linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(220, 38, 38, 0.95))';
-          borderColor = 'rgba(248, 113, 113, 0.85)';
-          shadowColor = 'rgba(239, 68, 68, 0.55)';
-          dotColor = 'bg-rose-300';
-          countBg = 'bg-rose-950 text-rose-200 border-rose-500/60';
-          pulseHtml = '<span class="absolute -inset-1 rounded-full bg-rose-500/40 animate-ping pointer-events-none" style="animation-duration: 1.8s;"></span>';
+          clusterBg = 'linear-gradient(135deg, #1e40af 0%, #3b82f6 30%, #ef4444 100%)';
+          ringAura = 'rgba(239, 68, 68, 0.5)';
+          dangerDotHtml = '<span class="cluster-danger-dot" style="position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border: 2px solid #ffffff; border-radius: 9999px; background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.9); animation: cluster-pulse-danger 1.8s infinite;"></span>';
         } else if (hasWarning) {
-          bgGradient = 'linear-gradient(135deg, rgba(180, 83, 9, 0.95), rgba(217, 119, 6, 0.95))';
-          borderColor = 'rgba(251, 191, 36, 0.85)';
-          shadowColor = 'rgba(245, 158, 11, 0.5)';
-          dotColor = 'bg-amber-300';
-          countBg = 'bg-amber-950 text-amber-200 border-amber-500/60';
-          pulseHtml = '<span class="absolute -inset-1 rounded-full bg-amber-500/35 animate-ping pointer-events-none" style="animation-duration: 2.2s;"></span>';
+          clusterBg = 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 40%, #f59e0b 100%)';
+          ringAura = 'rgba(245, 158, 11, 0.4)';
         }
 
+        const size = count >= 25 ? 46 : (count >= 10 ? 40 : 35);
+
         const el = document.createElement('div');
-        el.className = 'c2-district-zone-marker group flex items-center cursor-pointer select-none';
-        el.style.cssText = 'position: relative; z-index: 28;';
+        el.className = 'c2-district-zone-marker flex items-center justify-center cursor-pointer select-none group';
+        el.style.cssText = `position: relative; width: ${size + 14}px; height: ${size + 14}px; z-index: 28;`;
         el.innerHTML = `
-          ${pulseHtml}
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-bold shadow-xl border transition-all duration-200 group-hover:scale-110 pointer-events-auto"
-               style="background: ${bgGradient}; border-color: ${borderColor}; box-shadow: 0 4px 18px ${shadowColor}; backdrop-filter: blur(8px);"
-               title="Khu vực ${zoneName}: ${count} trạm quan trắc (Bấm để bung ${count} điểm chi tiết)">
-            <span class="inline-block w-2 h-2 rounded-full ${dotColor}"></span>
-            <span class="tracking-tight text-[11.5px] font-semibold whitespace-nowrap">${shortName}</span>
-            <span class="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-black border ${countBg}">${count}</span>
+          <!-- Quầng sáng tròn lan tỏa -->
+          <div style="position: absolute; width: ${size + 14}px; height: ${size + 14}px; border-radius: 9999px; background: radial-gradient(circle, ${ringAura} 0%, transparent 70%); pointer-events: none; animation: waterRipplePulse 2.8s infinite cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
+
+          <!-- Chấm tròn cụm chuẩn 100% Command Center -->
+          <div class="flood-cluster-badge transition-transform duration-200 group-hover:scale-115 pointer-events-auto"
+               style="width: ${size}px; height: ${size}px; border-radius: 9999px; background: ${clusterBg}; border: 2.5px solid #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff;"
+               title="${zoneName}: ${count} trạm quan trắc (Bấm để bung ${count} điểm chi tiết)">
+            <span class="cluster-num" style="font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800; font-size: ${size >= 44 ? 13 : 11.5}px; letter-spacing: -0.5px; line-height: 1;">${count}</span>
+            ${dangerDotHtml}
+          </div>
+
+          <!-- Tooltip nổi hiển thị tên quận khi hover -->
+          <div class="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-1 rounded-xl bg-slate-950/95 border border-slate-700/80 shadow-2xl text-[10px] text-white z-40 backdrop-blur-md flex items-center gap-1.5 transform group-hover:-translate-y-1">
+            <span class="font-bold text-sky-300">${zoneName}</span>
+            <span class="text-slate-500">•</span>
+            <span class="font-semibold text-slate-200">${count} trạm</span>
           </div>
         `;
 
@@ -1679,60 +1742,59 @@
 
       function createIndividualFloodMarker(m, pt, index = 0, isStaggered = false) {
         const depthVal = Math.round(pt.depth_cm !== null && pt.depth_cm !== undefined ? pt.depth_cm : 0);
-        const depthText = (pt.status === 'offline') ? 'OFF' : (pt.status === 'no_data' || pt.depth_cm === null ? '--' : `${depthVal}cm`);
         const radiusM = getFloodImpactRadiusMeters(depthVal);
+        const status = pt.status;
 
-        const isDanger = (pt.status === 'danger' || depthVal >= 20);
-        const isWarning = (!isDanger && (pt.status === 'warning' || depthVal >= 5));
-        const isOffline = (pt.status === 'offline' || pt.status === 'no_data');
-
-        let badgeBg = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
-        let borderColor = 'rgba(110, 231, 183, 0.85)';
-        let shadowColor = 'rgba(16, 185, 129, 0.45)';
+        // Phân loại trạng thái và màu sắc CHUẨN 100% NHẬN DIỆN COMMAND CENTER
+        let bgColor = '#10b981'; // Xanh an toàn
         let haloColor = 'rgba(16, 185, 129, 0.35)';
-        let iconSymbol = '💧';
+        let markerText = `${depthVal}cm`;
 
-        if (isDanger) {
-          badgeBg = 'linear-gradient(135deg, #b91c1c 0%, #ef4444 60%, #f43f5e 100%)';
-          borderColor = 'rgba(254, 205, 211, 0.95)';
-          shadowColor = 'rgba(239, 68, 68, 0.65)';
-          haloColor = 'rgba(239, 68, 68, 0.45)';
-          iconSymbol = '🌊';
-        } else if (isWarning) {
-          badgeBg = 'linear-gradient(135deg, #b45309 0%, #f59e0b 60%, #fbbf24 100%)';
-          borderColor = 'rgba(254, 240, 138, 0.95)';
-          shadowColor = 'rgba(245, 158, 11, 0.55)';
-          haloColor = 'rgba(245, 158, 11, 0.4)';
-          iconSymbol = '⚠️';
-        } else if (isOffline) {
-          badgeBg = 'linear-gradient(135deg, #475569 0%, #64748b 100%)';
-          borderColor = 'rgba(203, 213, 225, 0.6)';
-          shadowColor = 'rgba(100, 116, 139, 0.3)';
+        if (status === 'offline') {
+          bgColor = '#64748b'; // Xám mất tín hiệu
           haloColor = 'transparent';
-          iconSymbol = '⚪';
+          markerText = 'OFF';
+        } else if (status === 'no_data' || pt.depth_cm === null || pt.depth_cm === undefined) {
+          bgColor = '#64748b';
+          haloColor = 'transparent';
+          markerText = '--';
+        } else if (status === 'stale') {
+          bgColor = '#d97706'; // Hổ phách cũ
+          haloColor = 'rgba(217, 119, 6, 0.4)';
+          markerText = `${depthVal}cm`;
+        } else if (status === 'danger' || depthVal >= 20) {
+          bgColor = '#ef4444'; // Đỏ ngập sâu nguy hiểm
+          haloColor = 'rgba(239, 68, 68, 0.48)';
+          markerText = `${depthVal}cm`;
+        } else if (status === 'warning' || depthVal >= 5) {
+          bgColor = '#f59e0b'; // Vàng cam cảnh báo
+          haloColor = 'rgba(245, 158, 11, 0.42)';
+          markerText = `${depthVal}cm`;
         }
+
+        const isDanger = (status === 'danger' || depthVal >= 20);
+        const isWarning = (!isDanger && (status === 'warning' || depthVal >= 5));
 
         const el = document.createElement('div');
         const bloomClass = isStaggered ? 'flood-pin-bloom' : '';
         el.className = `c2-maplibre-pin ${bloomClass} flex items-center justify-center cursor-pointer select-none group`;
         const animDelay = isStaggered ? `animation-delay: ${Math.min(index * 45, 550)}ms;` : '';
-        el.style.cssText = `position: relative; z-index: ${isDanger ? 28 : 25}; ${animDelay}`;
+        el.style.cssText = `position: relative; width: 48px; height: 48px; z-index: ${isDanger ? 28 : 25}; ${animDelay}`;
 
         const pulsePing = isDanger
-          ? '<span class="absolute w-9 h-9 rounded-full bg-rose-500/40 animate-ping pointer-events-none" style="animation-duration: 1.5s;"></span>'
+          ? '<span class="absolute w-8 h-8 rounded-full bg-rose-500/40 animate-ping pointer-events-none" style="animation-duration: 1.6s;"></span>'
           : '';
 
         el.innerHTML = `
           <!-- Quầng radar sóng nước lan tỏa đa tầng -->
-          <div class="water-ripple-aura pointer-events-none" style="position: absolute; width: 44px; height: 44px; border-radius: 9999px; background: radial-gradient(circle, ${haloColor} 0%, transparent 70%); animation: waterRipplePulse 2.6s infinite cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
+          <div class="water-ripple-aura pointer-events-none" style="position: absolute; width: 48px; height: 48px; border-radius: 9999px; background: radial-gradient(circle, ${haloColor} 0%, transparent 70%); animation: waterRipplePulse 2.6s infinite cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
           ${pulsePing}
 
-          <!-- Thân Badge trạm ngập Glassmorphism siêu nét -->
-          <div class="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-white text-[10.5px] font-mono font-black shadow-xl border relative z-10 transition-all duration-200 group-hover:scale-125 group-hover:shadow-2xl pointer-events-auto"
-               style="background: ${badgeBg}; border-color: ${borderColor}; box-shadow: 0 4px 16px ${shadowColor}; min-width: 32px; height: 23px;"
-               title="${pt.name}: ~${depthVal}cm">
-            <span class="text-[9px] drop-shadow leading-none">${iconSymbol}</span>
-            <span class="tracking-tight leading-none">${depthText}</span>
+          <!-- Chấm tròn trạm quan trắc chuẩn 100% Command Center: 32x32px, viền trắng 2px, đổ bóng sắc nét -->
+          <div class="custom-marker transition-transform duration-200 group-hover:scale-125 pointer-events-auto"
+               style="width: 32px; height: 32px; border-radius: 9999px; background-color: ${bgColor}; border: 2px solid #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; color: #ffffff; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800; font-size: 11px; user-select: none;"
+               title="${pt.name}: ${markerText}">
+            <span style="letter-spacing: -0.3px; line-height: 1;">${markerText}</span>
           </div>
 
           <!-- Tooltip nổi tức thời khi Hover (Quick Hover Floating Preview) -->
