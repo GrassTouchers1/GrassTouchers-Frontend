@@ -25,59 +25,31 @@
  */
 
 const NorthStarRescue = (function () {
-  let activeRescueMarkers = {
-    disasters: [],
-    shelters: [],
-    sos: []
-  };
-  let rescueLayerVisibility = {
-    disasters: true,
-    shelters: true,
-    sos: true
-  };
-  let activeRescuePopup = null;
-  let evacuationRouteGeoJson = { type: 'FeatureCollection', features: [] };
+  let disasterLayerGroup = null;
+  let shelterLayerGroup = null;
+  let sosLayerGroup = null;
+  let evacuationRouteLayer = null;
 
   let allShelters = [];
   let allDisasters = [];
   let allSOSBeacons = [];
 
-  function getMapLibre() {
-    if (window.map && window.map._maplibre) return window.map._maplibre;
-    if (window.map && typeof window.map.getSource === 'function') return window.map;
-    return null;
-  }
-
   function initRescueLayers(map) {
-    const mapInst = getMapLibre();
-    if (mapInst && mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
-      setupRescueSourcesAndLayers(mapInst);
-    } else if (mapInst) {
-      mapInst.once('load', () => setupRescueSourcesAndLayers(mapInst));
+    if (window.L && typeof window.L.layerGroup === 'function') {
+      try {
+        if (!disasterLayerGroup) disasterLayerGroup = L.layerGroup();
+        if (!shelterLayerGroup) shelterLayerGroup = L.layerGroup();
+        if (!sosLayerGroup) sosLayerGroup = L.layerGroup();
+        if (map && typeof map.addLayer === 'function') {
+          map.addLayer(disasterLayerGroup);
+          map.addLayer(shelterLayerGroup);
+          map.addLayer(sosLayerGroup);
+        }
+      } catch (e) {
+        console.warn('Leaflet bridge layer init bypassed for MapLibre:', e);
+      }
     }
     connectRealtimeWebSocket();
-  }
-
-  function setupRescueSourcesAndLayers(mapInst) {
-    if (!mapInst) return;
-    if (!mapInst.getSource('evacuation-route-source')) {
-      mapInst.addSource('evacuation-route-source', {
-        type: 'geojson',
-        data: evacuationRouteGeoJson
-      });
-      mapInst.addLayer({
-        id: 'evacuation-route-layer',
-        type: 'line',
-        source: 'evacuation-route-source',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: {
-          'line-color': '#10b981',
-          'line-width': 6,
-          'line-dasharray': [2, 1],
-          'line-opacity': 0.95
-        }
-      });
-    }
   }
 
   // ==========================================
@@ -91,9 +63,11 @@ const NorthStarRescue = (function () {
       return;
     }
 
-    const wsUrl = (typeof GRASSTOUCHER_CONFIG !== 'undefined' && GRASSTOUCHER_CONFIG.WS_BASE_URL)
-      ? GRASSTOUCHER_CONFIG.WS_BASE_URL
-      : 'ws://localhost:8000/ws/navigation';
+    const wsUrl = (typeof GRASSTOUCHER_CONFIG !== 'undefined' && typeof GRASSTOUCHER_CONFIG.getWsUrl === 'function')
+      ? GRASSTOUCHER_CONFIG.getWsUrl('/ws/navigation')
+      : ((typeof GRASSTOUCHER_CONFIG !== 'undefined' && GRASSTOUCHER_CONFIG.WS_BASE_URL)
+        ? GRASSTOUCHER_CONFIG.WS_BASE_URL
+        : ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/navigation'));
 
     try {
       socket = new WebSocket(wsUrl);
@@ -149,34 +123,65 @@ const NorthStarRescue = (function () {
       allDisasters = data.features || [];
       renderDisasterLayers();
       renderDisastersSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải dữ liệu vùng thiên tai:', err);
     }
   }
 
   function renderDisasterLayers() {
-    const mapInst = getMapLibre();
-    if (!mapInst) return;
+    if (!window.map || !disasterLayerGroup) return;
+    disasterLayerGroup.clearLayers();
 
-    activeRescueMarkers.disasters.forEach(m => m.remove());
-    activeRescueMarkers.disasters = [];
+    allDisasters.forEach(feat => {
+      const p = feat.properties;
+      const coords = feat.geometry.coordinates;
+      const latLng = [coords[1], coords[0]];
+      const radius = p.radius_m || 200;
 
-    allDisasters.forEach(d => {
-      const p = d.properties || d;
-      let latLng = null;
-      if (d.geometry && d.geometry.coordinates) {
-        latLng = [d.geometry.coordinates[1], d.geometry.coordinates[0]];
-      } else if (p.latitude && p.longitude) {
-        latLng = [parseFloat(p.latitude), parseFloat(p.longitude)];
-      } else if (p.lat && p.lng) {
-        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
+      let color = '#f97316'; // flood
+      let fillColor = '#fb923c';
+      let icon = 'waves';
+
+      if (p.hazard_type === 'landslide') {
+        color = '#dc2626';
+        fillColor = '#ef4444';
+        icon = 'mountain';
+      } else if (p.hazard_type === 'storm') {
+        color = '#eab308';
+        fillColor = '#fde047';
+        icon = 'wind';
       }
-      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
 
-      const radius = p.radius_meters || 500;
-      let color = '#f59e0b';
-      if (p.severity === 'critical') color = '#ef4444';
-      else if (p.severity === 'high') color = '#ea580c';
+      // Vẽ vòng tròn bán kính vùng nguy cơ
+      const circle = L.circle(latLng, {
+        radius: radius,
+        color: color,
+        weight: 2,
+        fillColor: fillColor,
+        fillOpacity: 0.25,
+        dashArray: p.severity === 'critical' ? '4, 4' : null,
+      });
+
+      // Marker biểu tượng nguy hiểm
+      const markerHtml = `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
+          <div class="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold" style="background-color: ${color}">
+            ⚠️
+          </div>
+        </div>
+      `;
+      const customIcon = L.divIcon({
+        className: 'disaster-hazard-icon',
+        html: markerHtml,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      const marker = L.marker(latLng, { icon: customIcon });
 
       const hazardLabels = {
         flood: 'LŨ LỤT & NGẬP SÂU',
@@ -186,11 +191,11 @@ const NorthStarRescue = (function () {
       };
       const hazardName = hazardLabels[String(p.hazard_type).toLowerCase()] || String(p.hazard_type).toUpperCase();
 
-      let severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-extrabold bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide">CẢNH BÁO</span>';
+      let severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-extrabold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">CẢNH BÁO</span>';
       if (p.severity === 'critical') {
-        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800 uppercase tracking-wide animate-pulse">ĐẶC BIỆT NGUY CẤP</span>';
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-rose-100 text-rose-800 border border-rose-300 uppercase tracking-wide animate-pulse">ĐẶC BIỆT NGUY CẤP</span>';
       } else if (p.severity === 'high') {
-        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-amber-950 text-amber-300 border border-amber-800 uppercase tracking-wide">RẤT NGUY HIỂM</span>';
+        severityBadge = '<span class="text-[9.5px] px-1.5 py-0.5 rounded font-black bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wide">RẤT NGUY HIỂM</span>';
       }
 
       const popupHtml = `
@@ -209,26 +214,29 @@ const NorthStarRescue = (function () {
           </div>
         </div>
       `;
+      circle.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
+      circle.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
+        }
+        if (window.map) window.map.closePopup();
+        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+        circle.openPopup();
+      });
+      marker.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
+        }
+        if (window.map) window.map.closePopup();
+        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+        marker.openPopup();
+      });
 
-      const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center cursor-pointer';
-      if (!rescueLayerVisibility.disasters) el.style.display = 'none';
-      el.innerHTML = `
-        <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
-        <div class="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold" style="background-color: ${color}">
-          ⚠️
-        </div>
-      `;
-
-      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
-        .setHTML(popupHtml);
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([latLng[1], latLng[0]])
-        .setPopup(popup)
-        .addTo(mapInst);
-
-      activeRescueMarkers.disasters.push(marker);
+      disasterLayerGroup.addLayer(circle);
+      disasterLayerGroup.addLayer(marker);
     });
   }
 
@@ -247,16 +255,16 @@ const NorthStarRescue = (function () {
       if (p.severity === 'critical') badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse';
 
       return `
-        <div onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="p-2.5 rounded-xl border border-slate-800 hover:border-amber-500/70 bg-slate-950 hover:bg-slate-900 cursor-pointer transition shadow-sm">
+        <div onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-white hover:bg-slate-50 cursor-pointer transition shadow-sm">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-white">${p.title}</span>
+            <span class="text-xs font-bold text-slate-900">${p.title}</span>
             <span class="text-[10px] px-1.5 py-0.5 rounded font-bold border ${badgeClass}">${p.hazard_type}</span>
           </div>
-          <div class="text-[11px] text-slate-300 mt-1 line-clamp-2">${p.description || ''}</div>
+          <div class="text-[11px] text-slate-600 mt-1 line-clamp-2">${p.description || ''}</div>
           <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
             <span>Bán kính ảnh hưởng: ${p.radius_m}m</span>
             <span>•</span>
-            <span class="text-sky-400 font-semibold hover:underline">Xem trên bản đồ</span>
+            <span class="text-blue-600 font-semibold hover:underline">Xem trên bản đồ</span>
           </div>
         </div>
       `;
@@ -272,76 +280,88 @@ const NorthStarRescue = (function () {
       if (!res.ok) return;
       const data = await res.json();
       allShelters = data.features || [];
+      if (allShelters.length > 0 && typeof window !== 'undefined' && window.OfflineDB && typeof window.OfflineDB.saveShelterCache === 'function') {
+        window.OfflineDB.saveShelterCache(
+          allShelters.map((f) => ({
+            ...(f.properties || {}),
+            id: (f.properties && f.properties.id) || f.id,
+            coordinates: f.geometry ? f.geometry.coordinates : null
+          }))
+        ).catch(() => {});
+      }
       renderShelterLayers();
       renderSheltersSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải dữ liệu điểm sơ tán:', err);
     }
   }
 
   function renderShelterLayers() {
-    const mapInst = getMapLibre();
-    if (!mapInst) return;
+    if (!window.map || !shelterLayerGroup) return;
+    shelterLayerGroup.clearLayers();
 
-    activeRescueMarkers.shelters.forEach(m => m.remove());
-    activeRescueMarkers.shelters = [];
+    allShelters.forEach(feat => {
+      const p = feat.properties;
+      const coords = feat.geometry.coordinates;
+      const latLng = [coords[1], coords[0]];
 
-    allShelters.forEach(s => {
-      const p = s.properties || s;
-      let latLng = null;
-      if (s.geometry && s.geometry.coordinates) {
-        latLng = [s.geometry.coordinates[1], s.geometry.coordinates[0]];
-      } else if (p.latitude && p.longitude) {
-        latLng = [parseFloat(p.latitude), parseFloat(p.longitude)];
-      } else if (p.lat && p.lng) {
-        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
-      }
-      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
+      const markerHtml = `
+        <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer">
+          <span class="text-xs font-bold">🛡️</span>
+        </div>
+      `;
+      const shelterIcon = L.divIcon({
+        className: 'shelter-map-icon',
+        html: markerHtml,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
 
+      const marker = L.marker(latLng, { icon: shelterIcon });
       const percent = Math.min(100, Math.round((p.current_occupancy / p.capacity) * 100));
-      let capColor = 'text-emerald-400 bg-emerald-950 border-emerald-800';
-      if (percent >= 90) capColor = 'text-rose-400 bg-rose-950 border-rose-800';
-      else if (percent >= 70) capColor = 'text-amber-400 bg-amber-950 border-amber-800';
-
-      const el = document.createElement('div');
-      el.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer';
-      if (!rescueLayerVisibility.shelters) el.style.display = 'none';
-      el.innerHTML = '<span class="text-sm">🛡️</span>';
-      el.title = `${p.name} (${percent}% sức chứa)`;
 
       const popupHtml = `
-        <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
-          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
-            <span class="font-extrabold text-xs text-emerald-400 flex items-center gap-1">🛡️ TRẠM TRÚ ẨN AN TOÀN</span>
-            <span class="text-[9.5px] px-1.5 py-0.2 rounded font-bold border ${capColor}">${percent}% SỨC CHỨA</span>
+        <div class="p-2.5 max-w-xs text-slate-100 font-sans select-none">
+          <div class="flex items-center gap-1.5 text-emerald-400 font-black text-xs uppercase tracking-wide">
+            <span>🛡️ ĐIỂM SƠ TÁN AN TOÀN</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">${p.status}</span>
           </div>
-          <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.name}</h4>
-          <p class="text-xs text-slate-300 mt-1 leading-relaxed">${p.address || 'Khu vực an toàn đã được thẩm định'}</p>
-          <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
-            <div class="flex justify-between text-slate-300">
-              <span>Đang tiếp nhận:</span>
-              <b class="text-white">${p.current_occupancy} / ${p.capacity} người</b>
+          <h4 class="font-black text-sm text-white mt-1.5 leading-snug">${p.name}</h4>
+          <p class="text-xs text-slate-300 mt-0.5">${p.address || ''}</p>
+          
+          <div class="mt-2.5 pt-2 border-t border-slate-800 space-y-1.5 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400">Sức chứa:</span>
+              <span class="font-bold text-white font-mono">${p.current_occupancy} / ${p.capacity} (${percent}%)</span>
             </div>
-            <div class="flex justify-between text-slate-400 text-[10px]">
-              <span>Liên hệ: ${p.contact_person || 'Ban Chỉ huy'}</span>
-              <a href="tel:${p.contact_phone}" class="text-cyan-400 font-bold">${p.contact_phone || '114'}</a>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full ${percent > 80 ? 'bg-amber-400' : 'bg-emerald-400'}" style="width: ${percent}%"></div>
             </div>
+            <div class="text-[11px] text-slate-300">
+              <span class="text-slate-400">Vật tư:</span> <b class="text-slate-200">${p.supplies_status || 'Sẵn sàng'}</b>
+            </div>
+            ${p.contact_phone ? `<div class="text-[11px] text-slate-300"><span class="text-slate-400">Hotline:</span> <a href="tel:${p.contact_phone}" class="text-amber-300 font-bold font-mono hover:underline">${p.contact_phone}</a></div>` : ''}
           </div>
-          <button onclick="NorthStarRescue.routeToShelter(${latLng[1]}, ${latLng[0]}, '${p.name.replace(/'/g, "\'")}')" class="mt-2.5 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
-            <span>🧭 Dẫn Đường Sơ Tán Đến Đây</span>
+
+          <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="w-full mt-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>Dẫn đường sơ tán tới đây</span>
           </button>
         </div>
       `;
-
-      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
-        .setHTML(popupHtml);
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([latLng[1], latLng[0]])
-        .setPopup(popup)
-        .addTo(mapInst);
-
-      activeRescueMarkers.shelters.push(marker);
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
+      marker.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
+        }
+        if (window.map) window.map.closePopup();
+        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+        marker.openPopup();
+      });
+      shelterLayerGroup.addLayer(marker);
     });
   }
 
@@ -359,26 +379,26 @@ const NorthStarRescue = (function () {
       const percent = Math.min(100, Math.round((p.current_occupancy / p.capacity) * 100));
 
       return `
-        <div class="p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/70 hover:shadow-sm transition">
+        <div class="p-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-sm transition">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-white">${p.name}</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">${p.status}</span>
+            <span class="text-xs font-bold text-slate-900">${p.name}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">${p.status}</span>
           </div>
-          <div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${p.address || ''}</div>
+          <div class="text-[11px] text-slate-500 mt-0.5 line-clamp-1">${p.address || ''}</div>
           
           <div class="mt-2 space-y-1">
             <div class="flex justify-between text-[11px]">
-              <span class="text-slate-400">Chỗ tiếp nhận:</span>
-              <span class="font-bold text-slate-200">${p.current_occupancy}/${p.capacity} (${p.available_slots} còn trống)</span>
+              <span class="text-slate-500">Chỗ tiếp nhận:</span>
+              <span class="font-bold text-slate-800">${p.current_occupancy}/${p.capacity} (${p.available_slots} còn trống)</span>
             </div>
-            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div class="h-full ${percent > 85 ? 'bg-amber-500' : 'bg-emerald-500'}" style="width: ${percent}%"></div>
             </div>
           </div>
 
-          <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-            ${p.contact_phone ? `<a href="tel:${p.contact_phone}" class="text-[11px] text-sky-400 font-semibold hover:underline flex items-center gap-1">📞 ${p.contact_phone}</a>` : '<span></span>'}
-            <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 rounded-lg text-xs font-bold transition cursor-pointer">
+          <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+            ${p.contact_phone ? `<a href="tel:${p.contact_phone}" class="text-[11px] text-blue-600 font-semibold hover:underline flex items-center gap-1">📞 ${p.contact_phone}</a>` : '<span></span>'}
+            <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition">
               Sơ tán tới đây
             </button>
           </div>
@@ -391,85 +411,100 @@ const NorthStarRescue = (function () {
   // 3. TẢI VÀ VẼ TÍN HIỆU SOS (BEACONS)
   // ==========================================
   async function loadSOSBeacons() {
-    if (document.getElementById('citizen-sos-form')) return;
     if (window.NorthStarAuth && ['guest', 'citizen'].includes(window.NorthStarAuth.getRole())) return;
     try {
-      const res = await fetch(getApiUrl('/api/sos'));
+      const headers = {};
+      const token = window.NorthStarAuth && typeof window.NorthStarAuth.getToken === 'function' ? window.NorthStarAuth.getToken() : null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(getApiUrl('/api/sos'), { headers });
       if (!res.ok) return;
       const data = await res.json();
       allSOSBeacons = data.features || [];
       renderSOSLayers();
       renderSOSSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải tín hiệu SOS:', err);
     }
   }
 
   function renderSOSLayers() {
-    const mapInst = getMapLibre();
-    if (!mapInst) return;
+    if (!window.map || !sosLayerGroup) return;
+    sosLayerGroup.clearLayers();
 
-    activeRescueMarkers.sos.forEach(m => m.remove());
-    activeRescueMarkers.sos = [];
+    allSOSBeacons.forEach(feat => {
+      const p = feat.properties;
+      if (!feat.geometry || !Array.isArray(feat.geometry.coordinates)) return;
+      const coords = feat.geometry.coordinates;
+      const latLng = [coords[1], coords[0]];
 
-    const activeSOS = allSOSBeacons.filter(b => {
-      const p = b.properties || b;
-      return p.status === 'active' || p.status === 'pending' || p.status === 'verified';
-    });
+      // Ẩn tất cả tín hiệu đã được bàn giao đội cứu hộ hoặc đã cứu hộ an toàn (tránh rối mắt và trùng lặp bản đồ)
+      if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
 
-    activeSOS.forEach(s => {
-      const p = s.properties || s;
-      let latLng = null;
-      if (s.geometry && s.geometry.coordinates) {
-        latLng = [s.geometry.coordinates[1], s.geometry.coordinates[0]];
-      } else if (p.lat && p.lng) {
-        latLng = [parseFloat(p.lat), parseFloat(p.lng)];
-      }
-      if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
-
-      const pNorm = (p.final_priority || p.priority || 'P3').toUpperCase();
-      let color = '#ef4444';
-      if (pNorm === 'P2' || pNorm === 'HIGH') color = '#f59e0b';
-      else if (pNorm === 'P3' || pNorm === 'MEDIUM') color = '#0284c7';
-      else if (pNorm === 'P4' || pNorm === 'LOW') color = '#64748b';
-
-      const el = document.createElement('div');
-      el.className = 'relative flex items-center justify-center cursor-pointer';
-      if (!rescueLayerVisibility.sos) el.style.display = 'none';
-      el.innerHTML = `
-        <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
-        <div class="w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white select-none" style="background-color: ${color}">
-          SOS
+      const markerHtml = `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute w-10 h-10 rounded-full bg-rose-500 opacity-75 animate-ping"></span>
+          <div class="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xl border-2 border-white text-xs font-black">
+            SOS
+          </div>
         </div>
       `;
+      const sosIcon = L.divIcon({
+        className: 'sos-beacon-icon',
+        html: markerHtml,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
 
+      const marker = L.marker(latLng, { icon: sosIcon });
       const popupHtml = `
         <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
-          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
-            <span class="font-extrabold text-xs text-rose-400 flex items-center gap-1">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
-            <span class="text-[10px] px-2 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800">${pNorm}</span>
+          <div class="flex items-center justify-between pb-1.5 border-b border-rose-500/30">
+            <span class="flex items-center gap-1.5 text-rose-400 font-black text-xs tracking-wider">🚨 YÊU CẦU CỨU HỘ KHẨN CẤP</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-black bg-rose-500/20 text-rose-300 border border-rose-500/40">${(p.priority || 'P1').toUpperCase()}</span>
           </div>
-          <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.contact_name} (${p.people_count} người)</h4>
-          <p class="text-xs text-slate-300 mt-1 italic leading-relaxed">"${p.description || p.notes || 'Cần hỗ trợ di tản khẩn cấp!'}"</p>
-          <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
-            <div class="text-slate-300">SĐT: <a href="tel:${p.phone}" class="text-amber-300 font-bold">${p.phone}</a></div>
-            <div class="text-slate-400 text-[10px]">Địa bàn: ${p.location_text || (p.district ? p.district + ', ' + p.province : 'Khu vực ngập sâu')}</div>
+          <div class="mt-2">
+            <h4 class="font-black text-sm text-white leading-snug">${p.contact_name || 'Nạn nhân'}</h4>
+            <div class="text-xs font-mono font-bold text-amber-300 mt-0.5 flex items-center gap-1">
+              <span>📞</span>
+              <span>${p.phone || 'Chưa có SĐT'}</span>
+            </div>
           </div>
-          <button onclick="CommandUIController.openDispatchModal('${p.id || p.raw_id}')" class="mt-2.5 w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
-            <span>⚡ Lập Lệnh Cứu Nạn (Điều Phối)</span>
-          </button>
+          <div class="text-xs text-slate-200 mt-2 space-y-1.5 bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400 font-medium">Số người mắc kẹt:</span>
+              <span class="font-extrabold text-white text-sm font-mono">${p.people_count} người ${p.has_elderly_or_children ? '⚠️' : ''}</span>
+            </div>
+            ${p.has_elderly_or_children ? '<div class="text-[11px] text-amber-400 font-bold bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/60">⚠️ Có trẻ nhỏ / người già neo đơn</div>' : ''}
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400 font-medium">Mực nước ngập:</span>
+              <span class="font-extrabold text-rose-400 font-mono text-sm">~${p.water_level_cm || 0} cm</span>
+            </div>
+            ${p.notes ? `<div class="pt-1.5 mt-1 border-t border-slate-800 text-[11px] text-slate-300 leading-relaxed italic">"${p.notes}"</div>` : ''}
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800 flex gap-2">
+            <a href="tel:${p.phone}" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-center text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md no-underline">
+              <span class="text-white font-black">📞 Gọi nạn nhân</span>
+            </a>
+            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="px-3 py-2 bg-slate-800 hover:bg-emerald-950 active:bg-emerald-900 text-slate-200 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/50 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm cursor-pointer" title="Đánh dấu đã giải cứu an toàn và chuyển vào kho hồ sơ">
+              <span>✓ Đã an toàn</span>
+            </button>
+          </div>
         </div>
       `;
-
-      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
-        .setHTML(popupHtml);
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([latLng[1], latLng[0]])
-        .setPopup(popup)
-        .addTo(mapInst);
-
-      activeRescueMarkers.sos.push(marker);
+      marker.bindPopup(popupHtml, { className: 'flood-custom-popup', maxWidth: 330, minWidth: 280, autoClose: true, closeOnClick: true });
+      marker.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
+        }
+        if (window.map) window.map.closePopup();
+        document.querySelectorAll('.leaflet-popup').forEach(el => el.remove());
+        marker.openPopup();
+      });
+      sosLayerGroup.addLayer(marker);
     });
   }
 
@@ -484,19 +519,22 @@ const NorthStarRescue = (function () {
 
     listEl.innerHTML = activeBeacons.map(f => {
       const p = f.properties;
-      const coords = f.geometry.coordinates;
+      const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : null;
+      const mapBtn = coords
+        ? `<button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>`
+        : `<span class="text-[11px] text-amber-400 font-semibold">📍 ${p.location_description || p.location_landmark || 'Chưa có tọa độ GPS'}</span>`;
 
       return `
-        <div class="p-2.5 rounded-xl border border-rose-800/60 bg-rose-950/30 hover:bg-rose-950/50 transition shadow-sm">
+        <div class="p-2.5 rounded-xl border border-rose-900/40 bg-slate-900/80 hover:bg-slate-800/80 transition shadow-sm">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-rose-200">🆘 ${p.contact_name} (${p.people_count} người)</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded font-bold bg-rose-900 text-rose-200 border border-rose-700">${p.priority}</span>
+            <span class="text-xs font-black text-rose-300">🆘 ${p.contact_name} (${p.people_count} người)</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-black bg-rose-950 text-rose-300 border border-rose-800">${p.priority}</span>
           </div>
-          <div class="text-[11px] text-slate-300 mt-1">SĐT: <a href="tel:${p.phone}" class="text-sky-400 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• Có trẻ nhỏ/người già' : ''}</div>
+          <div class="text-[11px] text-slate-300 mt-1">SĐT: <a href="tel:${p.phone}" class="text-amber-300 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• <span class="text-amber-400 font-bold">Có trẻ nhỏ/người già</span>' : ''}</div>
           ${p.notes ? `<div class="text-[11px] text-slate-400 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
           <div class="mt-2 flex items-center justify-between">
-            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>
-            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer">Đánh dấu đã cứu</button>
+            ${mapBtn}
+            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer">Đánh dấu đã cứu</button>
           </div>
         </div>
       `;
@@ -551,35 +589,25 @@ const NorthStarRescue = (function () {
   }
 
   function renderEvacuationRouteOnMap(routeData) {
-    const mapInst = getMapLibre();
-    if (!mapInst || !routeData || !routeData.geometry || !routeData.geometry.coordinates) return;
+    if (!window.map) return;
+    if (evacuationRouteLayer) window.map.removeLayer(evacuationRouteLayer);
 
-    const coords = routeData.geometry.coordinates; // [[lng, lat], ...]
-    evacuationRouteGeoJson = {
-      type: 'FeatureCollection',
-      features: [{
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: coords
-        }
-      }]
-    };
+    const geom = routeData.geometry;
+    if (!geom || !geom.coordinates) return;
 
-    if (mapInst.getSource('evacuation-route-source')) {
-      mapInst.getSource('evacuation-route-source').setData(evacuationRouteGeoJson);
-    }
+    // Chuyển đổi [lng, lat] -> [lat, lng]
+    const latLngs = geom.coordinates.map(c => [c[1], c[0]]);
 
-    let minLng = 180, minLat = 90, maxLng = -180, maxLat = -90;
-    coords.forEach(c => {
-      if (c[0] < minLng) minLng = c[0];
-      if (c[0] > maxLng) maxLng = c[0];
-      if (c[1] < minLat) minLat = c[1];
-      if (c[1] > maxLat) maxLat = c[1];
-    });
-    if (minLng <= maxLng && minLat <= maxLat) {
-      mapInst.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 50, duration: 800 });
-    }
+    evacuationRouteLayer = L.polyline(latLngs, {
+      color: '#10b981', // Xanh lá cây an toàn
+      weight: 6,
+      opacity: 0.9,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: '8, 8'
+    }).addTo(window.map);
+
+    window.map.fitBounds(evacuationRouteLayer.getBounds(), { padding: [50, 50] });
   }
 
   function renderEvacuationResultCard(routeData) {
@@ -591,7 +619,7 @@ const NorthStarRescue = (function () {
     document.getElementById('evac-distance').innerText = `${(routeData.distance_m / 1000).toFixed(2)} km`;
     document.getElementById('evac-duration').innerText = `~${routeData.duration_min} phút (${routeData.vehicle === 'walk' ? 'Đi bộ' : 'Phương tiện'})`;
     document.getElementById('evac-shelter-capacity').innerText = `${sh.current_occupancy}/${sh.capacity} người`;
-    
+
     const hotlineEl = document.getElementById('evac-shelter-hotline');
     if (hotlineEl) {
       if (sh.contact_phone) {
@@ -616,111 +644,208 @@ const NorthStarRescue = (function () {
   }
 
   // ==========================================
-  // 5. GỬI TÍN HIỆU SOS KHẨN CẤP
+  // 5. GỬI TÍN HIỆU SOS KHẨN CẤP (CIT-03)
   // ==========================================
+  function renderSOSSubmissionState(submitState, { ticketCode = null, trackingToken = null, localId = null, message = '' } = {}) {
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    const ticketDisplay = document.getElementById('citizen-sos-ticket-code');
+    const syncBadge = document.getElementById('citizen-sos-sync-badge');
+    const feedbackMsg = document.getElementById('citizen-sos-feedback-msg');
+    const tokenRow = document.getElementById('citizen-sos-tracking-token-row');
+    const tokenDisplay = document.getElementById('citizen-sos-tracking-token');
+    if (!resultCard || !ticketDisplay || !syncBadge || !feedbackMsg) return;
+
+    resultCard.classList.remove('hidden');
+
+    if (tokenRow && tokenDisplay) {
+      if (submitState === 'SERVER_RECEIVED' && trackingToken) {
+        tokenDisplay.textContent = trackingToken;
+        tokenRow.classList.remove('hidden');
+      } else {
+        tokenDisplay.textContent = '';
+        tokenRow.classList.add('hidden');
+      }
+    }
+
+    if (submitState === 'SENDING') {
+      ticketDisplay.textContent = 'ĐANG CHỜ MÁY CHỦ...';
+      syncBadge.textContent = 'SENDING';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-sky-950/90 text-sky-300 border border-sky-600 animate-pulse';
+      feedbackMsg.textContent = '⏳ Đang truyền yêu cầu cứu hộ tới máy chủ Ban chỉ huy...';
+    } else if (submitState === 'SERVER_RECEIVED') {
+      ticketDisplay.textContent = ticketCode;
+      syncBadge.textContent = 'ĐÃ TIẾP NHẬN (MÁY CHỦ)';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-600 shadow-xs';
+      feedbackMsg.textContent = message || '✅ Máy chủ Chỉ huy đã tiếp nhận thông tin cứu nạn khẩn cấp của bạn.';
+    } else if (submitState === 'PENDING_OFFLINE') {
+      ticketDisplay.textContent = localId || 'CHƯA CÓ MÃ MÁY CHỦ';
+      syncBadge.textContent = 'LƯU TRÊN MÁY (CHƯA GỬI)';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600 animate-pulse';
+      feedbackMsg.innerHTML = message ||
+        '<strong class="text-amber-300">⚠️ ĐANG NGOẠI TUYẾN:</strong> Bản nháp cục bộ (chưa phải mã hồ sơ chính thức) đã được lưu trên máy. ' +
+        'Hệ thống sẽ tự động gửi khi có mạng trở lại. Nếu khẩn cấp, hãy gọi ngay hotline <strong>114</strong> hoặc <strong>112</strong>!';
+    } else {
+      // FAILED / Lỗi giao thức API
+      ticketDisplay.textContent = 'CHƯA CẤP MÃ HỒ SƠ';
+      syncBadge.textContent = 'GỬI THẤT BẠI';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-600';
+      feedbackMsg.textContent = message || '❌ Không thể xác nhận tiếp nhận từ máy chủ. Vui lòng kiểm tra thông tin và thử lại.';
+    }
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   async function submitSOSBeacon() {
-    const name = document.getElementById('sos-input-name')?.value.trim();
-    const phone = document.getElementById('sos-input-phone')?.value.trim();
+    const name = document.getElementById('sos-input-name')?.value.trim() || '';
+    const phone = document.getElementById('sos-input-phone')?.value.trim() || '';
     const people = parseInt(document.getElementById('sos-input-people')?.value || '1', 10);
     const hasVulnerable = document.getElementById('sos-input-vulnerable')?.checked || false;
     const waterDepth = parseFloat(document.getElementById('sos-input-depth')?.value || '0');
     const priority = document.getElementById('sos-select-priority')?.value || 'high';
-    const notes = document.getElementById('sos-input-notes')?.value.trim();
+    const notes = document.getElementById('sos-input-notes')?.value.trim() || '';
+    const locDesc = document.getElementById('sos-location-description')?.value.trim() || '';
+    const locLandmark = document.getElementById('sos-location-landmark')?.value.trim() || '';
 
-    if (!name || !phone || phone.length < 8) {
-      alert('Vui lòng nhập đầy đủ họ tên và số điện thoại hợp lệ (>= 8 số) để lực lượng cứu nạn liên hệ.');
+    if (!name || phone.length < 8) {
+      alert('Vui lòng nhập họ tên và số điện thoại hợp lệ (tối thiểu 8 ký tự) để lực lượng cứu nạn có thể liên hệ lại.');
       return;
     }
 
-    // Lấy toạ độ GPS hoặc tâm bản đồ
-    let coords = window.coords ? window.coords.origin : null;
-    if (!coords && window.map) {
-      const c = window.map.getCenter();
-      coords = { lng: c.lng, lat: c.lat };
-    }
-    if (!coords) coords = { lng: 105.8030, lat: 21.0285 };
+    const portalState = window.CitizenPortal ? window.CitizenPortal.state : null;
+    const rawCoords = portalState ? portalState.selectedCoords : null;
+    const hasValidCoords = !!(
+      rawCoords &&
+      typeof rawCoords.lat === 'number' &&
+      typeof rawCoords.lng === 'number' &&
+      Number.isFinite(rawCoords.lat) &&
+      Number.isFinite(rawCoords.lng)
+    );
+    const hasTextLocation = locDesc.length >= 3 || locLandmark.length >= 3;
 
-    // Xác nhận trước khi gửi SOS
-    const confirmBox = document.getElementById('sos-confirm-overlay');
-    if (confirmBox && !window._skipSosConfirmOnce) {
-      const summaryEl = document.getElementById('sos-confirm-summary');
-      if (summaryEl) {
-        summaryEl.innerHTML = `
-          <div><b>Người liên hệ:</b> ${name} (${phone})</div>
-          <div><b>Số người mắc kẹt:</b> ${people} người ${hasVulnerable ? '<span class="text-rose-400 font-bold">(Có người già/trẻ nhỏ)</span>' : ''}</div>
-          <div><b>Toạ độ gửi đi:</b> <span class="font-mono text-cyan-300">[${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]</span></div>
-          <div><b>Tình trạng:</b> ${notes || 'Cần hỗ trợ khẩn cấp'}</div>
-        `;
-      }
-      confirmBox.classList.remove('hidden');
+    // Quy tắc CIT-02 & CIT-03: Tuyệt đối không dùng tọa độ mặc định Hà Nội khi chưa có tọa độ thật
+    if (!hasValidCoords && !hasTextLocation) {
+      alert(
+        '⚠️ CHƯA CÓ VỊ TRÍ CỨU HỘ!\n\n' +
+        'Vui lòng bấm nút "GPS", hoặc "Ghim bản đồ", hoặc nhập mô tả địa điểm / điểm mốc (tối thiểu 3 ký tự) trước khi gửi SOS.'
+      );
       return;
     }
-    window._skipSosConfirmOnce = false;
+
+    if (!portalState || !portalState.locationConfirmed) {
+      alert(
+        '⚠️ BẠN CHƯA XÁC NHẬN VỊ TRÍ!\n\n' +
+        'Vui lòng kiểm tra tọa độ / mô tả địa điểm và tích chọn ô "Tôi xác nhận vị trí / mô tả này là chính xác" trước khi gửi.'
+      );
+      const checkEl = document.getElementById('citizen-confirm-location-check');
+      if (checkEl) checkEl.focus();
+      return;
+    }
+
+    const locationSource = hasValidCoords
+      ? (portalState.locationSource === 'gps' ? 'gps' : 'manual')
+      : 'unknown';
 
     const payload = {
       contact_name: name,
       phone: phone,
-      lng: coords.lng,
-      lat: coords.lat,
-      people_count: people,
+      lng: hasValidCoords ? rawCoords.lng : null,
+      lat: hasValidCoords ? rawCoords.lat : null,
+      location_source: locationSource,
+      location_accuracy_m: (hasValidCoords && locationSource === 'gps') ? portalState.locationAccuracy : null,
+      location_captured_at: portalState.locationCapturedAt || null,
+      location_confirmed: true,
+      location_description: locDesc || null,
+      location_landmark: locLandmark || null,
+      people_count: Number.isFinite(people) && people >= 1 ? people : 1,
       has_elderly_or_children: hasVulnerable,
-      water_level_cm: waterDepth,
+      water_level_cm: Number.isFinite(waterDepth) && waterDepth >= 0 ? waterDepth : 0,
       priority: priority,
-      notes: notes
+      notes: notes || null
     };
 
+    const clientEventId = (window.OfflineSyncManager && typeof window.OfflineSyncManager.generateClientEventId === 'function')
+      ? window.OfflineSyncManager.generateClientEventId()
+      : `EVT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    payload.client_event_id = clientEventId;
+
+    // Tiêu chí V-03: Nếu thiết bị đang ngoại tuyến -> lưu bản nháp cục bộ (không coi là đã gửi server)
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await handleOfflineSOSDraft({ ...payload, client_event_id: clientEventId });
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-submit-sos');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Đang gửi máy chủ...';
+    }
+    renderSOSSubmissionState('SENDING');
+
     try {
-      const res = await fetch(getApiUrl('/api/sos'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const savedBeacon = await res.json();
-      const sosId = savedBeacon?.properties?.id;
-      const ticketCode = sosId ? `SOS-${sosId}` : 'SOS-NEW';
-
-      // Đồng bộ phân tích AI Qwen3-8B & Guardrails trên /api/relief/requests
-      if (sosId) {
-        fetch(getApiUrl('/api/relief/requests'), {
+      let savedBeacon = null;
+      if (typeof NorthStarApi !== 'undefined' && typeof NorthStarApi.fetchJson === 'function') {
+        savedBeacon = await NorthStarApi.fetchJson('/api/sos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            request_id: ticketCode,
-            message: notes || `Cần cứu hộ khẩn cấp ${people} người tại [${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]`,
-            contact_name: name,
-            phone: phone,
-            lat: coords.lat,
-            lng: coords.lng,
-            source: 'web_form'
-          })
-        }).catch(() => {});
-      }
-
-      // Hiển thị kết quả kèm Mã hồ sơ để người dân theo dõi
-      const receiptEl = document.getElementById('sos-sent-receipt');
-      if (receiptEl) {
-        receiptEl.classList.remove('hidden');
-        const codeEl = document.getElementById('sos-sent-ticket-code');
-        if (codeEl) codeEl.textContent = ticketCode;
-      }
-      const trackInput = document.getElementById('citizen-tracking-input');
-      if (trackInput) trackInput.value = ticketCode;
-
-      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-        window.CommandUIController.showToast('🚨 ĐÃ PHÁT TÍN HIỆU SOS', `Mã hồ sơ của bạn: ${ticketCode}. Trung tâm điều phối đang xử lý!`, 'success');
+          body: JSON.stringify(payload)
+        });
       } else {
-        alert(`✅ ĐÃ PHÁT TÍN HIỆU SOS THÀNH CÔNG! Mã hồ sơ: ${ticketCode}`);
+        const res = await fetch(getApiUrl('/api/sos'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = new Error(`Máy chủ từ chối yêu cầu (HTTP ${res.status})`);
+          err.status = res.status;
+          err.type = 'HTTP';
+          throw err;
+        }
+        savedBeacon = await res.json();
       }
 
-      // Xoá trắng ghi chú form
-      if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
-      
-      // 1. Cập nhật marker cứu hộ trên bản đồ
-      await loadSOSBeacons();
+      // Chỉ chấp nhận ID số hợp lệ do máy chủ thực sự cấp (CIT-03: Không dùng Math.random())
+      const rawId = savedBeacon?.properties?.id ?? savedBeacon?.id;
+      const numericId = Number(rawId);
+      if (!savedBeacon || rawId === null || rawId === undefined || !Number.isInteger(numericId) || numericId <= 0) {
+        console.error('[NorthStar SOS] Phản hồi máy chủ thiếu ID hồ sơ hợp lệ (Protocol Error).');
+        renderSOSSubmissionState('FAILED', {
+          message: '⚠️ Máy chủ phản hồi thành công nhưng chưa cấp mã hồ sơ hợp lệ (lỗi giao thức API). Vui lòng thử gửi lại hoặc gọi hotline 114.'
+        });
+        return;
+      }
 
-      // 2. Đồng bộ lập tức sang Trung Tâm Tiếp Nhận & COP Command Center
+      const ticketCode = `#SOS-2026-${String(numericId).padStart(4, '0')}`;
+      const trackingToken = savedBeacon?.properties?.tracking_token || null;
+
+      if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOS === 'function') {
+        const savedRec = await window.OfflineSyncManager.enqueueSOS(payload, {
+          client_event_id: clientEventId,
+          sync_status: 'ACKNOWLEDGED',
+          server_id: numericId,
+          acknowledged_at: new Date().toISOString(),
+          triggerSync: false
+        }).catch(() => null);
+        if (trackingToken && savedRec && window.OfflineDB && typeof window.OfflineDB.updateSOS === 'function') {
+          await window.OfflineDB.updateSOS(savedRec.local_id, { tracking_token: trackingToken }).catch(() => {});
+        }
+      }
+
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', ticketCode);
+      } catch (e) {}
+
+      renderSOSSubmissionState('SERVER_RECEIVED', {
+        ticketCode,
+        trackingToken,
+        message: '✅ Máy chủ Chỉ huy đã tiếp nhận thông tin cứu nạn khẩn cấp của bạn. Đội cứu hộ đang xử lý.'
+      });
+
+      if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
+
+      if (typeof loadSOSBeacons === 'function') {
+        await loadSOSBeacons();
+      }
+
       if (window.CommandUIController) {
         if (typeof window.CommandUIController.registerNewSOS === 'function') {
           window.CommandUIController.registerNewSOS(savedBeacon);
@@ -729,19 +854,84 @@ const NorthStarRescue = (function () {
         }
       }
 
-      // 3. Bắn event đồng bộ toàn cục
       window.dispatchEvent(new CustomEvent('northstar:sos_beacon_created', { detail: savedBeacon }));
-
     } catch (err) {
-      alert(`Không thể gửi tín hiệu SOS: ${err.message}. Vui lòng gọi trực tiếp hotline 114 hoặc 112.`);
+      // Lỗi dữ liệu đầu vào (HTTP 400/401/409/422) hoặc lỗi JSON -> báo FAILED rõ ràng, không lưu bản nháp sai
+      if (err && (err.status === 400 || err.status === 401 || err.status === 409 || err.status === 422 || err.type === 'JSON_PARSE')) {
+        renderSOSSubmissionState('FAILED', {
+          message: `❌ ${err.message || 'Dữ liệu SOS không hợp lệ hoặc phản hồi máy chủ sai định dạng.'}`
+        });
+      } else {
+        // Lỗi mạng / Timeout / Server 5xx -> chuyển sang lưu bản nháp ngoại tuyến PENDING_OFFLINE
+        console.warn('[NorthStar SOS] Lỗi kết nối máy chủ, chuyển sang lưu bản nháp cục bộ:', err?.message || err);
+        await handleOfflineSOSDraft({ ...payload, client_event_id: clientEventId }, err?.message);
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i><span>Gửi Yêu Cầu Cứu Hộ SOS</span>';
+        if (window.lucide) lucide.createIcons();
+      }
     }
   }
 
-  function confirmSendSOSBeacon() {
-    const confirmBox = document.getElementById('sos-confirm-overlay');
-    if (confirmBox) confirmBox.classList.add('hidden');
-    window._skipSosConfirmOnce = true;
-    submitSOSBeacon();
+  /**
+   * Xử lý lưu bản nháp cứu nạn SOS khi mất mạng hoặc máy chủ lỗi (Tiêu chí V-03)
+   */
+  async function handleOfflineSOSDraft(payload, reason = null) {
+    let draftItem = null;
+    if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOS === 'function') {
+      draftItem = await window.OfflineSyncManager.enqueueSOS(payload, {
+        client_event_id: payload?.client_event_id,
+        sync_status: 'PENDING_OFFLINE',
+        triggerSync: false
+      });
+    } else if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOSDraft === 'function') {
+      draftItem = await window.OfflineSyncManager.enqueueSOSDraft(payload);
+    } else {
+      const localId = `SOS-DRAFT-${Date.now()}`;
+      draftItem = { local_id: localId };
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', localId);
+      } catch (e) {}
+    }
+
+    const localId = draftItem?.local_id || draftItem?.id || `SOS-DRAFT-${Date.now()}`;
+    renderSOSSubmissionState('PENDING_OFFLINE', { localId });
+
+    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+      window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP TRÊN MÁY', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('northstar:sos_offline_saved', {
+        detail: { payload, draft: draftItem }
+      }));
+    } catch (_) {}
+  }
+
+  /**
+   * Sao chép mã hồ sơ tiếp nhận vào Clipboard (Tiêu chí V-02)
+   */
+  function copyTicketCode() {
+    const code = document.getElementById('citizen-sos-ticket-code')?.textContent || '#SOS-2026-0001';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`📋 Đã sao chép mã hồ sơ: ${code}\nBạn có thể gửi mã này qua SMS cho người thân hoặc lực lượng cứu nạn.`);
+      }).catch(() => {
+        prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+      });
+    } else {
+      prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+    }
+  }
+
+  /**
+   * Làm sạch và đóng thẻ kết quả SOS
+   */
+  function resetSOSForm() {
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    if (resultCard) resultCard.classList.add('hidden');
+    if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
   }
 
   async function resolveSOS(sosId) {
@@ -756,7 +946,7 @@ const NorthStarRescue = (function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rescued' })
       });
-      
+
       // 1. Cập nhật marker trên bản đồ (Ẩn tín hiệu ngay để không gây rối mắt)
       await loadSOSBeacons();
 
@@ -780,22 +970,24 @@ const NorthStarRescue = (function () {
   }
 
   function flyToPoint(lat, lng) {
-    const mapInst = getMapLibre();
-    if (mapInst) {
-      mapInst.flyTo({ center: [lng, lat], zoom: 15.5, duration: 1200 });
+    if (window.NorthStarMapLibre && window.NorthStarMapLibre.map) {
+      window.NorthStarMapLibre.map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+    } else if (window.map && typeof window.map.flyTo === 'function') {
+      window.map.flyTo([lat, lng], 15, { duration: 1.2 });
     }
   }
 
   function toggleLayer(layerType, show) {
-    rescueLayerVisibility[layerType] = !!show;
-    const markers = activeRescueMarkers[layerType];
-    if (Array.isArray(markers)) {
-      markers.forEach(marker => {
-        const el = marker && typeof marker.getElement === 'function' ? marker.getElement() : null;
-        if (el) {
-          el.style.display = show ? 'flex' : 'none';
-        }
-      });
+    if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.toggleLayer === 'function') {
+      window.NorthStarMapLibre.toggleLayer(layerType, show);
+    }
+    if (!window.map) return;
+    if (layerType === 'disasters' && disasterLayerGroup && typeof window.map.addLayer === 'function') {
+      show ? window.map.addLayer(disasterLayerGroup) : window.map.removeLayer(disasterLayerGroup);
+    } else if (layerType === 'shelters' && shelterLayerGroup && typeof window.map.addLayer === 'function') {
+      show ? window.map.addLayer(shelterLayerGroup) : window.map.removeLayer(shelterLayerGroup);
+    } else if (layerType === 'sos' && sosLayerGroup && typeof window.map.addLayer === 'function') {
+      show ? window.map.addLayer(sosLayerGroup) : window.map.removeLayer(sosLayerGroup);
     }
   }
 
@@ -807,7 +999,8 @@ const NorthStarRescue = (function () {
     findEvacuationRoute,
     routeToShelter,
     submitSOSBeacon,
-    confirmSendSOSBeacon,
+    copyTicketCode,
+    resetSOSForm,
     resolveSOS,
     flyToPoint,
     toggleLayer,

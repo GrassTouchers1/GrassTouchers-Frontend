@@ -7,3 +7,8 @@ __pycache__/
 .idea/
 dist/
 build/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example

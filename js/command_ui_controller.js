@@ -1577,6 +1577,44 @@ const CommandUIController = (function () {
     if (floatingFeedBadge) floatingFeedBadge.innerText = `${criticalSOS > 0 ? criticalSOS : (intakeData.length > 0 ? intakeData.length : 42)}`;
   }
 
+  function renderChannelBadge(item) {
+    const ch = String((item && item.ingest_channel) || 'direct_online').toLowerCase();
+    if (ch === 'dtn_relay') {
+      const hops = Number(item.hop_count || 0);
+      const sigTxt = item.signature_verified ? ' • ✓ Chữ ký hợp lệ' : '';
+      return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-950/85 text-cyan-300 border border-purple-500/60">📡 Chuyển tiếp (${hops} chặng)${sigTxt}</span>`;
+    }
+    if (ch === 'satellite') {
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-950/85 text-blue-300 border border-blue-600/70">🛰️ Kênh Vệ Tinh</span>';
+    }
+    if (ch === 'satellite_simulated') {
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-sky-950/75 text-sky-200 border border-dashed border-sky-400">🛰️ Kênh Vệ Tinh (Mô phỏng)</span>';
+    }
+    if (ch === 'sms_2g') {
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-950/85 text-amber-300 border border-amber-600/70">📱 SMS Khẩn Cấp</span>';
+    }
+    return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/70">🟢 Trực tuyến</span>';
+  }
+
+  function renderRelayTimingInfo(item) {
+    const ch = String((item && item.ingest_channel) || 'direct_online').toLowerCase();
+    if (ch === 'dtn_relay' && item.origin_created_at && item.relayed_at && item.origin_created_at !== item.relayed_at) {
+      const tOrig = new Date(item.origin_created_at);
+      const tRel = new Date(item.relayed_at);
+      if (!Number.isNaN(tOrig.getTime()) && !Number.isNaN(tRel.getTime())) {
+        const diffSec = Math.max(0, Math.round((tRel.getTime() - tOrig.getTime()) / 1000));
+        const delayStr = diffSec >= 60 ? `Trễ +${Math.round(diffSec / 60)} phút` : `Trễ +${diffSec}s`;
+        const oStr = tOrig.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const rStr = tRel.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="text-[9.5px] text-cyan-300/90 font-mono">⏱️ Gốc: ${oStr} • Đồng bộ: ${rStr} (${delayStr})</div>`;
+      }
+    }
+    if (ch === 'satellite' || ch === 'satellite_simulated') {
+      return '<div class="text-[9.5px] text-sky-300/90 italic">Kênh vệ tinh — Có thể không gọi thoại trực tiếp được</div>';
+    }
+    return '';
+  }
+
   // DÒNG TIN TIẾP NHẬN CỨU HỘ TRỰC TIẾP TRÊN DASHBOARD COP
   function renderLiveTriageFeed() {
     const feedEl = document.getElementById('dashboard-live-feed');
@@ -1623,10 +1661,14 @@ const CommandUIController = (function () {
 
       return `
         <div class="p-2.5 rounded-lg border ${borderClass} shadow-xs transition hover:border-slate-600 space-y-1.5 cursor-pointer" onclick="if(event.target.tagName !== 'BUTTON' && !event.target.closest('button')) CommandUIController.openIncidentDocket('${item.id}')" title="Click để mở Hồ sơ Nhật ký tác chiến">
-          <div class="flex items-center justify-between">
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${badgeText}</span>
+          <div class="flex items-center justify-between gap-1 flex-wrap">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${badgeText}</span>
+              ${item.source === 'sos_beacon' ? renderChannelBadge(item) : ''}
+            </div>
             <span class="text-[10px] text-slate-400 font-mono">${formatRelativeTime(item.created_at)}</span>
           </div>
+          ${item.source === 'sos_beacon' ? renderRelayTimingInfo(item) : ''}
           <div class="font-bold text-slate-100 text-xs truncate hover:text-sky-300 transition" title="${item.contact_name}">
             ${item.contact_name} - 📞 ${item.phone}
           </div>
@@ -1770,6 +1812,7 @@ const CommandUIController = (function () {
           <td class="p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">${formatRelativeTime(item.created_at)}</td>
           <td class="p-3 whitespace-nowrap">
             <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.source_badge_color}">${item.source_label}</span>
+            ${item.source === 'sos_beacon' ? `<div class="mt-1">${renderChannelBadge(item)}</div>${renderRelayTimingInfo(item)}` : ''}
             ${item.duplicate_count > 0 ? `<span class="block mt-1 text-[9.5px] text-amber-400 font-bold whitespace-nowrap">⚠️ +${item.duplicate_count} tin cùng vị trí (50m)</span>` : ''}
           </td>
           <td class="p-3">

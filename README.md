@@ -252,5 +252,43 @@ Toàn bộ hệ thống tuân thủ 100% các tiêu chí khắt khe nhất của
 - 📝 **Lịch sử phiên bản phát hành:** [CHANGELOG.md](CHANGELOG.md) (Chuẩn Keep a Changelog v1.1.0 & Semantic Versioning v2.0.0).
 - 🤝 **Quy định đóng góp cộng đồng:** [CONTRIBUTING.md](CONTRIBUTING.md).
 - 🐛 **Hệ thống Quản lý Lỗi Phần mềm (Bug Tracker):** Tiếp nhận tại [GitHub Issues](https://github.com/GrassTouchers1/GrassTouchers-Frontend/issues) với Issue Templates chuẩn trong `.github/ISSUE_TEMPLATE/`.
-- 🏷️ **Bản phát hành chính thức dự thi:** [Release v1.0.0](https://github.com/GrassTouchers1/GrassTouchers-Frontend/releases/tag/v1.0.0).
+- 🏷️ **Bản phát hành chính thức dự thi:** `v1.0.0-olp2026` ([CHANGELOG.md](CHANGELOG.md), gói phân phối `dist/northstar-citizen-v1.0.0-olp2026.tar.gz`).
 - 🌐 **Dữ liệu mở (100% Open Data, Chuẩn mở quốc tế FOSS/OSI, Tuyệt đối không cào web):** OpenStreetMap (ODbL 1.0), Open-Meteo Weather & Air Quality (CC-BY 4.0), OpenAQ Air Quality Network (CC-BY 4.0), Copernicus Sentinel-1 SAR & GloFAS (EU Open Access), NASA GPM IMERG (NASA Open Data).
+- 📚 **Giấy phép thư viện bên thứ ba đã kiểm tra:** MapLibre GL JS v4.7.1 (`BSD-3-Clause`, tệp cục bộ `js/vendor/maplibre-gl.js`).
+
+---
+
+## 📱 9. Phân Hệ NORTHSTAR Citizen (`citizen.html`) — Kiến Trúc, Cấu Hình & Kiểm Thử
+
+### 9.1. Kiến trúc & Công nghệ Citizen
+- **Frontend PWA:** HTML5, CSS3, Vanilla JS (ES6+), **MapLibre GL JS v4.7.1** (`BSD-3-Clause`), **IndexedDB** (`northstar_citizen_db`, 7 Object Stores), **Service Worker** (`sw.js`), **WebCrypto** (`SHA-256`, `ECDSA-P256`).
+- **Backend tích hợp:** FastAPI (`GrassToucher-backend`), PostgreSQL/PostGIS (kèm SQLite Fallback khi PostgreSQL offline), Alembic Migrations (`0001..0005`), thuật toán định tuyến né ngập A* (`hanoi_drive.graphml`).
+- **Phân hệ chính:**
+  - `citizen.html` + `js/citizen_portal.js`: Giao diện người dân, GPS thực kèm vòng tròn sai số, thời tiết & cảnh báo thiên tai.
+  - `js/offline_db.js` + `js/offline_sync_manager.js`: Lưu trữ ngoại tuyến và đồng bộ Store-and-Forward chống trùng (`client_event_id`).
+  - `js/rescue_manager.js`: Gửi SOS an toàn và tra cứu riêng tư qua `/api/sos/track/{tracking_token}`.
+  - `js/offline_knowledge.js` + `js/ai_assistant.js`: Trợ lý AI Online/Offline (15 chủ đề sinh tồn Việt Nam).
+  - `js/sos_relay.js` + `js/satellite_gateway_adapter.js`: Giao thức SOS Relay (`northstar.sos.relay.v1`) và adapter mở rộng Gateway vệ tinh.
+
+### 9.2. Yêu cầu môi trường & Cấu hình
+- **Yêu cầu:** Python 3.10+ (để chạy static server Frontend & FastAPI Backend), trình duyệt hiện đại (Edge/Chrome/Firefox/Safari). Không yêu cầu Node.js bundler.
+- **Cấu hình API (`js/config.js`):** Tự động dùng `http://127.0.0.1:8000` khi chạy trên `localhost`/`127.0.0.1`, hỗ trợ override qua query `?api=...` hoặc `localStorage` cho mạng LAN/di động.
+- **Khởi chạy Citizen:** Mở `http://127.0.0.1:3000/citizen.html` (sau khi chạy Backend cổng `8000` và Frontend cổng `3000`).
+
+### 9.3. Cách kiểm thử
+```bash
+# 1. Kiểm thử toàn bộ Frontend (Giai đoạn 1–12, Compliance, E2E)
+cd GrassTouchers-Frontend
+python -m unittest discover -s tests -p "test_*.py" -v
+
+# 2. Kiểm thử Backend
+cd GrassToucher-backend
+.\venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v
+```
+
+### 9.4. Tài liệu Citizen & Nghiệm thu OLP 2026
+- Hướng dẫn sử dụng người dân: [docs/CITIZEN_USER_GUIDE.md](docs/CITIZEN_USER_GUIDE.md)
+- Tài liệu kiến trúc kỹ thuật: [docs/CITIZEN_TECHNICAL_ARCHITECTURE.md](docs/CITIZEN_TECHNICAL_ARCHITECTURE.md)
+- Theo dõi lỗi (Bug Tracker): [docs/CITIZEN_BUG_TRACKER.md](docs/CITIZEN_BUG_TRACKER.md)
+- Kiểm toán & Nghiệm thu: [docs/CITIZEN_FINAL_AUDIT.md](docs/CITIZEN_FINAL_AUDIT.md), [docs/CITIZEN_FINAL_ACCEPTANCE.md](docs/CITIZEN_FINAL_ACCEPTANCE.md)
+- Kịch bản trình diễn (7–10 phút): [docs/CITIZEN_DEMO_SCRIPT.md](docs/CITIZEN_DEMO_SCRIPT.md)
