@@ -154,8 +154,11 @@ const CoordinatorCommand = (function () {
 
       // 1. Nạp từ SOS Beacons
       sosFeatures.forEach(f => {
-        const p = f.properties;
-        const coords = f.geometry.coordinates;
+        const p = f.properties || {};
+        const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : null;
+        const locTitle = coords
+          ? `[${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}]`
+          : (p.location_description || p.location_landmark || 'Chưa có tọa độ GPS');
         intakeStream.push({
           id: `SOS-${p.id}`,
           raw_id: p.id,
@@ -168,10 +171,10 @@ const CoordinatorCommand = (function () {
           water_level_cm: p.water_level_cm || 0,
           priority: p.priority || 'critical', // critical, high, medium, low
           status: p.status === 'rescued' ? 'resolved' : (p.status === 'dispatched' ? 'dispatched' : 'pending'),
-          title: `Cứu hộ khẩn cấp tại toạ độ [${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}]`,
-          description: p.notes || 'Bị cô lập trong nước lũ, cần ca nô và tiếp tế gấp.',
-          lat: coords[1],
-          lng: coords[0],
+          title: `Cứu hộ khẩn cấp tại ${locTitle}`,
+          description: p.notes || p.location_description || 'Bị cô lập trong nước lũ, cần ca nô và tiếp tế gấp.',
+          lat: coords ? coords[1] : null,
+          lng: coords ? coords[0] : null,
           timestamp: p.created_at || new Date().toISOString(),
           is_verified: p.status !== 'pending' || p.priority === 'critical',
           duplicate_count: 0
@@ -180,8 +183,8 @@ const CoordinatorCommand = (function () {
 
       // 2. Nạp từ Báo cáo hiện trường người dân
       repFeatures.forEach(f => {
-        const p = f.properties;
-        const coords = f.geometry.coordinates;
+        const p = f.properties || {};
+        const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : [105.85, 21.02];
         intakeStream.push({
           id: `REP-${p.id}`,
           raw_id: p.id,
@@ -509,7 +512,7 @@ const CoordinatorCommand = (function () {
               ${item.description}
             </p>
             <div class="flex items-center gap-2 mt-1 text-[10.5px] text-slate-500 dark:text-slate-400">
-              <span>📍 [${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]</span>
+              <span>📍 ${item.lat != null && item.lng != null ? `[${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]` : (item.description || 'Chưa có tọa độ GPS')}</span>
               ${item.water_level_cm > 0 ? `<span class="font-bold text-cyan-600 dark:text-cyan-400">🌊 Ngập: ${item.water_level_cm}cm</span>` : ''}
               ${item.phone !== 'Xác minh qua vị trí GPS' ? `<span>📞 <a href="tel:${item.phone}" class="font-bold text-blue-600 dark:text-blue-400 hover:underline">${item.phone}</a></span>` : ''}
             </div>
@@ -789,7 +792,9 @@ Mệnh lệnh chỉ huy: Tiếp tục duy trì thông tin liên lạc 24/7, ưu 
     // Điền dữ liệu vào modal
     document.getElementById('disp-modal-incident-id').value = item.id;
     document.getElementById('disp-modal-victim-info').innerText = `${item.contact_name} - ${item.phone} (${item.people_count} người)`;
-    document.getElementById('disp-modal-location').innerText = `Toạ độ [${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]`;
+    document.getElementById('disp-modal-location').innerText = (item.lat != null && item.lng != null)
+      ? `Toạ độ [${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}]`
+      : (item.description || 'Chưa có tọa độ GPS');
     document.getElementById('disp-modal-notes').value = item.description || '';
 
     // Nạp danh sách đội cứu hộ vào select

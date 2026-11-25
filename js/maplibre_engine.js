@@ -90,6 +90,7 @@ window.NorthStarMapLibre = (function () {
             'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 16,
           attribution: '&copy; Esri &copy; OpenStreetMap contributors'
         },
         'esri-dark-ref': {
@@ -97,12 +98,13 @@ window.NorthStarMapLibre = (function () {
           tiles: [
             'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
           ],
-          tileSize: 256
+          tileSize: 256,
+          maxzoom: 16
         }
       },
       layers: [
-        { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 19 },
-        { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 19 }
+        { id: 'base-dark-layer', type: 'raster', source: 'esri-dark', minzoom: 0, maxzoom: 22 },
+        { id: 'base-dark-ref-layer', type: 'raster', source: 'esri-dark-ref', minzoom: 0, maxzoom: 22 }
       ]
     },
     satellite: {
@@ -115,6 +117,7 @@ window.NorthStarMapLibre = (function () {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 19,
           attribution: '&copy; Esri, Maxar, Earthstar Geographics'
         },
         'esri-sat-labels': {
@@ -122,12 +125,13 @@ window.NorthStarMapLibre = (function () {
           tiles: [
             'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
           ],
-          tileSize: 256
+          tileSize: 256,
+          maxzoom: 19
         }
       },
       layers: [
-        { id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 19 },
-        { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 19 }
+        { id: 'base-sat-layer', type: 'raster', source: 'esri-satellite', minzoom: 0, maxzoom: 22 },
+        { id: 'base-sat-labels-layer', type: 'raster', source: 'esri-sat-labels', minzoom: 0, maxzoom: 22 }
       ]
     },
     topo: {
@@ -140,11 +144,12 @@ window.NorthStarMapLibre = (function () {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 18,
           attribution: '&copy; Esri, USGS, METI/NASA, OpenStreetMap contributors'
         }
       },
       layers: [
-        { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 19 }
+        { id: 'base-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 22 }
       ]
     },
     osm: {
@@ -157,10 +162,11 @@ window.NorthStarMapLibre = (function () {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 18,
           attribution: '&copy; Esri, DeLorme, NAVTEQ, TomTom, OpenStreetMap contributors'
         }
       },
-      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'esri-streets', minzoom: 0, maxzoom: 19 }]
+      layers: [{ id: 'base-osm-layer', type: 'raster', source: 'esri-streets', minzoom: 0, maxzoom: 22 }]
     }
   };
 
@@ -1397,8 +1403,8 @@ window.NorthStarMapLibre = (function () {
       features.forEach(feat => {
         const p = feat.properties;
         if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
-        const coords = feat.geometry.coordinates; // [Lng, Lat]
-        if (!coords || !coords[0] || !coords[1]) return;
+        const coords = (feat.geometry && Array.isArray(feat.geometry.coordinates)) ? feat.geometry.coordinates : null; // [Lng, Lat]
+        if (!coords || coords[0] == null || coords[1] == null) return;
         if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm ngoài Miền Bắc (Lào, Thái Lan)
 
         const coordKey = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;

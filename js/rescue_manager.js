@@ -476,15 +476,20 @@ const NorthStarRescue = (function () {
   // 3. TẢI VÀ VẼ TÍN HIỆU SOS (BEACONS)
   // ==========================================
   async function loadSOSBeacons() {
-    if (document.getElementById('citizen-sos-form')) return;
     if (window.NorthStarAuth && ['guest', 'citizen'].includes(window.NorthStarAuth.getRole())) return;
     try {
-      const res = await fetch(getApiUrl('/api/sos'));
+      const headers = {};
+      const token = window.NorthStarAuth && typeof window.NorthStarAuth.getToken === 'function' ? window.NorthStarAuth.getToken() : null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(getApiUrl('/api/sos'), { headers });
       if (!res.ok) return;
       const data = await res.json();
       allSOSBeacons = data.features || [];
       renderSOSLayers();
       renderSOSSidebar();
+      if (window.NorthStarMapLibre && typeof window.NorthStarMapLibre.syncAllLayers === 'function') {
+        window.NorthStarMapLibre.syncAllLayers();
+      }
     } catch (err) {
       console.warn('Lỗi tải tín hiệu SOS:', err);
     }
@@ -569,7 +574,10 @@ const NorthStarRescue = (function () {
 
     listEl.innerHTML = activeBeacons.map(f => {
       const p = f.properties;
-      const coords = f.geometry.coordinates;
+      const coords = (f.geometry && Array.isArray(f.geometry.coordinates)) ? f.geometry.coordinates : null;
+      const mapBtn = coords
+        ? `<button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>`
+        : `<span class="text-[11px] text-amber-400 font-semibold">📍 ${p.location_description || p.location_landmark || 'Chưa có tọa độ GPS'}</span>`;
 
       return `
         <div class="p-2.5 rounded-xl border border-rose-800/60 bg-rose-950/30 hover:bg-rose-950/50 transition shadow-sm">
@@ -580,7 +588,7 @@ const NorthStarRescue = (function () {
           <div class="text-[11px] text-slate-300 mt-1">SĐT: <a href="tel:${p.phone}" class="text-sky-400 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• Có trẻ nhỏ/người già' : ''}</div>
           ${p.notes ? `<div class="text-[11px] text-slate-400 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
           <div class="mt-2 flex items-center justify-between">
-            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>
+            ${mapBtn}
             <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer">Đánh dấu đã cứu</button>
           </div>
         </div>
@@ -701,89 +709,210 @@ const NorthStarRescue = (function () {
   }
 
   // ==========================================
-  // 5. GỬI TÍN HIỆU SOS KHẨN CẤP
+  // 5. GỬI TÍN HIỆU SOS KHẨN CẤP (CIT-03 + COP SYNC)
   // ==========================================
+  function renderSOSSubmissionState(submitState, { ticketCode = null, trackingToken = null, localId = null, message = '' } = {}) {
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    const ticketDisplay = document.getElementById('citizen-sos-ticket-code');
+    const syncBadge = document.getElementById('citizen-sos-sync-badge');
+    const feedbackMsg = document.getElementById('citizen-sos-feedback-msg');
+    const tokenRow = document.getElementById('citizen-sos-tracking-token-row');
+    const tokenDisplay = document.getElementById('citizen-sos-tracking-token');
+    if (!resultCard || !ticketDisplay || !syncBadge || !feedbackMsg) return;
+
+    resultCard.classList.remove('hidden');
+
+    if (tokenRow && tokenDisplay) {
+      if (submitState === 'SERVER_RECEIVED' && trackingToken) {
+        tokenDisplay.textContent = trackingToken;
+        tokenRow.classList.remove('hidden');
+      } else {
+        tokenDisplay.textContent = '';
+        tokenRow.classList.add('hidden');
+      }
+    }
+
+    if (submitState === 'SENDING') {
+      ticketDisplay.textContent = 'ĐANG CHỜ MÁY CHỦ...';
+      syncBadge.textContent = 'SENDING';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-sky-950/90 text-sky-300 border border-sky-600 animate-pulse';
+      feedbackMsg.textContent = '⏳ Đang truyền yêu cầu cứu hộ tới máy chủ Ban chỉ huy...';
+    } else if (submitState === 'SERVER_RECEIVED') {
+      ticketDisplay.textContent = ticketCode;
+      syncBadge.textContent = 'ĐÃ TIẾP NHẬN (MÁY CHỦ)';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-600 shadow-xs';
+      feedbackMsg.textContent = message || '✅ Máy chủ Chỉ huy đã tiếp nhận thông tin cứu nạn khẩn cấp của bạn.';
+    } else if (submitState === 'PENDING_OFFLINE') {
+      ticketDisplay.textContent = localId || 'CHƯA CÓ MÃ MÁY CHỦ';
+      syncBadge.textContent = 'LƯU TRÊN MÁY (CHƯA GỬI)';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600 animate-pulse';
+      feedbackMsg.innerHTML = message ||
+        '<strong class="text-amber-300">⚠️ ĐANG NGOẠI TUYẾN:</strong> Bản nháp cục bộ (chưa phải mã hồ sơ chính thức) đã được lưu trên máy. ' +
+        'Hệ thống sẽ tự động gửi khi có mạng trở lại. Nếu khẩn cấp, hãy gọi ngay hotline <strong>114</strong> hoặc <strong>112</strong>!';
+    } else {
+      ticketDisplay.textContent = 'CHƯA CẤP MÃ HỒ SƠ';
+      syncBadge.textContent = 'GỬI THẤT BẠI';
+      syncBadge.className = 'text-[9.5px] font-black px-2 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-600';
+      feedbackMsg.textContent = message || '❌ Không thể xác nhận tiếp nhận từ máy chủ. Vui lòng kiểm tra thông tin và thử lại.';
+    }
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   async function submitSOSBeacon() {
-    const name = document.getElementById('sos-input-name')?.value.trim();
-    const phone = document.getElementById('sos-input-phone')?.value.trim();
+    const name = document.getElementById('sos-input-name')?.value.trim() || '';
+    const phone = document.getElementById('sos-input-phone')?.value.trim() || '';
     const people = parseInt(document.getElementById('sos-input-people')?.value || '1', 10);
     const hasVulnerable = document.getElementById('sos-input-vulnerable')?.checked || false;
     const waterDepth = parseFloat(document.getElementById('sos-input-depth')?.value || '0');
     const priority = document.getElementById('sos-select-priority')?.value || 'high';
-    const notes = document.getElementById('sos-input-notes')?.value.trim();
+    const notes = document.getElementById('sos-input-notes')?.value.trim() || '';
+    const locDesc = document.getElementById('sos-location-description')?.value.trim() || '';
+    const locLandmark = document.getElementById('sos-location-landmark')?.value.trim() || '';
 
-    if (!name || !phone || phone.length < 8) {
-      alert('Vui lòng nhập đầy đủ họ tên và số điện thoại hợp lệ (>= 8 số) để lực lượng cứu nạn liên hệ.');
+    if (!name || phone.length < 8) {
+      alert('Vui lòng nhập họ tên và số điện thoại hợp lệ (tối thiểu 8 ký tự) để lực lượng cứu nạn có thể liên hệ lại.');
       return;
     }
 
-    // Lấy toạ độ GPS hoặc tâm bản đồ
-    let coords = window.coords ? window.coords.origin : null;
-    if (!coords && window.map) {
-      const c = window.map.getCenter();
-      coords = { lng: c.lng, lat: c.lat };
-    }
-    if (!coords) coords = { lng: 105.8030, lat: 21.0285 };
+    const portalState = window.CitizenPortal ? window.CitizenPortal.state : null;
+    const fallbackCoords = (!portalState && window.coords && window.coords.origin) ? window.coords.origin : null;
+    const rawCoords = portalState ? portalState.selectedCoords : fallbackCoords;
+    const hasValidCoords = !!(
+      rawCoords &&
+      typeof rawCoords.lat === 'number' &&
+      typeof rawCoords.lng === 'number' &&
+      Number.isFinite(rawCoords.lat) &&
+      Number.isFinite(rawCoords.lng)
+    );
+    const hasTextLocation = locDesc.length >= 3 || locLandmark.length >= 3;
 
-    // Xác nhận trước khi gửi SOS
-    const confirmBox = document.getElementById('sos-confirm-overlay');
-    if (confirmBox && !window._skipSosConfirmOnce) {
-      const summaryEl = document.getElementById('sos-confirm-summary');
-      if (summaryEl) {
-        summaryEl.innerHTML = `
-          <div><b>Người liên hệ:</b> ${name} (${phone})</div>
-          <div><b>Số người mắc kẹt:</b> ${people} người ${hasVulnerable ? '<span class="text-rose-400 font-bold">(Có người già/trẻ nhỏ)</span>' : ''}</div>
-          <div><b>Toạ độ gửi đi:</b> <span class="font-mono text-cyan-300">[${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]</span></div>
-          <div><b>Tình trạng:</b> ${notes || 'Cần hỗ trợ khẩn cấp'}</div>
-        `;
+    if (portalState) {
+      if (!hasValidCoords && !hasTextLocation) {
+        alert(
+          '⚠️ CHƯA CÓ VỊ TRÍ CỨU HỘ!\n\n' +
+          'Vui lòng bấm nút "GPS", hoặc "Ghim bản đồ", hoặc nhập mô tả địa điểm / điểm mốc (tối thiểu 3 ký tự) trước khi gửi SOS.'
+        );
+        return;
       }
-      confirmBox.classList.remove('hidden');
-      return;
+      if (!portalState.locationConfirmed) {
+        alert(
+          '⚠️ BẠN CHƯA XÁC NHẬN VỊ TRÍ!\n\n' +
+          'Vui lòng kiểm tra tọa độ / mô tả địa điểm và tích chọn ô "Tôi xác nhận vị trí / mô tả này là chính xác" trước khi gửi.'
+        );
+        const checkEl = document.getElementById('citizen-confirm-location-check');
+        if (checkEl) checkEl.focus();
+        return;
+      }
     }
-    window._skipSosConfirmOnce = false;
+
+    let finalCoords = hasValidCoords ? rawCoords : null;
+    if (!portalState && !finalCoords && window.map) {
+      const c = window.map.getCenter();
+      finalCoords = { lng: c.lng, lat: c.lat };
+    }
+
+    const locationSource = finalCoords
+      ? (portalState && portalState.locationSource === 'gps' ? 'gps' : 'manual')
+      : 'unknown';
 
     const payload = {
       contact_name: name,
       phone: phone,
-      lng: coords.lng,
-      lat: coords.lat,
-      people_count: people,
+      lng: finalCoords ? finalCoords.lng : null,
+      lat: finalCoords ? finalCoords.lat : null,
+      location_source: locationSource,
+      location_accuracy_m: (finalCoords && locationSource === 'gps' && portalState) ? portalState.locationAccuracy : null,
+      location_captured_at: (portalState && portalState.locationCapturedAt) || null,
+      location_confirmed: true,
+      location_description: locDesc || null,
+      location_landmark: locLandmark || null,
+      people_count: Number.isFinite(people) && people >= 1 ? people : 1,
       has_elderly_or_children: hasVulnerable,
-      water_level_cm: waterDepth,
+      water_level_cm: Number.isFinite(waterDepth) && waterDepth >= 0 ? waterDepth : 0,
       priority: priority,
-      notes: notes
+      notes: notes || null
     };
 
+    const clientEventId = (window.OfflineSyncManager && typeof window.OfflineSyncManager.generateClientEventId === 'function')
+      ? window.OfflineSyncManager.generateClientEventId()
+      : `EVT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    payload.client_event_id = clientEventId;
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await handleOfflineSOSDraft({ ...payload, client_event_id: clientEventId });
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-submit-sos');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Đang gửi máy chủ...';
+    }
+    renderSOSSubmissionState('SENDING');
+
     try {
-      const res = await fetch(getApiUrl('/api/sos'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      let savedBeacon = null;
+      const authHeaders = { 'Content-Type': 'application/json' };
+      const authToken = window.NorthStarAuth && typeof window.NorthStarAuth.getToken === 'function' ? window.NorthStarAuth.getToken() : null;
+      if (authToken) authHeaders['Authorization'] = `Bearer ${authToken}`;
 
-      const savedBeacon = await res.json();
-      const sosId = savedBeacon?.properties?.id;
-      const ticketCode = sosId ? `SOS-${sosId}` : 'SOS-NEW';
-
-      // Đồng bộ phân tích AI Qwen3-8B & Guardrails trên /api/relief/requests
-      if (sosId) {
-        fetch(getApiUrl('/api/relief/requests'), {
+      if (typeof NorthStarApi !== 'undefined' && typeof NorthStarApi.fetchJson === 'function') {
+        savedBeacon = await NorthStarApi.fetchJson('/api/sos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            request_id: ticketCode,
-            message: notes || `Cần cứu hộ khẩn cấp ${people} người tại [${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]`,
-            contact_name: name,
-            phone: phone,
-            lat: coords.lat,
-            lng: coords.lng,
-            source: 'web_form'
-          })
-        }).catch(() => {});
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+      } else {
+        const res = await fetch(getApiUrl('/api/sos'), {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = new Error(`Máy chủ từ chối yêu cầu (HTTP ${res.status})`);
+          err.status = res.status;
+          err.type = 'HTTP';
+          throw err;
+        }
+        savedBeacon = await res.json();
       }
 
-      // Hiển thị kết quả kèm Mã hồ sơ để người dân theo dõi
+      const rawId = savedBeacon?.properties?.id ?? savedBeacon?.id;
+      const numericId = Number(rawId);
+      if (!savedBeacon || rawId === null || rawId === undefined || !Number.isInteger(numericId) || numericId <= 0) {
+        console.error('[NorthStar SOS] Phản hồi máy chủ thiếu ID hồ sơ hợp lệ (Protocol Error).');
+        renderSOSSubmissionState('FAILED', {
+          message: '⚠️ Máy chủ phản hồi thành công nhưng chưa cấp mã hồ sơ hợp lệ (lỗi giao thức API). Vui lòng thử gửi lại hoặc gọi hotline 114.'
+        });
+        return;
+      }
+
+      const ticketCode = `#SOS-2026-${String(numericId).padStart(4, '0')}`;
+      const trackingToken = savedBeacon?.properties?.tracking_token || null;
+
+      if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOS === 'function') {
+        const savedRec = await window.OfflineSyncManager.enqueueSOS(payload, {
+          client_event_id: clientEventId,
+          sync_status: 'ACKNOWLEDGED',
+          server_id: numericId,
+          acknowledged_at: new Date().toISOString(),
+          triggerSync: false
+        }).catch(() => null);
+        if (trackingToken && savedRec && window.OfflineDB && typeof window.OfflineDB.updateSOS === 'function') {
+          await window.OfflineDB.updateSOS(savedRec.local_id, { tracking_token: trackingToken }).catch(() => {});
+        }
+      }
+
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', ticketCode);
+      } catch (e) {}
+
+      renderSOSSubmissionState('SERVER_RECEIVED', {
+        ticketCode,
+        trackingToken,
+        message: '✅ Máy chủ Chỉ huy đã tiếp nhận thông tin cứu nạn khẩn cấp của bạn. Đội cứu hộ đang xử lý.'
+      });
+
       const receiptEl = document.getElementById('sos-sent-receipt');
       if (receiptEl) {
         receiptEl.classList.remove('hidden');
@@ -793,19 +922,12 @@ const NorthStarRescue = (function () {
       const trackInput = document.getElementById('citizen-tracking-input');
       if (trackInput) trackInput.value = ticketCode;
 
-      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-        window.CommandUIController.showToast('🚨 ĐÃ PHÁT TÍN HIỆU SOS', `Mã hồ sơ của bạn: ${ticketCode}. Trung tâm điều phối đang xử lý!`, 'success');
-      } else {
-        alert(`✅ ĐÃ PHÁT TÍN HIỆU SOS THÀNH CÔNG! Mã hồ sơ: ${ticketCode}`);
+      if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
+
+      if (typeof loadSOSBeacons === 'function') {
+        await loadSOSBeacons();
       }
 
-      // Xoá trắng ghi chú form
-      if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
-      
-      // 1. Cập nhật marker cứu hộ trên bản đồ
-      await loadSOSBeacons();
-
-      // 2. Đồng bộ lập tức sang Trung Tâm Tiếp Nhận & COP Command Center
       if (window.CommandUIController) {
         if (typeof window.CommandUIController.registerNewSOS === 'function') {
           window.CommandUIController.registerNewSOS(savedBeacon);
@@ -814,12 +936,73 @@ const NorthStarRescue = (function () {
         }
       }
 
-      // 3. Bắn event đồng bộ toàn cục
       window.dispatchEvent(new CustomEvent('northstar:sos_beacon_created', { detail: savedBeacon }));
-
     } catch (err) {
-      alert(`Không thể gửi tín hiệu SOS: ${err.message}. Vui lòng gọi trực tiếp hotline 114 hoặc 112.`);
+      if (err && (err.status === 400 || err.status === 401 || err.status === 409 || err.status === 422 || err.type === 'JSON_PARSE')) {
+        renderSOSSubmissionState('FAILED', {
+          message: `❌ ${err.message || 'Dữ liệu SOS không hợp lệ hoặc phản hồi máy chủ sai định dạng.'}`
+        });
+      } else {
+        console.warn('[NorthStar SOS] Lỗi kết nối máy chủ, chuyển sang lưu bản nháp cục bộ:', err?.message || err);
+        await handleOfflineSOSDraft({ ...payload, client_event_id: clientEventId }, err?.message);
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i><span>Gửi Yêu Cầu Cứu Hộ SOS</span>';
+        if (window.lucide) lucide.createIcons();
+      }
     }
+  }
+
+  async function handleOfflineSOSDraft(payload, reason = null) {
+    let draftItem = null;
+    if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOS === 'function') {
+      draftItem = await window.OfflineSyncManager.enqueueSOS(payload, {
+        client_event_id: payload?.client_event_id,
+        sync_status: 'PENDING_OFFLINE',
+        triggerSync: false
+      });
+    } else if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOSDraft === 'function') {
+      draftItem = await window.OfflineSyncManager.enqueueSOSDraft(payload);
+    } else {
+      const localId = `SOS-DRAFT-${Date.now()}`;
+      draftItem = { local_id: localId };
+      try {
+        localStorage.setItem('northstar_last_sos_ticket', localId);
+      } catch (e) {}
+    }
+
+    const localId = draftItem?.local_id || draftItem?.id || `SOS-DRAFT-${Date.now()}`;
+    renderSOSSubmissionState('PENDING_OFFLINE', { localId });
+
+    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+      window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP TRÊN MÁY', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('northstar:sos_offline_saved', {
+        detail: { payload, draft: draftItem }
+      }));
+    } catch (_) {}
+  }
+
+  function copyTicketCode() {
+    const code = document.getElementById('citizen-sos-ticket-code')?.textContent || '#SOS-2026-0001';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`📋 Đã sao chép mã hồ sơ: ${code}\nBạn có thể gửi mã này qua SMS cho người thân hoặc lực lượng cứu nạn.`);
+      }).catch(() => {
+        prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+      });
+    } else {
+      prompt('Mã hồ sơ cứu hộ của bạn (Copy):', code);
+    }
+  }
+
+  function resetSOSForm() {
+    const resultCard = document.getElementById('citizen-sos-result-card');
+    if (resultCard) resultCard.classList.add('hidden');
+    if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
   }
 
   function confirmSendSOSBeacon() {
@@ -836,9 +1019,13 @@ const NorthStarRescue = (function () {
         window.map.closePopup();
       }
 
+      const headers = { 'Content-Type': 'application/json' };
+      const token = window.NorthStarAuth && typeof window.NorthStarAuth.getToken === 'function' ? window.NorthStarAuth.getToken() : null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch(getApiUrl(`/api/sos/${sosId}/status`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ status: 'rescued' })
       });
       
@@ -904,6 +1091,8 @@ const NorthStarRescue = (function () {
     routeToShelter,
     submitSOSBeacon,
     confirmSendSOSBeacon,
+    copyTicketCode,
+    resetSOSForm,
     resolveSOS,
     flyToPoint,
     toggleLayer,
