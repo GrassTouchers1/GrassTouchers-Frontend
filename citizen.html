@@ -24,8 +24,8 @@
   <link rel="apple-touch-icon" href="assets/icons/citizen-192.png">
   <meta name="theme-color" content="#0f172a">
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS (Local MIT Bundle - Zero CDN dependency) -->
+  <script src="js/vendor/tailwindcss.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -43,8 +43,12 @@
   <link rel="stylesheet" href="css/maplibre-gl.css" />
   <script src="js/vendor/maplibre-gl.js"></script>
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons (Local ISC Bundle) -->
+  <script src="js/vendor/lucide.min.js"></script>
+
+  <!-- Offline QR Code Generator & Decoder (MIT / Apache-2.0 Local Bundles) -->
+  <script src="js/vendor/qrcode.min.js"></script>
+  <script src="js/vendor/jsQR.js"></script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css" />
@@ -76,29 +80,32 @@
     }
 
     .maplibregl-popup-close-button {
-      color: #64748b !important;
-      font-size: 20px !important;
+      color: #e2e8f0 !important;
+      font-size: 15px !important;
       font-weight: 700 !important;
-      padding: 2px 8px !important;
+      line-height: 1 !important;
+      padding: 0 !important;
       top: 10px !important;
-      right: 12px !important;
-      background: #f1f5f9 !important;
+      right: 10px !important;
+      background: rgba(30, 41, 59, 0.92) !important;
       border-radius: 9999px !important;
-      width: 26px !important;
-      height: 26px !important;
+      width: 24px !important;
+      height: 24px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      border: 1px solid #cbd5e1 !important;
+      border: 1px solid rgba(148, 163, 184, 0.45) !important;
       cursor: pointer !important;
       z-index: 100 !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
       transition: all 0.2s ease !important;
     }
 
     .maplibregl-popup-close-button:hover {
-      color: #0f172a !important;
-      background: #e2e8f0 !important;
-      transform: scale(1.1) !important;
+      color: #ffffff !important;
+      background: #e11d48 !important;
+      border-color: #fda4af !important;
+      transform: scale(1.08) !important;
     }
 
     .maplibregl-popup-tip {
@@ -134,6 +141,15 @@
       background-color: #e11d48 !important;
       color: #ffffff !important;
       box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45) !important;
+    }
+
+    .no-scrollbar {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
     }
 
     /* Animation sóng nước ngập lụt lan tỏa (Water Ripple Radar Pulse) */
@@ -298,25 +314,25 @@
   <!-- ========================================================================= -->
   <!-- 1. HEADER DÂN SỰ CAO CẤP (CITIZEN TOPBAR - NEO GLASS) -->
   <!-- ========================================================================= -->
-  <header class="h-16 citizen-glass-header px-3 sm:px-5 flex items-center justify-between z-30 shrink-0">
-    <div class="flex items-center gap-3">
+  <header class="h-14 sm:h-16 citizen-glass-header px-2.5 sm:px-5 flex items-center justify-between gap-2 z-30 shrink-0">
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
       <div
-        class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/25 text-white font-black text-base border border-white/20">
-        <i data-lucide="shield-alert" class="w-5 h-5"></i>
+        class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/25 text-white font-black text-base border border-white/20 shrink-0">
+        <i data-lucide="shield-alert" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </div>
-      <div>
+      <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <span class="text-base font-black tracking-wider text-white">NORTHSTAR</span>
+          <span class="text-sm sm:text-base font-black tracking-wider text-white whitespace-nowrap">NORTHSTAR</span>
           <span
-            class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 text-sky-300 border border-sky-400/30 uppercase tracking-wider">Cổng
+            class="hidden sm:inline-block whitespace-nowrap text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 text-sky-300 border border-sky-400/30 uppercase tracking-wider">Cổng
             Dân Sự</span>
         </div>
-        <p class="text-[10.5px] text-slate-400 font-medium leading-tight">Phòng Chống Thiên Tai & Cứu Hộ Cộng Đồng</p>
+        <p class="hidden sm:block text-[10.5px] text-slate-400 font-medium leading-tight">Phòng Chống Thiên Tai &amp; Cứu Hộ Cộng Đồng</p>
       </div>
     </div>
 
     <!-- Tiện ích trạng thái, Nút 114 Siêu Nổi Bật & Lối tắt Chỉ huy -->
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
       <!-- Trạng thái mạng Online / Offline & Đồng bộ Outbox (Tiêu chí V-03 / CIT-05) -->
       <div id="citizen-network-status"
         class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 shadow-sm">
@@ -352,10 +368,10 @@
 
       <!-- Hotline cứu nạn khẩn cấp 114 Siêu Nổi Bật -->
       <a href="tel:114"
-        class="citizen-hotline-114 text-white font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+        class="citizen-hotline-114 whitespace-nowrap shrink-0 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
         title="Bấm để gọi cấp cứu cứu hỏa 114 ngay lập tức">
         <i data-lucide="phone-call" class="w-4 h-4 animate-bounce"></i>
-        <span>CỨU NẠN 114</span>
+        <span class="hidden sm:inline">CỨU NẠN </span><span>114</span>
       </a>
 
       <!-- Lối tắt sang Trung tâm Chỉ huy (Dành cho Giám khảo & Cán bộ) -->
@@ -378,7 +394,7 @@
       class="order-2 md:order-1 flex-1 w-full md:w-2/5 lg:w-[32%] flex flex-col bg-slate-950 border-t md:border-t-0 md:border-r border-slate-800/80 overflow-hidden transition-all duration-300">
 
       <!-- Thanh thu gọn / mở rộng bảng thao tác để tối đa hóa bản đồ giống bên Command -->
-      <div class="p-1.5 shrink-0 bg-slate-950 border-b border-slate-800/80 select-none">
+      <div class="hidden md:block p-1.5 shrink-0 bg-slate-950 border-b border-slate-800/80 select-none">
         <button onclick="CitizenPortalApp.toggleMapMaximize()" id="citizen-btn-toggle-map"
           class="w-full py-1.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/40 text-[11px] font-extrabold text-sky-400 hover:text-sky-300 flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-98">
           <i data-lucide="chevrons-left" id="citizen-toggle-icon" class="w-3.5 h-3.5"></i>
@@ -402,7 +418,7 @@
 
       <!-- Thanh điều hướng Segmented Navigation Cao Cấp (VIC-01) -->
       <div class="p-2.5 shrink-0 bg-slate-950 border-b border-slate-800/70 select-none">
-        <nav class="citizen-segmented-nav p-1 flex items-center gap-1 overflow-x-auto select-none">
+        <nav class="citizen-segmented-nav no-scrollbar p-1 flex items-center gap-1 overflow-x-auto select-none">
           <button onclick="CitizenPortalApp.switchTab('weather')" id="tab-btn-weather"
             class="citizen-tab-item active flex-1 min-w-[72px] py-2 px-2.5 rounded-xl text-xs font-extrabold text-center transition flex flex-col items-center gap-1 cursor-pointer">
             <i data-lucide="cloud-sun" class="w-4 h-4 text-sky-400"></i>
@@ -487,9 +503,10 @@
         <!-- =================================================================== -->
         <div id="citizen-pane-rescue" class="hidden space-y-3">
           <div
-            class="citizen-glass-card p-4 sm:p-5 rounded-2xl border border-rose-500/30 space-y-4 shadow-2xl relative overflow-hidden">
+            class="citizen-glass-card p-4 sm:p-5 rounded-2xl border border-rose-500/30 space-y-4 shadow-2xl relative">
             <!-- Hào quang khẩn cấp nền -->
-            <div class="absolute -top-10 -right-10 w-36 h-36 bg-rose-500/15 rounded-full blur-3xl pointer-events-none">
+            <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+              <div class="absolute -top-10 -right-10 w-36 h-36 bg-rose-500/15 rounded-full blur-3xl"></div>
             </div>
 
             <div class="flex items-center justify-between pb-2 border-b border-rose-500/20">
@@ -505,93 +522,27 @@
             <p class="text-[11.5px] text-slate-300 leading-relaxed font-normal">Gửi vị trí cô lập trong vùng nước ngập
               sâu hoặc sạt lở tới ban chỉ huy và lực lượng cứu hộ địa phương nhanh nhất.</p>
 
+            <!-- Nút bấm nổi bật Voice AI SOS & Nhận chuyển tiếp Relay -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button type="button" id="btn-citizen-voice-sos" onclick="VoiceSOSManager.openModal()"
+                class="w-full min-h-[48px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-700 via-red-600 to-rose-600 hover:from-rose-600 hover:to-red-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg border border-rose-400/40 cursor-pointer transition active:scale-95">
+                <i data-lucide="mic" class="w-4 h-4 text-white"></i>
+                <span>Nói để gửi SOS (Voice AI)</span>
+              </button>
+              <button type="button" id="btn-citizen-open-relay-receiver" onclick="CitizenPortalApp.openRelayReceiverModal()"
+                class="w-full min-h-[48px] py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-300 font-bold text-xs flex items-center justify-center gap-2 border border-sky-700/60 cursor-pointer transition active:scale-95">
+                <i data-lucide="qr-code" class="w-4 h-4 text-sky-400"></i>
+                <span>Nhận tin SOS hộ (Relay)</span>
+              </button>
+            </div>
+
             <div class="space-y-3 text-xs">
-              <!-- Họ tên -->
-              <div>
-                <label class="block text-[11px] font-bold text-slate-300 mb-1">Họ tên người liên hệ / Nạn nhân:</label>
-                <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
-              </div>
-
-              <!-- Số điện thoại & Số người -->
-              <div class="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Số điện thoại liên lạc:</label>
-                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-mono">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Số người mắc kẹt:</label>
-                  <input id="sos-input-people" type="number" min="1" max="100" value="1"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-mono">
-                </div>
-              </div>
-
-              <!-- Checkbox người già, trẻ nhỏ -->
-              <div class="flex items-center gap-2 p-2 rounded-xl bg-rose-950/30 border border-rose-900/40">
-                <input id="sos-input-vulnerable" type="checkbox"
-                  class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer">
-                <label for="sos-input-vulnerable" class="text-[11px] font-bold text-rose-300 cursor-pointer">Có người
-                  già, trẻ nhỏ hoặc người cần cấp cứu y tế</label>
-              </div>
-
-              <!-- Chọn Mức nước ngập bằng Thẻ Trực Quan (Visual Depth Selector) -->
-              <div>
-                <div class="flex items-center justify-between mb-1.5">
-                  <label class="text-[11px] font-bold text-slate-300">Mức nước ngập thực tế (Chọn theo hình
-                    ảnh):</label>
-                  <span id="sos-depth-label" class="text-[10.5px] font-mono text-amber-300 font-bold">0.5m - 1.5m (Đến
-                    ngực)</span>
-                </div>
-                <!-- Select ẩn giữ tương thích 100% với logic backend & test suite -->
-                <select id="sos-input-depth" class="hidden">
-                  <option value="30">Dưới 0.5m (Đến đầu gối)</option>
-                  <option value="100" selected>0.5m - 1.5m (Đến ngực)</option>
-                  <option value="200">1.5m - 2.5m (Ngập tầng 1)</option>
-                  <option value="300">Trên 2.5m (Cô lập nóc nhà)</option>
-                </select>
-
-                <div class="grid grid-cols-3 gap-2" id="citizen-depth-selector">
-                  <button type="button" onclick="CitizenPortalApp.selectDepth('30', this)"
-                    class="citizen-depth-card p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-slate-800 bg-slate-900/80 hover:border-slate-700">
-                    <span class="text-xl">🚲</span>
-                    <span class="text-[10.5px] font-bold text-slate-200 leading-tight">&lt; 0.5m</span>
-                    <span class="text-[9.5px] text-slate-400">Đầu gối</span>
-                  </button>
-
-                  <button type="button" onclick="CitizenPortalApp.selectDepth('100', this)"
-                    class="citizen-depth-card selected p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-amber-500/80 bg-amber-950/40">
-                    <span class="text-xl">🚶</span>
-                    <span class="text-[10.5px] font-black text-amber-300 leading-tight">0.5m - 1.5m</span>
-                    <span class="text-[9.5px] text-amber-400 font-medium">Đến ngực</span>
-                  </button>
-
-                  <button type="button" onclick="CitizenPortalApp.selectDepth('200', this)"
-                    class="citizen-depth-card p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-slate-800 bg-slate-900/80 hover:border-slate-700">
-                    <span class="text-xl">🏠</span>
-                    <span class="text-[10.5px] font-bold text-slate-200 leading-tight">&gt; 1.5m</span>
-                    <span class="text-[9.5px] text-rose-400">Nóc nhà</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Mức độ ưu tiên trợ giúp -->
-              <div>
-                <label class="block text-[11px] font-bold text-slate-300 mb-1">Mức độ ưu tiên trợ giúp:</label>
-                <select id="sos-select-priority"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-semibold">
-                  <option value="critical">🚨 Khẩn cấp (Nguy hiểm tính mạng tức thì)</option>
-                  <option value="high" selected>⚠️ Cao (Ngập sâu, chia cắt cô lập)</option>
-                  <option value="medium">ℹ️ Trung bình (Cần sơ tán dần)</option>
-                </select>
-              </div>
-
-              <!-- Khối Xác Nhận Vị Trí Hiện Trường (VIC-04 & V-04 / CIT-02) -->
+              <!-- 1. Khối Định vị GPS & Xác nhận vị trí (Ưu tiên hàng đầu Emergency-First, V-04 & CIT-02) -->
               <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2">
                 <div class="flex items-center justify-between gap-1">
                   <label class="text-[11px] font-bold text-slate-200 flex items-center gap-1">
                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-500"></i>
-                    <span>Tọa độ cứu hộ (Hiện trường):</span>
+                    <span>1. Tọa độ cứu hộ (Hiện trường):</span>
                   </label>
                   <span id="citizen-loc-verify-badge"
                     class="text-[9.5px] font-bold px-2 py-0.5 rounded-full citizen-loc-unverified border border-amber-300">
@@ -608,18 +559,20 @@
 
                 <div class="flex items-center gap-1.5 text-xs">
                   <div
-                    class="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 font-mono text-[11px] truncate"
+                    class="flex-1 px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 font-mono text-[11px] truncate"
                     id="citizen-sos-coord-display">
                     Chưa xác định tọa độ
                   </div>
                   <button type="button" onclick="CitizenPortal.locateGPSWithAccuracy()" id="btn-citizen-gps-locate"
-                    class="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95"
+                    class="min-h-[44px] px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95"
                     title="Tự động lấy toạ độ GPS chính xác từ thiết bị">
                     <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
                     <span>GPS</span>
                   </button>
-                  <button type="button" onclick="CitizenPortal.startPickingSOSLocation()" id="btn-citizen-pick-sos"
-                    class="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95"
+                  <button type="button"
+                    onclick="CitizenPortalApp.restoreMobileMapHeight(); CitizenPortal.startPickingSOSLocation()"
+                    id="btn-citizen-pick-sos"
+                    class="min-h-[44px] px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95"
                     title="Chọn trực tiếp trên bản đồ tác chiến">
                     <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
                     <span>Ghim bản đồ</span>
@@ -643,56 +596,191 @@
                   <div id="citizen-gps-error-msg">Không thể xác định GPS.</div>
                   <div class="flex flex-wrap gap-1.5">
                     <button type="button" onclick="CitizenPortal.locateGPSWithAccuracy()"
-                      class="px-2 py-1 bg-rose-700/60 hover:bg-rose-600 text-white rounded font-bold text-[10px] cursor-pointer">
+                      class="min-h-[36px] px-2.5 py-1 bg-rose-700/60 hover:bg-rose-600 text-white rounded font-bold text-[10px] cursor-pointer">
                       Thử lấy GPS lại
                     </button>
-                    <button type="button" onclick="CitizenPortal.startPickingSOSLocation()"
-                      class="px-2 py-1 bg-blue-700/60 hover:bg-blue-600 text-white rounded font-bold text-[10px] cursor-pointer">
+                    <button type="button"
+                      onclick="CitizenPortalApp.restoreMobileMapHeight(); CitizenPortal.startPickingSOSLocation()"
+                      class="min-h-[36px] px-2.5 py-1 bg-blue-700/60 hover:bg-blue-600 text-white rounded font-bold text-[10px] cursor-pointer">
                       Chọn trên bản đồ
                     </button>
                   </div>
                 </div>
 
-                <!-- Phương án dự phòng khi mất GPS: Mô tả địa điểm & Điểm mốc -->
-                <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
-                  <div class="text-[10px] text-slate-400 font-semibold">
-                    Mô tả địa điểm / Điểm mốc (bắt buộc nếu không lấy được GPS):
+                <!-- Phương án dự phòng khi mất GPS: Thu gọn mặc định, tự mở nếu GPS lỗi -->
+                <details id="citizen-manual-location-details" class="pt-1 border-t border-slate-800/80">
+                  <summary class="text-[10.5px] text-sky-400 font-semibold cursor-pointer select-none py-1">
+                    Nhập địa chỉ / Điểm mốc thủ công (khi mất GPS)
+                  </summary>
+                  <div class="space-y-1.5 pt-1.5">
+                    <input id="sos-location-description" type="text"
+                      placeholder="Số nhà, ngõ/ngách, thôn/xóm, phường/xã..."
+                      class="w-full min-h-[40px] px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-800 text-slate-100 text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <input id="sos-location-landmark" type="text"
+                      placeholder="Điểm mốc gần nhất (VD: Cạnh UBND xã, trường tiểu học...)"
+                      class="w-full min-h-[40px] px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-800 text-slate-100 text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500">
                   </div>
-                  <input id="sos-location-description" type="text"
-                    placeholder="Số nhà, ngõ/ngách, thôn/xóm, phường/xã..."
-                    class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-800 text-slate-100 text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500">
-                  <input id="sos-location-landmark" type="text"
-                    placeholder="Điểm mốc gần nhất (VD: Cạnh UBND xã, trường tiểu học...)"
-                    class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950/90 border border-slate-800 text-slate-100 text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
+                </details>
 
-                <!-- Checkbox xác nhận của người dân theo tiêu chí V-04 -->
-                <div class="flex items-start gap-2 pt-1 border-t border-slate-800">
+                <!-- Checkbox xác nhận của người dân theo tiêu chí V-04 (vùng chạm >= 44px toàn hàng) -->
+                <label for="citizen-confirm-location-check"
+                  class="min-h-[44px] flex items-center gap-2.5 pt-1.5 px-2 rounded-lg border-t border-slate-800 hover:bg-slate-800/40 cursor-pointer select-none">
                   <input id="citizen-confirm-location-check" type="checkbox"
-                    onchange="CitizenPortal.onLocationVerifiedChange(this.checked)"
-                    class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer">
-                  <label for="citizen-confirm-location-check"
-                    class="text-[10.5px] text-slate-300 leading-tight cursor-pointer">
+                    onchange="CitizenPortal.onLocationVerifiedChange(this.checked); CitizenPortalApp.updateSOSStickySummary()"
+                    class="w-5 h-5 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer shrink-0">
+                  <span class="text-[11px] text-slate-300 leading-tight">
                     <strong class="text-white">Tôi xác nhận vị trí / mô tả này là chính xác</strong> nơi nạn nhân đang
                     mắc kẹt thực tế.
-                  </label>
+                  </span>
+                </label>
+              </div>
+
+              <!-- 2. Họ tên & Số điện thoại (tự lưu localStorage) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Họ tên người liên hệ / Nạn nhân:</label>
+                  <input id="sos-input-name" type="text" placeholder="Nguyễn Văn A"
+                    class="w-full min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-300 mb-1">Số điện thoại liên lạc:</label>
+                  <input id="sos-input-phone" type="tel" placeholder="098xxxxxxx"
+                    class="w-full min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-mono">
                 </div>
               </div>
 
-              <!-- Ghi chú tình trạng khẩn cấp -->
+              <!-- 3. Số người mắc kẹt (nút chạm nhanh + input) -->
               <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-[11px] font-bold text-slate-300">Số người mắc kẹt:</label>
+                  <input id="sos-input-people" type="number" min="1" max="100" value="1"
+                    class="w-16 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 text-center focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-mono">
+                </div>
+                <div id="citizen-people-quick-btns" class="grid grid-cols-4 gap-1.5">
+                  <button type="button" onclick="CitizenPortalApp.selectPeopleCount(1, this)" data-people="1"
+                    class="citizen-people-btn min-h-[44px] rounded-xl border border-rose-500/80 bg-rose-950/50 text-rose-200 font-black text-xs cursor-pointer transition">1</button>
+                  <button type="button" onclick="CitizenPortalApp.selectPeopleCount(2, this)" data-people="2"
+                    class="citizen-people-btn min-h-[44px] rounded-xl border border-slate-800 bg-slate-900/80 text-slate-200 font-bold text-xs cursor-pointer transition hover:border-slate-700">2</button>
+                  <button type="button" onclick="CitizenPortalApp.selectPeopleCount(4, this)" data-people="4"
+                    class="citizen-people-btn min-h-[44px] rounded-xl border border-slate-800 bg-slate-900/80 text-slate-200 font-bold text-xs cursor-pointer transition hover:border-slate-700">3-5</button>
+                  <button type="button" onclick="CitizenPortalApp.selectPeopleCount(6, this)" data-people="6"
+                    class="citizen-people-btn min-h-[44px] rounded-xl border border-slate-800 bg-slate-900/80 text-slate-200 font-bold text-xs cursor-pointer transition hover:border-slate-700">&gt;5</button>
+                </div>
+              </div>
+
+              <!-- 4. Nhóm yếu thế & Chip tình trạng khẩn cấp chạm nhanh -->
+              <div class="space-y-2">
+                <label for="sos-input-vulnerable"
+                  class="min-h-[44px] flex items-center gap-2 px-2.5 py-2 rounded-xl bg-rose-950/30 border border-rose-900/40 cursor-pointer">
+                  <input id="sos-input-vulnerable" type="checkbox"
+                    class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer shrink-0">
+                  <span class="text-[11px] font-bold text-rose-300">Có người già, trẻ nhỏ hoặc người cần cấp cứu y tế</span>
+                </label>
+
+                <div class="flex flex-wrap gap-1.5" id="citizen-vulnerable-chips">
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Trẻ nhỏ', true)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">👶 Trẻ nhỏ</button>
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Người già', true)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">👴 Người già</button>
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Phụ nữ mang thai', true)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">🤰 Phụ nữ mang thai</button>
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Cần cấp cứu y tế', true)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">🚑 Cần cấp cứu y tế</button>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5" id="citizen-need-chips">
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Cần xuồng/cano', false)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">🚤 Cần xuồng/cano</button>
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Mất điện/Sắp hết pin', false)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">🔋 Mất điện/Sắp hết pin</button>
+                  <button type="button" onclick="CitizenPortalApp.toggleSOSChip(this, 'Hết nước & lương thực', false)"
+                    class="citizen-sos-chip min-h-[38px] px-2.5 py-1 rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 text-[10.5px] font-semibold cursor-pointer transition">🥫 Hết nước &amp; lương thực</button>
+                </div>
+              </div>
+
+              <!-- 5. Chọn Mức nước ngập bằng Thẻ Trực Quan (Visual Depth Selector) -->
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-[11px] font-bold text-slate-300">Mức nước ngập thực tế (Chọn theo hình
+                    ảnh):</label>
+                  <span id="sos-depth-label" class="text-[10.5px] font-mono text-amber-300 font-bold">0.5m - 1.5m (Đến
+                    ngực)</span>
+                </div>
+                <!-- Select ẩn giữ tương thích 100% với logic backend & test suite -->
+                <select id="sos-input-depth" class="hidden">
+                  <option value="30">Dưới 0.5m (Đến đầu gối)</option>
+                  <option value="100" selected>0.5m - 1.5m (Đến ngực)</option>
+                  <option value="200">1.5m - 2.5m (Ngập tầng 1)</option>
+                  <option value="300">Trên 2.5m (Cô lập nóc nhà)</option>
+                </select>
+
+                <div class="grid grid-cols-2 gap-2" id="citizen-depth-selector">
+                  <button type="button" onclick="CitizenPortalApp.selectDepth('30', this)" data-depth="30"
+                    class="citizen-depth-card min-h-[44px] p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-slate-800 bg-slate-900/80 hover:border-slate-700">
+                    <span class="text-xl">🚲</span>
+                    <span class="depth-title text-[10.5px] font-bold text-slate-200 leading-tight">&lt; 0.5m</span>
+                    <span class="depth-sub text-[9.5px] text-slate-400">Đến đầu gối</span>
+                  </button>
+
+                  <button type="button" onclick="CitizenPortalApp.selectDepth('100', this)" data-depth="100"
+                    class="citizen-depth-card selected min-h-[44px] p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-amber-500/80 bg-amber-950/40">
+                    <span class="text-xl">🚶</span>
+                    <span class="depth-title text-[10.5px] font-black text-amber-300 leading-tight">0.5m - 1.5m</span>
+                    <span class="depth-sub text-[9.5px] text-amber-400 font-medium">Đến ngực</span>
+                  </button>
+
+                  <button type="button" onclick="CitizenPortalApp.selectDepth('200', this)" data-depth="200"
+                    class="citizen-depth-card min-h-[44px] p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-slate-800 bg-slate-900/80 hover:border-slate-700">
+                    <span class="text-xl">🌊</span>
+                    <span class="depth-title text-[10.5px] font-bold text-slate-200 leading-tight">1.5m - 2.5m</span>
+                    <span class="depth-sub text-[9.5px] text-slate-400">Ngập tầng 1</span>
+                  </button>
+
+                  <button type="button" onclick="CitizenPortalApp.selectDepth('300', this)" data-depth="300"
+                    class="citizen-depth-card min-h-[44px] p-2 sm:p-2.5 rounded-xl text-center cursor-pointer transition flex flex-col items-center gap-1 border border-slate-800 bg-slate-900/80 hover:border-slate-700">
+                    <span class="text-xl">🏠</span>
+                    <span class="depth-title text-[10.5px] font-bold text-slate-200 leading-tight">&gt; 2.5m</span>
+                    <span class="depth-sub text-[9.5px] text-slate-400">Cô lập nóc nhà</span>
+                  </button>
+                </div>
+
+                <!-- Mức độ ưu tiên trợ giúp (thu gọn tự động, vẫn giữ DOM ID) -->
+                <details class="mt-2">
+                  <summary class="text-[10.5px] text-slate-400 hover:text-slate-200 cursor-pointer select-none">
+                    Ưu tiên tự động (Chỉnh nếu cần)
+                  </summary>
+                  <div class="pt-1.5">
+                    <select id="sos-select-priority"
+                      class="w-full min-h-[40px] px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs font-semibold">
+                      <option value="critical">🚨 Khẩn cấp (Nguy hiểm tính mạng tức thì)</option>
+                      <option value="high" selected>⚠️ Cao (Ngập sâu, chia cắt cô lập)</option>
+                      <option value="medium">ℹ️ Trung bình (Cần sơ tán dần)</option>
+                    </select>
+                  </div>
+                </details>
+              </div>
+
+              <!-- 6. Ghi chú tình trạng khẩn cấp -->
+              <div class="pb-4">
                 <label class="block text-[11px] font-bold text-slate-300 mb-1">Ghi chú tình trạng khẩn cấp:</label>
                 <textarea id="sos-input-notes" rows="2"
                   placeholder="Ví dụ: Nước ngập tầng 1, không có điện, cần cano tiếp tế lương thực..."
-                  class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"></textarea>
+                  class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"></textarea>
               </div>
 
-              <!-- Nút bấm Gửi SOS Siêu Nổi Bật -->
-              <button onclick="NorthStarRescue.submitSOSBeacon()" id="btn-submit-sos"
-                class="citizen-sos-primary-btn w-full py-3.5 px-4 text-white font-black rounded-2xl flex items-center justify-center gap-2.5 transition active:scale-95 cursor-pointer text-xs sm:text-sm tracking-wider uppercase">
-                <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
-                <span>GỬI TÍN HIỆU CỨU HỘ SOS KHẨN CẤP</span>
-              </button>
+              <!-- 7. Nút bấm Gửi SOS Sticky Bottom dính đáy -->
+              <div id="citizen-sos-sticky-bar"
+                class="sticky bottom-0 z-20 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 pt-2.5 pb-2 -mx-3 sm:-mx-4 px-3 sm:px-4 space-y-1.5">
+                <div id="citizen-sos-sticky-summary"
+                  class="text-[10px] text-amber-300 font-medium flex items-center justify-between gap-2 truncate">
+                  <span>📍 Chưa xác định vị trí • Nước: 0.5m - 1.5m • ⚠️ Chưa tick xác nhận vị trí</span>
+                </div>
+                <button onclick="NorthStarRescue.submitSOSBeacon()" id="btn-submit-sos"
+                  class="citizen-sos-primary-btn w-full min-h-[44px] py-3 px-4 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-600 text-white shadow-lg shadow-rose-600/40 border border-rose-400/40 font-black rounded-2xl flex items-center justify-center gap-2.5 transition active:scale-95 cursor-pointer text-xs sm:text-sm tracking-wider uppercase">
+                  <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
+                  <span>GỬI TÍN HIỆU CỨU HỘ SOS KHẨN CẤP</span>
+                </button>
+              </div>
 
               <!-- Thẻ kết quả tiếp nhận hồ sơ cứu nạn (Tiêu chí V-02 & V-03) -->
               <div id="citizen-sos-result-card"
@@ -716,20 +804,223 @@
                     <span class="text-[10px]">Chép</span>
                   </button>
                 </div>
+                <div id="citizen-sos-tracking-token-row"
+                  class="hidden flex items-center justify-between bg-slate-950/90 text-sky-300 px-2.5 py-2 rounded-lg border border-sky-900/60 gap-2">
+                  <div class="min-w-0">
+                    <span class="block text-[9.5px] uppercase font-bold text-slate-400">Mã tra cứu bí mật (Tracking Token):</span>
+                    <span id="citizen-sos-tracking-token" class="block text-xs font-mono font-bold truncate select-all"></span>
+                  </div>
+                  <button type="button" onclick="CitizenPortalApp.copyTrackingToken()"
+                    class="text-xs text-sky-300 hover:text-white px-2 py-1 rounded bg-slate-800 border border-slate-700 cursor-pointer flex items-center gap-1 shrink-0"
+                    title="Sao chép Tracking Token gửi cho người thân">
+                    <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+                    <span class="text-[10px]">Chép Token</span>
+                  </button>
+                </div>
                 <p id="citizen-sos-feedback-msg" class="text-[11px] text-slate-300 leading-snug">
                   <!-- Thông điệp phản hồi từ máy chủ hoặc cảnh báo ngoại tuyến -->
                 </p>
-                <div class="pt-1 flex items-center gap-2">
+                <div class="pt-1 flex flex-wrap items-center gap-2">
                   <button type="button"
                     onclick="CitizenPortalApp.trackTicket(document.getElementById('citizen-sos-ticket-code').textContent)"
-                    class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                    class="flex-1 min-h-[40px] py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                     <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                    <span>Theo dõi tiến độ giải cứu</span>
+                    <span>Theo dõi giải cứu</span>
+                  </button>
+                  <button type="button" onclick="CitizenPortalApp.findEvacuationRoute()"
+                    class="min-h-[40px] py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                    <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+                    <span>Tìm tuyến tự sơ tán</span>
                   </button>
                   <button type="button" onclick="NorthStarRescue.resetSOSForm()"
-                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition cursor-pointer">
+                    class="min-h-[40px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition cursor-pointer">
                     Đóng
                   </button>
+                </div>
+              </div>
+
+              <!-- Trung tâm Phát SOS Ngoại tuyến (SMS 2G + DTN Relay QR / .nsos) -->
+              <div id="citizen-offline-failover-panel"
+                class="hidden p-3.5 rounded-2xl border border-amber-600/60 bg-slate-900/95 space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span class="text-xs font-black uppercase text-amber-300 flex items-center gap-1.5">
+                    <i data-lucide="wifi-off" class="w-4 h-4 text-amber-400"></i>
+                    <span>Trung Tâm Phát SOS Ngoại Tuyến</span>
+                  </span>
+                  <span class="text-[9.5px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 font-bold">
+                    Store &amp; Forward
+                  </span>
+                </div>
+
+                <!-- Kênh 1: SMS 2G -->
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-emerald-300">📱 Kênh 1 — SMS 2G (≤ 160 ký tự)</span>
+                    <span id="citizen-sms-2g-len" class="text-[10px] font-mono text-slate-400">0/160</span>
+                  </div>
+                  <div id="citizen-sms-2g-preview"
+                    class="p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-[10.5px] break-all border border-slate-800 select-all">
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <a id="btn-citizen-open-sms" href="sms:112"
+                      class="flex-1 min-h-[40px] py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 no-underline">
+                      <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                      <span>Mở ứng dụng SMS (112)</span>
+                    </a>
+                    <button type="button" onclick="CitizenPortalApp.copySms2G()"
+                      class="min-h-[40px] px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700 cursor-pointer">
+                      Chép SMS
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Kênh 2: Chuyển tiếp DTN (northstar.sos.relay.v1) -->
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-sky-300">📡 Kênh 2 — Chuyển tiếp DTN (QR / .nsos)</span>
+                    <span id="citizen-relay-meta-badge" class="text-[9.5px] font-mono text-slate-400">hop 0/5 • 48h</span>
+                  </div>
+                  <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl">
+                    <div id="citizen-relay-qr-box" class="flex items-center justify-center"></div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                    <button type="button" onclick="CitizenPortalApp.downloadRelayQRPng()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white font-bold text-[11px] cursor-pointer">
+                      ⬇️ Tải ảnh QR .png
+                    </button>
+                    <button type="button" onclick="CitizenPortalApp.exportRelayNsosFile()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-[11px] cursor-pointer">
+                      📦 Xuất tệp .nsos
+                    </button>
+                    <button type="button" onclick="CitizenPortalApp.copyRelayEncodedString()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700 cursor-pointer">
+                      📋 Chép chuỗi ký số
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Kênh 3: Cầu nối Vệ tinh (SatelliteGatewayAdapter 7 trạng thái) -->
+                <div id="citizen-satellite-gateway-box" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-bold text-purple-300">🛰️ Kênh 3 — Cầu nối Vệ tinh (Satellite Gateway)</span>
+                    <span id="citizen-sat-state-badge"
+                      class="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                      NOT_CONFIGURED
+                    </span>
+                  </div>
+
+                  <!-- Thanh 7 trạng thái của SatelliteGatewayAdapter -->
+                  <div id="citizen-sat-stepper" class="grid grid-cols-7 gap-1 text-[8.5px] font-mono text-center">
+                    <span data-sat-state="NOT_CONFIGURED" class="px-1 py-1 rounded bg-slate-800 text-white font-bold truncate" title="NOT_CONFIGURED">NOT_CFG</span>
+                    <span data-sat-state="DISCONNECTED" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="DISCONNECTED">DISCONN</span>
+                    <span data-sat-state="CONNECTING" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="CONNECTING">CONN..</span>
+                    <span data-sat-state="CONNECTED" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="CONNECTED">CONN</span>
+                    <span data-sat-state="TRANSMITTING" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="TRANSMITTING">TX</span>
+                    <span data-sat-state="ACKNOWLEDGED" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="ACKNOWLEDGED">ACK</span>
+                    <span data-sat-state="FAILED" class="px-1 py-1 rounded bg-slate-900 text-slate-500 truncate" title="FAILED">FAIL</span>
+                  </div>
+
+                  <div id="citizen-sat-real-status"
+                    class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[10.5px] text-slate-300">
+                    <span class="font-bold text-amber-300">GATEWAY_UNAVAILABLE:</span> Chưa kết nối phần cứng vệ tinh.
+                  </div>
+
+                  <!-- Chuỗi tọa độ siêu nén <= 120 bytes -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Khung dữ liệu siêu nén (≤ 120 bytes):</span>
+                      <span id="citizen-sat-frame-ratio" class="font-mono text-purple-300">--</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <div id="citizen-sat-compact-frame"
+                        class="flex-1 p-1.5 rounded-lg bg-slate-900 text-purple-200 font-mono text-[10px] truncate border border-slate-800 select-all">
+                        --
+                      </div>
+                      <button type="button" onclick="CitizenPortalApp.copySatelliteCompactFrame()"
+                        class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[10.5px] border border-slate-700 cursor-pointer shrink-0">
+                        Chép nén
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Công tắc Mô phỏng Trạm mặt đất (Mặc định TẮT) -->
+                  <div class="pt-1.5 border-t border-slate-800 space-y-2">
+                    <label for="citizen-sat-demo-toggle"
+                      class="flex items-center justify-between gap-2 cursor-pointer select-none">
+                      <span class="text-[10.5px] font-bold text-slate-300">Bật chế độ Mô phỏng Vệ tinh (Demo)</span>
+                      <input id="citizen-sat-demo-toggle" type="checkbox"
+                        onchange="CitizenPortalApp.onSatelliteDemoToggle(this.checked)"
+                        class="w-4 h-4 rounded text-purple-500 cursor-pointer">
+                    </label>
+                    <button type="button" id="btn-citizen-sat-demo-send"
+                      onclick="CitizenPortalApp.sendSatelliteDemo()"
+                      class="hidden w-full min-h-[40px] py-2 px-3 rounded-lg bg-purple-700 hover:bg-purple-600 text-white font-bold text-[11px] cursor-pointer">
+                      🛰️ Gửi thử qua Trạm mặt đất Mô phỏng (POST /api/sos/gateway/inbound)
+                    </button>
+                    <div id="citizen-sat-demo-result"
+                      class="hidden p-2 rounded-lg border text-[10.5px] font-semibold"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trung tâm Phát SOS Ngoại tuyến (SMS 2G + DTN Relay QR / .nsos) -->
+              <div id="citizen-offline-failover-panel"
+                class="hidden p-3.5 rounded-2xl border border-amber-600/60 bg-slate-900/95 space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span class="text-xs font-black uppercase text-amber-300 flex items-center gap-1.5">
+                    <i data-lucide="wifi-off" class="w-4 h-4 text-amber-400"></i>
+                    <span>Trung Tâm Phát SOS Ngoại Tuyến</span>
+                  </span>
+                  <span class="text-[9.5px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 font-bold">
+                    Store &amp; Forward
+                  </span>
+                </div>
+
+                <!-- Kênh 1: SMS 2G -->
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-emerald-300">📱 Kênh 1 — SMS 2G (≤ 160 ký tự)</span>
+                    <span id="citizen-sms-2g-len" class="text-[10px] font-mono text-slate-400">0/160</span>
+                  </div>
+                  <div id="citizen-sms-2g-preview"
+                    class="p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-[10.5px] break-all border border-slate-800 select-all">
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <a id="btn-citizen-open-sms" href="sms:112"
+                      class="flex-1 min-h-[40px] py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 no-underline">
+                      <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                      <span>Mở ứng dụng SMS (112)</span>
+                    </a>
+                    <button type="button" onclick="CitizenPortalApp.copySms2G()"
+                      class="min-h-[40px] px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700 cursor-pointer">
+                      Chép SMS
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Kênh 2: Chuyển tiếp DTN (northstar.sos.relay.v1) -->
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-sky-300">📡 Kênh 2 — Chuyển tiếp DTN (QR / .nsos)</span>
+                    <span id="citizen-relay-meta-badge" class="text-[9.5px] font-mono text-slate-400">hop 0/5 • 48h</span>
+                  </div>
+                  <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl">
+                    <div id="citizen-relay-qr-box" class="flex items-center justify-center"></div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                    <button type="button" onclick="CitizenPortalApp.downloadRelayQRPng()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white font-bold text-[11px] cursor-pointer">
+                      ⬇️ Tải ảnh QR .png
+                    </button>
+                    <button type="button" onclick="CitizenPortalApp.exportRelayNsosFile()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-[11px] cursor-pointer">
+                      📦 Xuất tệp .nsos
+                    </button>
+                    <button type="button" onclick="CitizenPortalApp.copyRelayEncodedString()"
+                      class="min-h-[40px] py-2 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700 cursor-pointer">
+                      📋 Chép chuỗi ký số
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -986,33 +1277,43 @@
                 </button>
               </div>
 
-              <!-- Thanh tiến trình 4 giai đoạn -->
-              <div class="space-y-2 py-1">
-                <div class="flex items-center gap-2 text-[11px]">
-                  <span
-                    class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">1</span>
-                  <span class="text-slate-200 font-semibold">Tiếp nhận thông tin SOS thành công</span>
+              <!-- Cảnh báo trạng thái ngoại tuyến / đã hủy -->
+              <div id="tracking-local-draft-alert"
+                class="hidden p-2.5 rounded-lg bg-amber-950/50 border border-amber-700/60 text-[11px] text-amber-300 font-semibold">
+                ⚠️ Đang lưu trên máy, chưa gửi được lên Sở Chỉ huy. Hệ thống sẽ tự động đồng bộ khi có mạng.
+              </div>
+              <div id="tracking-cancelled-alert"
+                class="hidden p-2.5 rounded-lg bg-rose-950/60 border border-rose-700/70 text-[11px] text-rose-300 font-semibold">
+                ❌ Yêu cầu SOS này đã được đánh dấu hủy / đóng hồ sơ.
+              </div>
+
+              <!-- Thanh tiến trình 4 giai đoạn (mặc định trung tính khi chưa tra cứu) -->
+              <div id="tracking-stepper-container" class="space-y-2 py-1">
+                <div id="tracking-step-1" class="flex items-center gap-2 text-[11px]">
+                  <span data-step-badge
+                    class="w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]">1</span>
+                  <span data-step-text class="text-slate-500 font-medium">Tiếp nhận thông tin SOS thành công</span>
                 </div>
-                <div class="flex items-center gap-2 text-[11px]">
-                  <span
-                    class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">2</span>
-                  <span class="text-slate-200 font-semibold">Ban chỉ huy phân bổ Đội cứu hộ & Xuồng cao tốc</span>
+                <div id="tracking-step-2" class="flex items-center gap-2 text-[11px]">
+                  <span data-step-badge
+                    class="w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]">2</span>
+                  <span data-step-text class="text-slate-500 font-medium">Ban chỉ huy phân bổ Đội cứu hộ &amp; Xuồng cao tốc</span>
                 </div>
-                <div class="flex items-center gap-2 text-[11px]">
-                  <span
-                    class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] animate-pulse">3</span>
-                  <span class="text-blue-300 font-bold">Đội cứu hộ đang trên đường tiếp cận hiện trường</span>
+                <div id="tracking-step-3" class="flex items-center gap-2 text-[11px]">
+                  <span data-step-badge
+                    class="w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]">3</span>
+                  <span data-step-text class="text-slate-500 font-medium">Đội cứu hộ đang trên đường tiếp cận hiện trường</span>
                 </div>
-                <div class="flex items-center gap-2 text-[11px]">
-                  <span
+                <div id="tracking-step-4" class="flex items-center gap-2 text-[11px]">
+                  <span data-step-badge
                     class="w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]">4</span>
-                  <span class="text-slate-500 font-medium">Đã sơ tán an toàn về Trạm lưu trú</span>
+                  <span data-step-text class="text-slate-500 font-medium">Đã sơ tán an toàn về Trạm lưu trú</span>
                 </div>
               </div>
 
-              <div
-                class="p-2.5 rounded-lg bg-blue-950/40 border border-blue-900/40 text-[11px] text-blue-300 flex items-start gap-2">
-                <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-blue-400"></i>
+              <div id="tracking-advice-box"
+                class="hidden p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/60 text-[11px] text-emerald-300 flex items-start gap-2">
+                <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-emerald-400"></i>
                 <div class="leading-relaxed">
                   Lực lượng cứu hộ đang di chuyển theo lộ trình an toàn tránh các đoạn nước xiết. Vui lòng giữ liên lạc
                   qua số điện thoại đã đăng ký.
@@ -1030,6 +1331,13 @@
       class="order-1 md:order-2 w-full md:w-3/5 lg:w-[68%] h-[48vh] sm:h-[55vh] md:h-full relative shrink-0 transition-all duration-300">
       <div id="map" class="w-full h-full z-0 bg-slate-950"></div>
 
+      <!-- Nút nhỏ trên mobile để mở lại bản đồ khi đang ở tab SOS -->
+      <button id="btn-citizen-restore-map-mobile" type="button"
+        onclick="CitizenPortalApp.restoreMobileMapHeight()"
+        class="hidden md:hidden absolute bottom-2 right-2 z-20 px-2.5 py-1.5 rounded-xl bg-slate-900/95 border border-slate-700 text-sky-300 text-[10.5px] font-bold shadow-lg cursor-pointer">
+        🗺️ Phóng to bản đồ
+      </button>
+
       <!-- Nút nổi mở lại bảng thao tác khi bị thu gọn (ở mép trái bản đồ) -->
       <button id="citizen-floating-expand-btn" onclick="CitizenPortalApp.toggleMapMaximize()"
         class="hidden absolute top-16 left-3 z-20 bg-slate-900/95 hover:bg-slate-800 text-sky-400 border border-slate-700/90 px-3 py-2 rounded-xl shadow-2xl backdrop-blur-md items-center gap-2 cursor-pointer transition hover:scale-105 active:scale-95 group"
@@ -1040,27 +1348,27 @@
 
       <!-- Thanh chọn Lớp Bản Đồ Tác Chiến (Ban Ngày / Ban Đêm / Địa Hình / Vệ Tinh) -->
       <div
-        class="absolute top-3 left-3 z-10 flex items-center gap-1 p-1 bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-xl max-w-[calc(100%-80px)] overflow-x-auto no-scrollbar">
+        class="absolute top-3 left-2.5 sm:left-3 z-10 flex items-center gap-0.5 sm:gap-1 p-1 bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-xl max-w-[calc(100%-56px)] overflow-x-auto no-scrollbar">
         <button onclick="CitizenPortalApp.switchBaseMap('day')" id="citizen-btn-base-day"
-          class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0"
+          class="px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer bg-sky-600 text-white shadow-sm flex items-center gap-1 shrink-0"
           title="Bản đồ đường phố ban ngày sáng rõ">
           <i data-lucide="sun" class="w-3 h-3 text-amber-300"></i>
           <span>Ban Ngày</span>
         </button>
         <button onclick="CitizenPortalApp.switchBaseMap('dark')" id="citizen-btn-base-dark"
-          class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
           title="Bản đồ ban đêm nền tối dịu mắt">
           <i data-lucide="moon" class="w-3 h-3"></i>
           <span>Ban Đêm</span>
         </button>
         <button onclick="CitizenPortalApp.switchBaseMap('topo')" id="citizen-btn-base-topo"
-          class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
           title="Bản đồ địa hình cao độ vùng lũ">
           <i data-lucide="map" class="w-3 h-3 text-emerald-400"></i>
           <span>Địa Hình</span>
         </button>
         <button onclick="CitizenPortalApp.switchBaseMap('satellite')" id="citizen-btn-base-sat"
-          class="px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
           title="Ảnh chụp vệ tinh quang học thực địa">
           <i data-lucide="satellite" class="w-3 h-3 text-sky-400"></i>
           <span>Vệ Tinh</span>
@@ -1088,13 +1396,19 @@
 
       <!-- Chú giải bản đồ & Điều khiển Vùng ảnh hưởng ngập C2 Neo-Glass -->
       <div
-        class="absolute bottom-3 right-20 z-10 hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-950/90 border border-slate-800/90 backdrop-blur-xl rounded-2xl text-[11px] font-medium text-slate-300 shadow-2xl">
-        <span class="flex items-center gap-1.5"><span
+        class="absolute bottom-3 right-20 z-10 hidden sm:flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-950/90 border border-slate-800/90 backdrop-blur-xl rounded-2xl text-[10.5px] font-medium text-slate-300 shadow-2xl max-w-[calc(100%-170px)]">
+        <span class="flex items-center gap-1"><span
             class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span> Ngập sâu (≥20cm)</span>
-        <span class="flex items-center gap-1.5"><span
+        <span class="flex items-center gap-1"><span
             class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span> Cảnh báo (5-20cm)</span>
-        <span class="flex items-center gap-1.5"><span
-            class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span> Trạm sơ tán</span>
+        <span class="flex items-center gap-1"><span
+            class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span> ⛰️ Sạt lở</span>
+        <span class="flex items-center gap-1"><span
+            class="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_8px_#8b5cf6]"></span> 🌀 Bão/Triều</span>
+        <span class="flex items-center gap-1"><span
+            class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span> 🌊 Lũ lớn</span>
+        <span class="flex items-center gap-1"><span
+            class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span> 🛡️ Trạm sơ tán</span>
         <div class="w-px h-3.5 bg-slate-800 mx-0.5"></div>
         <button id="citizen-btn-toggle-zones" onclick="toggleFloodImpactZones()"
           class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-500/60 text-[10.5px] font-bold text-sky-300 transition cursor-pointer shadow-sm active:scale-95"
@@ -1110,20 +1424,232 @@
   <!-- 3. TOAST THÔNG BÁO NHANH CHO NGƯỜI DÂN -->
   <!-- ========================================================================= -->
   <div id="citizen-toast"
-    class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    class="fixed top-16 sm:top-auto sm:bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
     <div id="citizen-toast-content"
-      class="px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-slate-700 text-white text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-auto">
+      class="px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-slate-700 text-white text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-none">
       <span id="citizen-toast-icon">ℹ️</span>
       <span id="citizen-toast-msg">Thông báo hệ thống</span>
+    </div>
+  </div>
+
+  <!-- Banner hướng dẫn khi đang chấm vị trí cho Voice SOS trên bản đồ -->
+  <div id="voice-sos-map-picker-banner"
+    class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-[1250] px-4 py-2 rounded-2xl bg-rose-700 text-white text-xs font-bold shadow-2xl border border-rose-400 flex items-center gap-3">
+    <span>📍 Chạm vào vị trí của bạn trên bản đồ để ghim tọa độ Voice SOS</span>
+    <button type="button" onclick="VoiceSOSManager.cancelMapPick()"
+      class="px-2 py-0.5 rounded bg-slate-900/70 hover:bg-slate-900 text-white text-[11px] cursor-pointer">Hủy</button>
+  </div>
+
+  <!-- Modal Nhận chuyển tiếp SOS hộ người khác (DTN Relay Receiver - Máy B) -->
+  <div id="citizen-relay-receiver-modal"
+    class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[1220] flex items-center justify-center p-3">
+    <div class="bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl border border-sky-800/60 flex flex-col overflow-hidden max-h-[90vh]">
+      <div class="p-4 bg-gradient-to-r from-sky-700 to-indigo-700 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="qr-code" class="w-5 h-5"></i>
+          <div>
+            <h3 class="font-black text-sm uppercase">Nhận Chuyển Tiếp SOS Hộ (Relay)</h3>
+            <p class="text-[10.5px] text-sky-100">Xác thực SHA-256 &amp; ECDSA-P256 trước khi lưu chuyển tiếp</p>
+          </div>
+        </div>
+        <button type="button" onclick="CitizenPortalApp.closeRelayReceiverModal()"
+          class="text-white/80 hover:text-white p-1.5 rounded-lg text-lg leading-none cursor-pointer">&times;</button>
+      </div>
+
+      <div class="p-4 space-y-3 overflow-y-auto text-xs text-slate-200">
+        <!-- Cách 1: Quét QR bằng Camera -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sky-300">1. Quét QR bằng Camera</span>
+            <button type="button" id="btn-relay-cam-scan" onclick="CitizenPortalApp.toggleRelayCameraScan()"
+              class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] cursor-pointer">
+              Bật Camera quét QR
+            </button>
+          </div>
+          <div id="relay-cam-preview-wrap" class="hidden space-y-1.5">
+            <video id="relay-cam-video" class="w-full rounded-lg bg-black max-h-48 object-cover" playsinline muted></video>
+            <canvas id="relay-cam-canvas" class="hidden"></canvas>
+          </div>
+        </div>
+
+        <!-- Cách 2: Tải ảnh QR giải mã offline bằng jsQR -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <label for="relay-qr-image-input" class="block font-bold text-emerald-300">2. Tải ảnh QR (.png/.jpg) để giải mã offline (jsQR)</label>
+          <input id="relay-qr-image-input" type="file" accept="image/*"
+            onchange="CitizenPortalApp.handleRelayQRImageUpload(this)"
+            class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:text-white file:font-bold cursor-pointer">
+        </div>
+
+        <!-- Cách 3: Chọn tệp .nsos hoặc dán chuỗi gói tin ký số -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <label for="relay-nsos-file-input" class="block font-bold text-amber-300">3. Chọn tệp .nsos hoặc dán chuỗi gói tin ký số</label>
+          <input id="relay-nsos-file-input" type="file" accept=".nsos,.txt,.json"
+            onchange="CitizenPortalApp.handleRelayNsosFileUpload(this)"
+            class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-amber-700 file:text-white file:font-bold cursor-pointer">
+          <textarea id="relay-paste-input" rows="3"
+            placeholder="Dán chuỗi NORTHSTAR-RELAY-V1:... hoặc nội dung tệp .nsos vào đây"
+            class="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 font-mono text-[10.5px] focus:outline-none focus:ring-1 focus:ring-sky-500"></textarea>
+          <button type="button" id="btn-relay-accept-packet" onclick="CitizenPortalApp.acceptIncomingRelayPacket()"
+            class="w-full min-h-[42px] py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-black text-xs cursor-pointer">
+            🔐 Xác Thực &amp; Tiếp Nhận Chuyển Tiếp
+          </button>
+        </div>
+
+        <!-- Kết quả xác thực -->
+        <div id="relay-receive-feedback" class="hidden p-2.5 rounded-xl border text-[11px] font-semibold"></div>
+
+        <!-- Danh sách gói tin SOS đang giữ hộ trên Máy B -->
+        <div class="space-y-1.5 pt-1 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-300">Danh sách SOS đang giữ hộ trên máy này</span>
+            <button type="button" onclick="CitizenPortalApp.renderHeldRelayPackets()"
+              class="text-[10.5px] text-sky-400 hover:underline cursor-pointer">Làm mới</button>
+          </div>
+          <div id="relay-held-packets-list" class="space-y-1.5 max-h-40 overflow-y-auto">
+            <div class="text-[11px] text-slate-500">Chưa có gói tin chuyển tiếp nào trên máy.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cấp Cứu Bằng Giọng Nói AI (Voice SOS) -->
+  <div id="voice-sos-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1200] flex items-center justify-center p-3 select-none">
+    <div class="bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-rose-900/50 flex flex-col overflow-hidden">
+      <div class="p-4 bg-gradient-to-r from-rose-600 to-red-600 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-white/20">
+            <i data-lucide="radio" class="w-5 h-5 text-white animate-pulse"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm uppercase tracking-wide">Cấp Cứu Bằng Giọng Nói AI</h3>
+            <p class="text-[10.5px] text-rose-100">Groq Whisper LPU + Tự động ghim cứu hộ</p>
+          </div>
+        </div>
+        <button type="button" onclick="VoiceSOSManager.closeModal()" class="text-white/80 hover:text-white p-1.5 rounded-lg text-lg leading-none cursor-pointer">&times;</button>
+      </div>
+
+      <div class="p-5 flex flex-col items-center text-center space-y-3.5 max-h-[82vh] overflow-y-auto">
+        <div class="relative py-1 flex items-center justify-center">
+          <button id="voice-sos-mic-btn" type="button" onclick="VoiceSOSManager.toggleRecording()" class="w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-red-500 hover:from-rose-700 hover:to-red-600 text-white flex flex-col items-center justify-center shadow-2xl transition transform hover:scale-105 active:scale-95 cursor-pointer border-4 border-white/80" title="Bấm để bắt đầu ghi âm">
+            <i data-lucide="mic" class="w-9 h-9"></i>
+          </button>
+        </div>
+
+        <div id="voice-sos-status" class="space-y-0.5">
+          <span class="font-extrabold text-white text-sm">Bấm để Nói hoặc Gõ trực tiếp</span>
+          <span class="text-xs text-slate-400 block">Nói: Số người mắc kẹt, địa chỉ, tình trạng ngập lụt</span>
+        </div>
+
+        <div id="voice-sos-wave" class="hidden flex items-center justify-center gap-1.5 py-1">
+          <span class="w-1.5 h-5 bg-red-500 rounded-full animate-bounce"></span>
+          <span class="w-1.5 h-8 bg-rose-500 rounded-full animate-bounce [animation-delay:0.1s]"></span>
+          <span class="w-1.5 h-6 bg-red-600 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+          <span class="w-1.5 h-10 bg-rose-600 rounded-full animate-bounce [animation-delay:0.3s]"></span>
+          <span class="w-1.5 h-5 bg-red-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+
+        <div class="w-full text-left space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label for="voice-sos-text-input" class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Lời kêu cứu nhận diện được (Có thể gõ sửa lại):</span>
+            </label>
+            <span id="voice-sos-char-count" class="text-[10px] text-slate-400">0 ký tự</span>
+          </div>
+
+          <div class="relative">
+            <textarea id="voice-sos-text-input" rows="3" oninput="VoiceSOSManager.onTextInputChange()"
+              class="w-full p-3 text-xs bg-slate-800 text-slate-100 rounded-xl border border-slate-700 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none leading-relaxed transition resize-none placeholder-slate-400 font-sans"
+              placeholder="Lời bạn nói sẽ hiện tại đây khi thu âm. Bạn có thể bấm vào đây để gõ sửa số nhà, tên đường, số người mắc kẹt trước khi bấm gửi..."></textarea>
+            <button id="voice-sos-clear-btn" onclick="VoiceSOSManager.clearText()" title="Xóa nội dung" type="button"
+              class="hidden absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-200 text-xs rounded cursor-pointer">
+              ✕
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span class="text-[10.5px] text-slate-400 font-medium">Bổ sung nhanh:</span>
+            <button type="button" onclick="VoiceSOSManager.appendQuickTag('Cần xuồng cứu hộ')" class="px-2 py-0.5 text-[11px] bg-rose-950/40 text-rose-300 border border-rose-800/60 rounded-lg hover:bg-rose-900/50 transition cursor-pointer">+ Cần xuồng</button>
+            <button type="button" onclick="VoiceSOSManager.appendQuickTag('Có người già và trẻ nhỏ')" class="px-2 py-0.5 text-[11px] bg-amber-950/40 text-amber-300 border border-amber-800/60 rounded-lg hover:bg-amber-900/50 transition cursor-pointer">+ Người già/Trẻ em</button>
+            <button type="button" onclick="VoiceSOSManager.appendQuickTag('Nước dâng cao 1.5m lên gác xép')" class="px-2 py-0.5 text-[11px] bg-blue-950/40 text-blue-300 border border-blue-800/60 rounded-lg hover:bg-blue-900/50 transition cursor-pointer">+ Ngập 1.5m</button>
+            <button type="button" onclick="VoiceSOSManager.appendQuickTag('Hết thức ăn nước uống')" class="px-2 py-0.5 text-[11px] bg-emerald-950/40 text-emerald-300 border border-emerald-800/60 rounded-lg hover:bg-emerald-900/50 transition cursor-pointer">+ Hết lương thực</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1 text-left">
+            <div>
+              <label class="text-[10.5px] font-semibold text-slate-400 block mb-0.5">Số điện thoại:</label>
+              <input type="tel" id="voice-sos-phone" value="" placeholder="Nhập SĐT liên hệ..." class="w-full py-1.5 px-2.5 text-xs bg-slate-800 text-slate-100 rounded-lg border border-slate-700 focus:ring-1 focus:ring-rose-500 outline-none">
+            </div>
+            <div>
+              <label class="text-[10.5px] font-semibold text-slate-400 block mb-0.5">Người liên hệ:</label>
+              <input type="text" id="voice-sos-contact-name" value="" placeholder="Họ và tên..." class="w-full py-1.5 px-2.5 text-xs bg-slate-800 text-slate-100 rounded-lg border border-slate-700 focus:ring-1 focus:ring-rose-500 outline-none">
+            </div>
+          </div>
+
+          <div class="w-full text-left space-y-1.5 p-3 rounded-2xl bg-slate-800/80 border border-rose-900/60 shadow-sm">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-500"></i>
+                <span>Vị trí ghim cứu hộ trên bản đồ:</span>
+              </label>
+              <span id="voice-sos-loc-tag" class="text-[10px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-200 font-bold border border-rose-700">
+                Định vị tự động
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <input type="text" id="voice-sos-location-display" readonly
+                class="flex-1 py-2 px-2.5 text-xs font-mono font-bold bg-slate-900 text-cyan-300 rounded-xl border border-slate-700 outline-none select-all"
+                value="Đang xác định tọa độ...">
+              <button type="button" onclick="VoiceSOSManager.pickLocationOnMap()"
+                class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer whitespace-nowrap shadow-sm"
+                title="Bấm vào bản đồ để chọn chính xác vị trí nhà bạn">
+                <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                <span>Chấm bản đồ</span>
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1 pt-0.5">
+              <span class="text-[10px] text-slate-400 font-medium">Chọn nhanh:</span>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('map_center')" class="px-2 py-0.5 text-[10.5px] bg-slate-700/80 text-slate-200 border border-slate-600 rounded-lg hover:bg-slate-600 transition cursor-pointer">🎯 Tâm bản đồ</button>
+              <button type="button" onclick="VoiceSOSManager.setLocationPreset('device_gps')" class="px-2 py-0.5 text-[10.5px] bg-slate-700/80 text-slate-200 border border-slate-600 rounded-lg hover:bg-slate-600 transition cursor-pointer">📡 GPS Máy</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="voice-sos-actions" class="w-full space-y-2 pt-1">
+          <button id="voice-sos-submit-btn" type="button" onclick="VoiceSOSManager.confirmAndSend()"
+            class="w-full min-h-[44px] py-3 px-4 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-700 hover:to-red-800 text-white font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer border border-white/20">
+            <i data-lucide="send" class="w-4 h-4 text-white"></i>
+            <span>XÁC NHẬN &amp; GỬI CỨU HỘ NGAY</span>
+          </button>
+
+          <button type="button" onclick="VoiceSOSManager.transferToMainForm()"
+            class="w-full min-h-[40px] py-2 px-3 bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-xs rounded-xl border border-slate-700 transition cursor-pointer">
+            📋 Chuyển nội dung vào Form SOS chính (Dùng khi mất mạng / không có micro)
+          </button>
+
+          <div class="flex items-center justify-between text-xs px-1">
+            <button onclick="VoiceSOSManager.retryRecording()" type="button" class="text-slate-400 hover:text-rose-400 flex items-center gap-1 cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Nói lại từ đầu</span>
+            </button>
+            <span class="text-[10.5px] text-slate-400 italic">Tự động lấy vị trí GPS từ thiết bị</span>
+          </div>
+        </div>
+
+        <div id="voice-sos-result" class="hidden w-full text-left"></div>
+      </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
   <!-- 4. FLOATING AI CHATBOT ASSISTANT WIDGET (TRỢ LÝ AI TRỰC BAN THIÊN TAI) -->
   <!-- ========================================================================= -->
-  <div id="ai-assistant-widget" class="fixed bottom-6 right-6 z-[1000]">
+  <div id="ai-assistant-widget" class="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-[1000]">
     <button onclick="AIAssistant.toggle()" aria-label="Mở trợ lý AI và kho tri thức thiên tai"
-      class="relative p-3.5 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80"
+      class="relative p-2.5 sm:p-3.5 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border-2 border-white/80"
       title="Trợ lý AI Trực ban Thiên tai 24/7">
       <i data-lucide="bot" class="w-6 h-6"></i>
       <span id="ai-assistant-badge" class="absolute -top-1 -right-1 flex h-4 w-4">
@@ -1207,6 +1733,7 @@
   <script src="js/sos_relay.js"></script>
   <script src="js/satellite_gateway_adapter.js"></script>
   <script src="js/rescue_manager.js"></script>
+  <script src="js/voice_sos.js"></script>
   <script src="js/citizen_portal.js"></script>
   <script src="js/offline_knowledge.js"></script>
   <script src="js/ai_assistant.js"></script>
@@ -1318,10 +1845,55 @@
         }
         initMap();
         initNetworkStatus();
+        const vulnCheckbox = document.getElementById('sos-input-vulnerable');
+        if (vulnCheckbox) {
+          vulnCheckbox.addEventListener('change', () => {
+            syncPriorityFromInputs();
+          });
+        }
+        // Tự lưu & khôi phục Họ tên, SĐT người dân
+        const nameInput = document.getElementById('sos-input-name');
+        const phoneInput = document.getElementById('sos-input-phone');
+        try {
+          const savedName = localStorage.getItem('northstar_citizen_sos_name');
+          const savedPhone = localStorage.getItem('northstar_citizen_sos_phone');
+          if (nameInput && savedName && !nameInput.value) nameInput.value = savedName;
+          if (phoneInput && savedPhone && !phoneInput.value) phoneInput.value = savedPhone;
+        } catch (_) { }
+        if (nameInput) {
+          nameInput.addEventListener('input', () => {
+            try { localStorage.setItem('northstar_citizen_sos_name', nameInput.value); } catch (_) { }
+          });
+        }
+        if (phoneInput) {
+          phoneInput.addEventListener('input', () => {
+            try { localStorage.setItem('northstar_citizen_sos_phone', phoneInput.value); } catch (_) { }
+          });
+        }
+        // Tự động mở phần nhập địa chỉ thủ công nếu GPS báo lỗi
+        const gpsErrBox = document.getElementById('citizen-gps-error-box');
+        if (gpsErrBox && typeof MutationObserver !== 'undefined') {
+          const obs = new MutationObserver(() => {
+            if (!gpsErrBox.classList.contains('hidden')) {
+              const details = document.getElementById('citizen-manual-location-details');
+              if (details) details.open = true;
+            }
+            updateSOSStickySummary();
+          });
+          obs.observe(gpsErrBox, { attributes: true, attributeFilter: ['class'] });
+        }
+        const coordDisp = document.getElementById('citizen-sos-coord-display');
+        if (coordDisp && typeof MutationObserver !== 'undefined') {
+          const cObs = new MutationObserver(() => updateSOSStickySummary());
+          cObs.observe(coordDisp, { childList: true, characterData: true, subtree: true });
+        }
+        updateSOSStickySummary();
+        updateTrackingStepper(null);
         initPWA();
         switchTab('weather');
         if (window.lucide) lucide.createIcons();
       }
+
 
       function initMap() {
         if (typeof maplibregl === 'undefined') return;
@@ -1345,6 +1917,7 @@
 
         map.on('load', () => {
           loadCitizenShelters(map);
+          loadCitizenDisasters(map);
           loadCommunityReports(map);
           loadOfficialFloodPoints(map);
           if (window.CitizenPortal && typeof window.CitizenPortal.initLocationPicker === 'function') {
@@ -1395,6 +1968,7 @@
 
         window.map.once('style.load', () => {
           loadCitizenShelters(window.map);
+          loadCitizenDisasters(window.map);
           loadCommunityReports(window.map);
           loadOfficialFloodPoints(window.map);
           redrawCurrentRoute(window.map);
@@ -1548,10 +2122,10 @@
           const capText = Number.isFinite(Number(s.capacity)) ? `${s.current_occupancy ?? '?'}/${s.capacity}` : 'Chưa có dữ liệu';
           const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
             .setHTML(`
-              <div class="p-2.5 bg-slate-900 border border-slate-700/80 rounded-xl shadow-xl text-slate-100 text-xs space-y-1">
-                <div class="font-bold text-white">${s.name}</div>
-                <div class="text-[10.5px] text-slate-300">${s.address || 'Chưa có địa chỉ'}</div>
-                <div class="text-[10.5px] text-emerald-300">Trạng thái: <b>${s.status || 'unknown'}</b> • Sức chứa: <b>${capText}</b></div>
+              <div class="p-3 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl text-slate-100 text-xs space-y-1.5 min-w-[230px] max-w-[290px]">
+                <div class="font-extrabold text-white pr-8 leading-snug">${s.name}</div>
+                <div class="text-[10.5px] text-slate-300 leading-snug">${s.address || 'Chưa có địa chỉ'}</div>
+                <div class="text-[10.5px] text-emerald-300 pt-1 border-t border-slate-800">Trạng thái: <b>${s.status || 'unknown'}</b> • Sức chứa: <b>${capText}</b></div>
                 <div class="text-[9.5px] text-slate-400">Nguồn: ${s.source || 'NORTHSTAR Backend'}</div>
               </div>
             `);
@@ -1562,6 +2136,75 @@
             .addTo(m);
           sampleShelterMarkers.push(marker);
         });
+      }
+
+      let citizenDisasterMarkers = [];
+
+      async function loadCitizenDisasters(targetMap) {
+        const m = targetMap || window.map;
+        if (!m || typeof maplibregl === 'undefined') return;
+
+        citizenDisasterMarkers.forEach(marker => marker.remove());
+        citizenDisasterMarkers = [];
+
+        try {
+          const data = await NorthStarApi.fetchJson('/api/disasters?active_only=true', { timeoutMs: 8000 });
+          const features = Array.isArray(data && data.features) ? data.features : [];
+          const hazardMeta = {
+            landslide: { icon: '⛰️', label: 'Sạt lở đất đá', bg: '#ea580c', border: '#fed7aa' },
+            storm: { icon: '🌀', label: 'Bão / Triều cường', bg: '#7c3aed', border: '#ddd6fe' },
+            flood: { icon: '🌊', label: 'Lũ lớn / Lũ quét', bg: '#2563eb', border: '#bfdbfe' },
+            heavy_rain: { icon: '⛈️', label: 'Mưa lớn cực đoan', bg: '#0891b2', border: '#a5f3fc' }
+          };
+
+          features.forEach(feat => {
+            const coords = feat.geometry && feat.geometry.coordinates;
+            if (!Array.isArray(coords) || coords.length < 2) return;
+            const lng = Number(coords[0]);
+            const lat = Number(coords[1]);
+            if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+            const p = feat.properties || {};
+            const meta = hazardMeta[p.hazard_type] || { icon: '⚠️', label: p.hazard_type || 'Thiên tai', bg: '#d97706', border: '#fde68a' };
+            const sevLabel = p.severity === 'critical' ? 'RẤT NGUY HIỂM' : (p.severity === 'high' ? 'NGUY HIỂM' : 'CẢNH BÁO');
+
+            const el = document.createElement('div');
+            el.className = 'disaster-marker-icon flex items-center justify-center cursor-pointer select-none group';
+            el.style.cssText = 'position: relative; width: 38px; height: 38px; z-index: 26;';
+            el.innerHTML = `
+              <div class="transition-transform duration-200 group-hover:scale-115 pointer-events-auto shadow-lg" style="width: 32px; height: 32px; border-radius: 10px; background: ${meta.bg}; border: 2px solid ${meta.border}; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 15px;" title="${p.title || meta.label}">
+                ${meta.icon}
+              </div>
+            `;
+
+            const sevBadgeCls = p.severity === 'critical'
+              ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+              : (p.severity === 'high' ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'bg-sky-500/20 text-sky-300 border-sky-500/50');
+            const popup = new maplibregl.Popup({ offset: [0, -12], anchor: 'bottom', closeButton: true })
+              .setHTML(`
+                <div class="p-3 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl text-slate-100 text-xs space-y-2 min-w-[240px] max-w-[300px]">
+                  <div class="flex flex-wrap items-center gap-1.5 pr-9">
+                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase text-white shadow-sm" style="background:${meta.bg}">${meta.icon} ${meta.label}</span>
+                    <span class="disaster-sev-badge px-2 py-0.5 rounded-full text-[9.5px] font-extrabold border ${sevBadgeCls}">${sevLabel}</span>
+                  </div>
+                  <div class="font-extrabold text-[13px] text-white leading-snug">${p.title || meta.label}</div>
+                  ${p.description ? `<div class="p-2 rounded-xl bg-slate-950/75 border border-slate-800/90 text-[11px] text-slate-300 leading-relaxed">${p.description}</div>` : ''}
+                  <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400">
+                    <span>Bán kính: <b class="text-slate-200 font-mono">~${Math.round(Number(p.radius_m || 500))} m</b></span>
+                    <span class="text-emerald-400 font-semibold">● Đang cảnh báo</span>
+                  </div>
+                </div>
+              `);
+            popup.on('open', () => { centerMapOnPoint(m, lng, lat, 12.5, 80); });
+            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+              .setLngLat([lng, lat])
+              .setPopup(popup)
+              .addTo(m);
+            citizenDisasterMarkers.push(marker);
+          });
+        } catch (err) {
+          console.warn('[CitizenMap] Không thể tải lớp đa thiên tai:', err);
+        }
       }
 
       let communityReportMarkers = [];
@@ -1647,6 +2290,7 @@
       let lastClusteringTier = null;
       let isMapMaximized = false;
       let currentExpandedZone = null;
+      let expandedProvincePointIds = new Set();
 
       function toggleMapMaximize() {
         const mapWrapper = document.getElementById('citizen-map-wrapper');
@@ -1713,14 +2357,40 @@
         const match = name.match(/\((.*?)\)/);
         const raw = match && match[1] ? match[1].trim().toLowerCase() : '';
 
-        // 1. Các tỉnh ngoài Hà Nội
-        if (lat > 22.0 || /cao bằng/i.test(nameClean)) return 'Tỉnh Cao Bằng';
-        if (lat > 21.6 || /lào cai|sa pa/i.test(nameClean)) return 'Tỉnh Lào Cai';
-        if (/quảng ninh|cẩm phả|hạ long/i.test(nameClean) || lng > 106.8) return 'Tỉnh Quảng Ninh';
-        if (/hải phòng/i.test(nameClean) || (lng > 106.5 && lat < 21.0)) return 'TP Hải Phòng';
-        if (/thái nguyên/i.test(nameClean) || (lat > 21.4 && lng > 105.7)) return 'Tỉnh Thái Nguyên';
-        if (/phú thọ|việt trì/i.test(nameClean) || (lat > 21.2 && lng < 105.5)) return 'Tỉnh Phú Thọ';
-        if (/bắc giang|đa mai/i.test(nameClean)) return 'Tỉnh Bắc Giang';
+        // 1. Các tỉnh/thành phố Miền Bắc ngoài Hà Nội (khớp chính xác theo địa danh, không gộp nhầm sang quận Hà Nội)
+        const provinceRules = [
+          { name: 'Tỉnh Cao Bằng', kw: ['cao bằng', 'trùng khánh', 'nguyên bình', 'bằng giang', 'pia oắc'] },
+          { name: 'Tỉnh Lào Cai', kw: ['lào cai', 'sa pa', 'bảo hà', 'bắc hà', 'bát xát', 'làng nủ'] },
+          { name: 'Tỉnh Yên Bái', kw: ['yên bái', 'nghĩa lộ', 'mù cang chải', 'văn yên', 'mậu a', 'sông thao'] },
+          { name: 'Tỉnh Hà Giang', kw: ['hà giang', 'vị xuyên', 'bắc quang', 'việt quang', 'quản bạ'] },
+          { name: 'Tỉnh Bắc Kạn', kw: ['bắc kạn', 'ba bể', 'chợ rã', 'đèo giàng'] },
+          { name: 'Tỉnh Lạng Sơn', kw: ['lạng sơn', 'thất khê', 'hữu lũng', 'kỳ cùng', 'chi lăng'] },
+          { name: 'Tỉnh Tuyên Quang', kw: ['tuyên quang', 'chiêm hóa', 'sơn dương'] },
+          { name: 'Tỉnh Thái Nguyên', kw: ['thái nguyên', 'sông công', 'phổ yên', 'gia bảy', 'đồng quang', 'minh cầu'] },
+          { name: 'Tỉnh Phú Thọ', kw: ['phú thọ', 'việt trì', 'phong châu', 'thanh sơn', 'tam nông'] },
+          { name: 'Tỉnh Vĩnh Phúc', kw: ['vĩnh phúc', 'vĩnh yên', 'phúc yên', 'tam đảo', 'đại lải'] },
+          { name: 'Tỉnh Bắc Giang', kw: ['bắc giang', 'lục ngạn', 'lục nam', 'hiệp hòa', 'phủ lạng thương', 'đa mai'] },
+          { name: 'Tỉnh Bắc Ninh', kw: ['bắc ninh', 'từ sơn', 'yên phong', 'bến hồ'] },
+          { name: 'Tỉnh Quảng Ninh', kw: ['quảng ninh', 'hạ long', 'bãi cháy', 'cẩm phả', 'uông bí', 'móng cái', 'đông triều', 'mạo khê', 'cột 5'] },
+          { name: 'TP Hải Phòng', kw: ['hải phòng', 'đồ sơn', 'hòn dáu', 'cát hải', 'lạch tray', 'tô hiệu', 'cát bi', 'cầu bính', 'thủy nguyên'] },
+          { name: 'Tỉnh Hải Dương', kw: ['hải dương', 'phả lại', 'chí linh', 'kinh môn', 'bạch đằng'] },
+          { name: 'Tỉnh Hưng Yên', kw: ['hưng yên', 'phố nối', 'mỹ hào', 'văn giang', 'khoái châu'] },
+          { name: 'Tỉnh Hà Nam', kw: ['hà nam', 'phủ lý', 'duy tiên', 'đồng văn'] },
+          { name: 'Tỉnh Nam Định', kw: ['nam định', 'hải hậu', 'giao thủy', 'thịnh long', 'ngô đồng', 'sông đào'] },
+          { name: 'Tỉnh Thái Bình', kw: ['thái bình', 'tiền hải', 'trà lý', 'trà linh', 'lý bôn'] },
+          { name: 'Tỉnh Ninh Bình', kw: ['ninh bình', 'hoàng long', 'bến đế', 'nho quan', 'tam điệp'] },
+          { name: 'Tỉnh Hòa Bình', kw: ['hòa bình', 'lương sơn', 'mai châu', 'thung khe'] },
+          { name: 'Tỉnh Sơn La', kw: ['sơn la', 'mộc châu', 'mai sơn', 'nậm la'] },
+          { name: 'Tỉnh Điện Biên', kw: ['điện biên', 'mường lay', 'nậm rốm', 'pha đin'] },
+          { name: 'Tỉnh Lai Châu', kw: ['lai châu', 'phong thổ', 'ma lù thàng'] }
+        ];
+        for (const p of provinceRules) {
+          for (const kw of p.kw) {
+            if ((raw && raw.includes(kw)) || nameClean.includes(kw)) {
+              return p.name;
+            }
+          }
+        }
 
         // 2. Các quận/huyện Hà Nội theo từ khóa (trong ngoặc hoặc trong tên đường)
         const districtRules = [
@@ -1750,7 +2420,12 @@
           }
         }
 
-        // 3. Phân vùng dự phòng theo tọa độ địa lý Hà Nội
+        // 3. Nếu nằm ngoài vùng Hà Nội mở rộng thì không gán nhầm vào quận nội thành Hà Nội
+        if (!(lat >= 20.80 && lat <= 21.35 && lng >= 105.45 && lng <= 106.10)) {
+          return 'Khu vực Miền Bắc';
+        }
+
+        // 4. Phân vùng dự phòng theo tọa độ địa lý Hà Nội
         if (lat >= 21.05 && lng <= 105.79) return 'Quận Bắc Từ Liêm';
         if (lat >= 21.05 && lng > 105.80 && lng < 105.85) return 'Quận Tây Hồ';
         if (lat < 20.97 && lng < 105.80) return 'Quận Hà Đông';
@@ -1991,6 +2666,7 @@
         // Tầng 3 (Zoom >= 12.8): Tách bung chi tiết từng trạm đo ngập kèm Vùng ảnh hưởng
         if (currentZoom < 10.5) {
           currentExpandedZone = null;
+          expandedProvincePointIds.clear();
           updateFloodImpactZonesLayer(m, []);
           renderProvinceClusters(m, validPoints);
         } else if (currentZoom < 12.8) {
@@ -2120,17 +2796,41 @@
           </div>
         `;
 
-        // Click cụm lớn: Bay mượt mà điện ảnh vào zoom 11.6 để kích hoạt Tầng 2 (Gom nhóm theo Quận Huyện)
+        // Click cụm lớn:
+        // - Với cụm lớn (> 25 trạm như Hà Nội): zoom vào Tầng 2 (Quận/Huyện)
+        // - Với cụm tỉnh (<= 25 trạm): fitBounds ôm trọn toàn bộ các điểm con và bung chi tiết ngay
         el.onclick = (e) => {
           e.stopPropagation();
           currentExpandedZone = null;
-          m.flyTo({
-            center: [avgLng, avgLat],
-            zoom: 11.6,
-            duration: 900,
-            curve: 1.42,
-            essential: true
-          });
+          if (group.length > 25) {
+            expandedProvincePointIds.clear();
+            m.flyTo({
+              center: [avgLng, avgLat],
+              zoom: 11.6,
+              duration: 900,
+              curve: 1.42,
+              essential: true
+            });
+          } else {
+            expandedProvincePointIds = new Set(group.map(p => p.id));
+            const bounds = new maplibregl.LngLatBounds();
+            group.forEach(p => bounds.extend([p.lng, p.lat]));
+            const cam = typeof m.cameraForBounds === 'function'
+              ? m.cameraForBounds(bounds, { padding: 75, maxZoom: 13.4 })
+              : null;
+            const targetZoom = Math.max(10.8, (cam && Number.isFinite(cam.zoom)) ? cam.zoom : 11.4);
+            m.flyTo({
+              center: (cam && cam.center) ? cam.center : [avgLng, avgLat],
+              zoom: targetZoom,
+              duration: 850,
+              essential: true
+            });
+            m.once('moveend', () => {
+              if (m.getZoom() >= 10.5) {
+                renderFloodPointsWithClustering(m, true, 1);
+              }
+            });
+          }
         };
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
@@ -2158,9 +2858,9 @@
         zoneMap.forEach((pts, zoneName) => {
           const zoneCenter = computeGroupCenter(pts);
 
-          // NẾU ZONE NÀY ĐANG ĐƯỢC CHỌN MỞ RỘNG (EXPANDED):
-          // BUNG TOÀN BỘ CÁC TRẠM CON CHI TIẾT CỦA ZONE NÀY RA BẢN ĐỒ!
-          if (currentExpandedZone && currentExpandedZone === zoneName) {
+          // Nếu cụm tỉnh vừa được click mở rộng ở Tầng 1, hoặc Zone đang expanded -> bung thẳng các điểm con
+          const hasExpandedPts = expandedProvincePointIds.size > 0 && pts.some(p => expandedProvincePointIds.has(p.id));
+          if ((currentExpandedZone && currentExpandedZone === zoneName) || hasExpandedPts) {
             pts.forEach((pt, idx) => createIndividualFloodMarker(m, pt, idx, isStaggered, zoneCenter));
             activeImpactPoints = activeImpactPoints.concat(pts);
             return;
@@ -2677,37 +3377,148 @@
         `;
       }
 
-      function selectDepth(depthVal, btnEl) {
+      function syncPriorityFromInputs(depthOverride = null) {
         const select = document.getElementById('sos-input-depth');
-        if (select) select.value = depthVal;
+        const prioritySelect = document.getElementById('sos-select-priority');
+        if (!prioritySelect) return;
+        const depthNum = parseInt(depthOverride !== null ? depthOverride : (select?.value || '100'), 10);
+        const isVulnerable = !!(document.getElementById('sos-input-vulnerable')?.checked);
+        if (isVulnerable || depthNum >= 200) {
+          prioritySelect.value = 'critical';
+        } else if (depthNum >= 100) {
+          prioritySelect.value = 'high';
+        } else {
+          prioritySelect.value = 'medium';
+        }
+      }
+
+      function selectDepth(depthVal, btnEl) {
+        const val = String(depthVal || '100');
+        const select = document.getElementById('sos-input-depth');
+        if (select) select.value = val;
 
         const label = document.getElementById('sos-depth-label');
         if (label) {
-          label.textContent = depthVal === '30'
-            ? 'Dưới 0.5m (Đến đầu gối - Xe chết máy)'
-            : depthVal === '100'
-              ? '0.5m - 1.5m (Đến ngực - Cần hỗ trợ)'
-              : 'Trên 1.5m (Nguy hiểm tính mạng - Cần xuồng/cano)';
+          const depthLabels = {
+            '30': '< 0.5m (Đến đầu gối - Xe chết máy)',
+            '100': '0.5m - 1.5m (Đến ngực - Cần hỗ trợ)',
+            '200': '1.5m - 2.5m (Ngập tầng 1 - Nguy hiểm cao)',
+            '300': '> 2.5m (Cô lập nóc nhà - Khẩn cấp)'
+          };
+          label.textContent = depthLabels[val] || depthLabels['100'];
         }
 
         const cards = document.querySelectorAll('#citizen-depth-selector .citizen-depth-card');
         cards.forEach(c => {
           c.classList.remove('selected', 'border-amber-500/80', 'bg-amber-950/40');
           c.classList.add('border-slate-800', 'bg-slate-900/80');
+          const titleEl = c.querySelector('.depth-title');
+          const subEl = c.querySelector('.depth-sub');
+          if (titleEl) {
+            titleEl.classList.remove('text-amber-300', 'font-black');
+            titleEl.classList.add('text-slate-200', 'font-bold');
+          }
+          if (subEl) {
+            subEl.classList.remove('text-amber-400', 'font-medium');
+            subEl.classList.add('text-slate-400');
+          }
         });
 
-        if (btnEl) {
-          btnEl.classList.add('selected', 'border-amber-500/80', 'bg-amber-950/40');
-          btnEl.classList.remove('border-slate-800', 'bg-slate-900/80');
+        const targetBtn = btnEl || document.querySelector(`#citizen-depth-selector .citizen-depth-card[data-depth="${val}"]`);
+        if (targetBtn) {
+          targetBtn.classList.add('selected', 'border-amber-500/80', 'bg-amber-950/40');
+          targetBtn.classList.remove('border-slate-800', 'bg-slate-900/80');
+          const titleEl = targetBtn.querySelector('.depth-title');
+          const subEl = targetBtn.querySelector('.depth-sub');
+          if (titleEl) {
+            titleEl.classList.add('text-amber-300', 'font-black');
+            titleEl.classList.remove('text-slate-200', 'font-bold');
+          }
+          if (subEl) {
+            subEl.classList.add('text-amber-400', 'font-medium');
+            subEl.classList.remove('text-slate-400');
+          }
         }
 
-        const prioritySelect = document.getElementById('sos-select-priority');
-        if (prioritySelect) {
-          if (parseInt(depthVal, 10) >= 200) {
-            prioritySelect.value = 'critical';
-          } else if (parseInt(depthVal, 10) >= 100) {
-            prioritySelect.value = 'high';
+        syncPriorityFromInputs(val);
+        updateSOSStickySummary();
+      }
+
+      function selectPeopleCount(countVal, btnEl) {
+        const input = document.getElementById('sos-input-people');
+        if (input) input.value = String(countVal);
+        document.querySelectorAll('#citizen-people-quick-btns .citizen-people-btn').forEach(b => {
+          b.classList.remove('border-rose-500/80', 'bg-rose-950/50', 'text-rose-200', 'font-black');
+          b.classList.add('border-slate-800', 'bg-slate-900/80', 'text-slate-200', 'font-bold');
+        });
+        if (btnEl) {
+          btnEl.classList.add('border-rose-500/80', 'bg-rose-950/50', 'text-rose-200', 'font-black');
+          btnEl.classList.remove('border-slate-800', 'bg-slate-900/80', 'text-slate-200', 'font-bold');
+        }
+      }
+
+      function toggleSOSChip(btnEl, phrase, isVulnerableGroup) {
+        if (!btnEl) return;
+        const isActive = btnEl.classList.toggle('active');
+        if (isActive) {
+          btnEl.classList.remove('border-slate-800', 'bg-slate-900/80', 'text-slate-300');
+          btnEl.classList.add('border-rose-500/80', 'bg-rose-950/60', 'text-rose-200');
+        } else {
+          btnEl.classList.add('border-slate-800', 'bg-slate-900/80', 'text-slate-300');
+          btnEl.classList.remove('border-rose-500/80', 'bg-rose-950/60', 'text-rose-200');
+        }
+        const notesEl = document.getElementById('sos-input-notes');
+        if (notesEl) {
+          const parts = notesEl.value.split(',').map(s => s.trim()).filter(Boolean);
+          const idx = parts.indexOf(phrase);
+          if (isActive && idx === -1) parts.push(phrase);
+          if (!isActive && idx !== -1) parts.splice(idx, 1);
+          notesEl.value = parts.join(', ');
+        }
+        if (isVulnerableGroup) {
+          const vulnWrap = document.getElementById('citizen-vulnerable-chips');
+          const anyVulnActive = !!(vulnWrap && vulnWrap.querySelector('.citizen-sos-chip.active'));
+          const vulnCb = document.getElementById('sos-input-vulnerable');
+          if (vulnCb && anyVulnActive) {
+            vulnCb.checked = true;
+            syncPriorityFromInputs();
           }
+        }
+      }
+
+      function updateSOSStickySummary() {
+        const summaryEl = document.getElementById('citizen-sos-sticky-summary');
+        if (!summaryEl) return;
+        const coordText = document.getElementById('citizen-sos-coord-display')?.textContent?.trim() || 'Chưa xác định tọa độ';
+        const hasCoord = coordText && !coordText.includes('Chưa xác định');
+        const depthLabel = document.getElementById('sos-depth-label')?.textContent?.trim() || '0.5m - 1.5m';
+        const confirmed = !!(document.getElementById('citizen-confirm-location-check')?.checked);
+        const gpsPart = hasCoord ? `📍 ${coordText}` : '📍 Chưa có GPS';
+        const confirmPart = confirmed ? '✅ Đã xác nhận vị trí' : '⚠️ Chưa tick xác nhận vị trí';
+        summaryEl.innerHTML = `<span class="truncate">${gpsPart} • Nước: ${depthLabel} • ${confirmPart}</span>`;
+      }
+
+      function restoreMobileMapHeight() {
+        const mapWrap = document.getElementById('citizen-map-wrapper');
+        const restoreBtn = document.getElementById('btn-citizen-restore-map-mobile');
+        if (!mapWrap) return;
+        mapWrap.classList.remove('h-[22vh]');
+        if (!mapWrap.classList.contains('h-[48vh]')) mapWrap.classList.add('h-[48vh]');
+        if (restoreBtn) restoreBtn.classList.add('hidden');
+        setTimeout(() => { if (window.map && typeof window.map.resize === 'function') window.map.resize(); }, 250);
+      }
+
+      function copyTrackingToken() {
+        const token = document.getElementById('citizen-sos-tracking-token')?.textContent?.trim() || '';
+        if (!token) return;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(token).then(() => {
+            showToast('🔑 Đã sao chép Tracking Token bí mật để tra cứu.', 'success');
+          }).catch(() => {
+            prompt('Mã tra cứu bí mật (Tracking Token):', token);
+          });
+        } else {
+          prompt('Mã tra cứu bí mật (Tracking Token):', token);
         }
       }
 
@@ -2831,6 +3642,8 @@
           });
       }
 
+      let hasAutoAttemptedRescueGPS = false;
+
       function switchTab(tabId) {
         activeTab = tabId;
         const tabs = ['weather', 'rescue', 'route', 'report', 'tracking'];
@@ -2853,8 +3666,47 @@
           activeBtn.classList.remove('text-slate-400');
         }
 
+        // Tối ưu Mobile (< 768px) cho Tab SOS & tự kích hoạt GPS nếu chưa xác định
+        const mapWrap = document.getElementById('citizen-map-wrapper');
+        const restoreBtn = document.getElementById('btn-citizen-restore-map-mobile');
+        const emergencyBanner = document.getElementById('citizen-emergency-banner');
+        const aiWidget = document.getElementById('ai-assistant-widget');
+        if (tabId === 'rescue') {
+          if (emergencyBanner) {
+            emergencyBanner.classList.add('hidden', 'md:flex');
+            emergencyBanner.classList.remove('flex');
+          }
+          if (aiWidget) {
+            aiWidget.classList.add('hidden', 'md:block');
+          }
+          if (mapWrap && window.innerWidth < 768) {
+            mapWrap.classList.remove('h-[48vh]');
+            mapWrap.classList.add('h-[22vh]');
+            if (restoreBtn) restoreBtn.classList.remove('hidden');
+            setTimeout(() => { if (window.map && typeof window.map.resize === 'function') window.map.resize(); }, 250);
+          }
+          const coordText = document.getElementById('citizen-sos-coord-display')?.textContent || '';
+          const statusText = document.getElementById('citizen-gps-status-text')?.textContent || '';
+          if (!hasAutoAttemptedRescueGPS && (coordText.includes('Chưa xác định') || statusText.includes('UNKNOWN'))) {
+            hasAutoAttemptedRescueGPS = true;
+            if (window.CitizenPortal && typeof window.CitizenPortal.locateGPSWithAccuracy === 'function') {
+              window.CitizenPortal.locateGPSWithAccuracy();
+            }
+          }
+        } else {
+          if (emergencyBanner) {
+            emergencyBanner.classList.remove('hidden', 'md:flex');
+            emergencyBanner.classList.add('flex');
+          }
+          if (aiWidget) {
+            aiWidget.classList.remove('hidden', 'md:block');
+          }
+          restoreMobileMapHeight();
+        }
+
         if (window.lucide) lucide.createIcons();
       }
+
 
       function showToast(message, type = 'info') {
         const toast = document.getElementById('citizen-toast');
@@ -2889,6 +3741,72 @@
         return null;
       }
 
+      function updateTrackingStepper(status) {
+        const st = String(status || '').trim().toUpperCase();
+        const draftAlert = document.getElementById('tracking-local-draft-alert');
+        const cancelledAlert = document.getElementById('tracking-cancelled-alert');
+        const adviceBox = document.getElementById('tracking-advice-box');
+        const steps = [1, 2, 3, 4].map(n => document.getElementById(`tracking-step-${n}`));
+
+        if (draftAlert) draftAlert.classList.add('hidden');
+        if (cancelledAlert) cancelledAlert.classList.add('hidden');
+        if (adviceBox) adviceBox.classList.add('hidden');
+
+        // Reset tất cả 4 bước về màu xám trung tính
+        steps.forEach(stepEl => {
+          if (!stepEl) return;
+          const badge = stepEl.querySelector('[data-step-badge]');
+          const text = stepEl.querySelector('[data-step-text]');
+          if (badge) {
+            badge.className = 'w-5 h-5 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-[10px]';
+          }
+          if (text) {
+            text.className = 'text-slate-500 font-medium';
+          }
+        });
+
+        const setStepState = (stepEl, mode) => {
+          if (!stepEl) return;
+          const badge = stepEl.querySelector('[data-step-badge]');
+          const text = stepEl.querySelector('[data-step-text]');
+          if (mode === 'done') {
+            if (badge) badge.className = 'w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]';
+            if (text) text.className = 'text-slate-200 font-semibold';
+          } else if (mode === 'active') {
+            if (badge) badge.className = 'w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] animate-pulse';
+            if (text) text.className = 'text-blue-300 font-bold';
+          }
+        };
+
+        if (!st || st === 'NONE' || st === 'NOT_FOUND' || st === 'OFFLINE_ERROR') {
+          return;
+        }
+        if (st === 'LOCAL_DRAFT' || st === 'PENDING_OFFLINE') {
+          if (draftAlert) draftAlert.classList.remove('hidden');
+          return;
+        }
+        if (st === 'CANCELLED') {
+          if (cancelledAlert) cancelledAlert.classList.remove('hidden');
+          return;
+        }
+        if (st === 'PENDING' || st === 'RECEIVED') {
+          setStepState(steps[0], 'done');
+        } else if (st === 'VERIFIED' || st === 'ACKNOWLEDGED') {
+          setStepState(steps[0], 'done');
+          setStepState(steps[1], 'done');
+        } else if (st === 'DISPATCHED' || st === 'IN_PROGRESS') {
+          setStepState(steps[0], 'done');
+          setStepState(steps[1], 'done');
+          setStepState(steps[2], 'active');
+          if (adviceBox) adviceBox.classList.remove('hidden');
+        } else if (st === 'RESCUED' || st === 'RESOLVED') {
+          setStepState(steps[0], 'done');
+          setStepState(steps[1], 'done');
+          setStepState(steps[2], 'done');
+          setStepState(steps[3], 'done');
+        }
+      }
+
       async function trackTicket(tokenOrCode) {
         switchTab('tracking');
         const input = document.getElementById('tracking-ticket-input');
@@ -2911,6 +3829,7 @@
             displayStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700';
           }
           if (displayGuidance) displayGuidance.textContent = 'Vui lòng nhập Tracking Token hợp lệ được cấp sau khi gửi SOS.';
+          updateTrackingStepper(null);
           return { ok: false, reason: 'missing_token' };
         }
 
@@ -2921,6 +3840,7 @@
             displayStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
           }
           if (displayGuidance) displayGuidance.textContent = 'Yêu cầu SOS chưa gửi lên máy chủ. Hệ thống sẽ tự đồng bộ khi có mạng.';
+          updateTrackingStepper('LOCAL_DRAFT');
           return { ok: true, local_draft: true };
         }
 
@@ -2937,10 +3857,10 @@
             headers: { 'X-NorthStar-Client': 'citizen' }
           });
 
+          const st = String(data.status || 'RECEIVED');
           if (displayId) displayId.textContent = data.ticket_code || 'Hồ sơ SOS';
           if (displayStatus) {
-            const st = String(data.status || 'RECEIVED');
-            const badgeCls = st === 'DISPATCHED' || st === 'RESCUED'
+            const badgeCls = st === 'DISPATCHED' || st === 'IN_PROGRESS' || st === 'RESCUED'
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
               : (st === 'CANCELLED' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40');
             displayStatus.textContent = st;
@@ -2949,6 +3869,7 @@
           if (displayGuidance) displayGuidance.textContent = data.guidance || 'Đã cập nhật trạng thái từ máy chủ.';
           if (displayUpdated) displayUpdated.textContent = `Cập nhật máy chủ: ${data.updated_at ? new Date(data.updated_at).toLocaleString('vi-VN') : 'Không rõ'} (${data.source || 'NORTHSTAR Command'})`;
           if (revokeBtn) revokeBtn.classList.remove('hidden');
+          updateTrackingStepper(st);
 
           if (window.OfflineDB && typeof window.OfflineDB.saveMetadata === 'function') {
             await window.OfflineDB.saveMetadata('last_sos_track_status', {
@@ -2969,6 +3890,7 @@
             }
             if (displayGuidance) displayGuidance.textContent = (err && err.message) || 'Không tìm thấy hồ sơ hoặc token không hợp lệ.';
             if (revokeBtn) revokeBtn.classList.add('hidden');
+            updateTrackingStepper('NOT_FOUND');
             return { ok: false, status: err.status };
           }
           return renderCachedTrackFallback(displayId, displayStatus, displayGuidance, displayUpdated, (err && err.message) || 'Lỗi kết nối máy chủ.');
@@ -2991,6 +3913,7 @@
           }
           if (displayGuidance) displayGuidance.textContent = `${cached.guidance || ''} (Lưu ý: đây là dữ liệu đã lưu từ trước, không phản ánh trạng thái hiện tại khi mất mạng).`;
           if (displayUpdated) displayUpdated.textContent = `Lưu cục bộ lúc: ${cached.cached_at ? new Date(cached.cached_at).toLocaleString('vi-VN') : 'Không rõ'}`;
+          updateTrackingStepper(cached.status);
           return { ok: true, cached: true };
         }
 
@@ -3000,6 +3923,7 @@
           displayStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
         }
         if (displayGuidance) displayGuidance.textContent = reason || 'Không thể kết nối máy chủ và chưa có trạng thái lưu cục bộ.';
+        updateTrackingStepper('OFFLINE_ERROR');
         return { ok: false, offline: true };
       }
 
@@ -3364,6 +4288,7 @@
         if (window.lucide) lucide.createIcons();
       }
 
+
       async function findRoute() {
         const originInput = document.getElementById('citizen-route-origin')?.value.trim();
         const destInput = document.getElementById('citizen-route-destination')?.value.trim();
@@ -3463,25 +4388,110 @@
         }
       }
 
+      function haversineMeters(lat1, lng1, lat2, lng2) {
+        const toRad = (d) => (d * Math.PI) / 180;
+        const R = 6371000;
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      async function resolveEvacuationOrigin() {
+        const originEl = document.getElementById('citizen-route-origin');
+        const existing = parseLatLngText(originEl ? originEl.value.trim() : '');
+        if (existing) return existing;
+
+        const sosCoords = window.CitizenPortal && window.CitizenPortal.state ? window.CitizenPortal.state.selectedCoords : null;
+        if (sosCoords && Number.isFinite(Number(sosCoords.lat)) && Number.isFinite(Number(sosCoords.lng))) {
+          const loc = { lat: Number(sosCoords.lat), lng: Number(sosCoords.lng) };
+          if (originEl) originEl.value = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+          return loc;
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          try {
+            showToast('Đang tự động lấy vị trí GPS để tìm tuyến sơ tán...', 'info');
+            const pos = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 60000
+              });
+            });
+            const lat = pos && pos.coords ? Number(pos.coords.lat ?? pos.coords.latitude) : NaN;
+            const lng = pos && pos.coords ? Number(pos.coords.lng ?? pos.coords.longitude) : NaN;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              const loc = { lat, lng };
+              if (originEl) originEl.value = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+              return loc;
+            }
+          } catch (_) {
+            // Bỏ qua để fallback báo hướng dẫn bên dưới
+          }
+        }
+        return null;
+      }
+
       async function findEvacuationRoute() {
-        const originInput = document.getElementById('citizen-route-origin')?.value.trim();
-        const vehicle = document.getElementById('citizen-route-vehicle')?.value || 'motorbike';
-        const originLoc = parseLatLngText(originInput);
+        if (activeTab !== 'route') switchTab('route');
+
+        const originEl = document.getElementById('citizen-route-origin');
+        const destEl = document.getElementById('citizen-route-destination');
+        const vehicleEl = document.getElementById('citizen-route-vehicle');
+        const btn = document.getElementById('citizen-btn-evacuate');
+
+        const originLoc = await resolveEvacuationOrigin();
         if (!originLoc) {
-          showToast('Chưa có tọa độ xuất phát hợp lệ. Hãy bấm "Lấy GPS hiện tại".', 'warning');
-          renderRouteResultCard({ status: 'UNAVAILABLE', title: 'Thiếu vị trí xuất phát', summary: 'Không dùng tọa độ mặc định. Vui lòng lấy GPS hoặc nhập tọa độ xuất phát.' });
+          showToast('Không lấy được GPS xuất phát. Vui lòng bật GPS hoặc chạm vào bản đồ để chọn vị trí.', 'warning');
+          renderRouteResultCard({ status: 'UNAVAILABLE', title: 'Thiếu vị trí xuất phát', summary: 'Không dùng tọa độ mặc định. Vui lòng bật GPS hoặc nhập tọa độ xuất phát.' });
           return { status: 'UNAVAILABLE' };
         }
+
+        // Phương án 3B: Nếu mức ngập SOS >= 0.5m (100cm) và đang chọn mặc định xe máy -> tự chuyển sang Đi bộ (walk)
+        const sosDepthCm = parseFloat(document.getElementById('sos-input-depth')?.value || '0');
+        if (vehicleEl && Number.isFinite(sosDepthCm) && sosDepthCm >= 100 && vehicleEl.value === 'motorbike') {
+          vehicleEl.value = 'walk';
+        }
+        const vehicle = vehicleEl?.value || 'motorbike';
+
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          let cached = Array.isArray(citizenSheltersList) && citizenSheltersList.length ? citizenSheltersList : [];
+          if (!cached.length && window.OfflineDB && typeof window.OfflineDB.getShelterCache === 'function') {
+            cached = await window.OfflineDB.getShelterCache().catch(() => []);
+          }
+          const openNearest = (cached || [])
+            .filter(s => s && s.status !== 'closed' && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng)))
+            .map(s => ({ ...s, _distM: haversineMeters(originLoc.lat, originLoc.lng, Number(s.lat), Number(s.lng)) }))
+            .sort((a, b) => a._distM - b._distM)
+            .slice(0, 3);
+
+          if (openNearest.length > 0) {
+            const top = openNearest[0];
+            if (destEl) destEl.value = `${Number(top.lat).toFixed(6)}, ${Number(top.lng).toFixed(6)}`;
+            const listSummary = openNearest
+              .map((s, idx) => `${idx + 1}. ${s.name || 'Điểm trú ẩn'} (~${(s._distM / 1000).toFixed(2)} km${s.address ? ' — ' + s.address : ''})`)
+              .join(' | ');
+            renderRouteResultCard({
+              status: 'REFERENCE_ONLY',
+              title: `Top ${openNearest.length} điểm sơ tán gần nhất (Offline)`,
+              distance_m: top._distM,
+              summary: `Đang ngoại tuyến nên không tính được tuyến đường bộ tránh ngập từ máy chủ. Điểm trú ẩn gần nhất theo đường chim bay: ${listSummary}`,
+              sourceLabel: 'Offline Shelter Cache (Haversine)'
+            });
+            return { status: 'REFERENCE_ONLY', shelters: openNearest };
+          }
+
           renderRouteResultCard({
             status: 'UNAVAILABLE',
             title: 'Không thể tính tuyến sơ tán khi ngoại tuyến',
-            summary: 'Định tuyến sơ tán cần đồ thị và dữ liệu thiên tai từ Backend. Vui lòng xem danh sách điểm trú ẩn đã cache.',
+            summary: 'Định tuyến sơ tán cần đồ thị và dữ liệu thiên tai từ Backend, và chưa có điểm trú ẩn nào được cache trên máy.',
             sourceLabel: 'Offline Check'
           });
           return { status: 'UNAVAILABLE' };
         }
 
+        if (btn) btn.disabled = true;
         try {
           const res = await NorthStarApi.fetchJson('/api/route/evacuate', {
             method: 'POST',
@@ -3494,6 +4504,9 @@
           }
           const shelter = res.shelter || {};
           const destLoc = { lat: Number(shelter.lat), lng: Number(shelter.lng) };
+          if (destEl && Number.isFinite(destLoc.lat) && Number.isFinite(destLoc.lng)) {
+            destEl.value = `${destLoc.lat.toFixed(6)}, ${destLoc.lng.toFixed(6)}`;
+          }
           currentRouteData = {
             geojson: { type: 'Feature', properties: {}, geometry: res.geometry },
             origin: originLoc,
@@ -3504,6 +4517,7 @@
 
           const isFullOrClosed = shelter.status === 'full' || shelter.status === 'closed' || (Number.isFinite(shelter.capacity) && Number.isFinite(shelter.current_occupancy) && shelter.current_occupancy >= shelter.capacity);
           const routeStatus = isFullOrClosed ? 'UNSAFE' : 'SAFE_VERIFIED';
+          const shelterAddr = shelter.address ? `Địa chỉ: ${shelter.address}. ` : '';
           renderRouteResultCard({
             status: routeStatus,
             title: `Sơ tán tới: ${shelter.name || 'Điểm trú ẩn'}`,
@@ -3511,11 +4525,14 @@
             duration_min: res.duration_min,
             warnings: res.flood_warnings || [],
             summary: isFullOrClosed
-              ? `Cảnh báo: Điểm đến (${shelter.name}) hiện có trạng thái ${shelter.status} hoặc đã hết chỗ (${shelter.current_occupancy}/${shelter.capacity}).`
-              : `Định tuyến sơ tán từ Backend (/api/route/evacuate) kết hợp dữ liệu ngập & đa thiên tai. Sức chứa: ${shelter.current_occupancy ?? '?'}/${shelter.capacity ?? '?'}.`,
+              ? `${shelterAddr}Cảnh báo: Điểm đến (${shelter.name}) hiện có trạng thái ${shelter.status} hoặc đã hết chỗ (${shelter.current_occupancy}/${shelter.capacity}).`
+              : `${shelterAddr}Định tuyến sơ tán từ Backend (/api/route/evacuate) kết hợp dữ liệu ngập & đa thiên tai. Sức chứa: ${shelter.current_occupancy ?? '?'}/${shelter.capacity ?? '?'}.`,
             sourceLabel: 'NORTHSTAR Backend (/api/route/evacuate)',
             limitation: 'Chưa có dữ liệu đánh giá mức độ tiếp cận cho người khuyết tật/trẻ nhỏ tại điểm đến.'
           });
+          const cardEl = document.getElementById('citizen-route-result-card');
+          if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          showToast(`✅ Đã tìm thấy tuyến sơ tán tới ${shelter.name || 'điểm an toàn gần nhất'}`, 'success');
           return { status: routeStatus, shelter };
         } catch (err) {
           renderRouteResultCard({
@@ -3525,6 +4542,8 @@
             sourceLabel: 'NORTHSTAR Backend (/api/route/evacuate)'
           });
           return { status: 'UNAVAILABLE' };
+        } finally {
+          if (btn) btn.disabled = false;
         }
       }
 
@@ -3827,6 +4846,479 @@
         }
       }
 
+      // =====================================================================
+      // TRUNG TÂM PHÁT SOS NGOẠI TUYẾN (SMS 2G + DTN RELAY QR / .nsos) & RECEIVER
+      // =====================================================================
+      let currentRelayPacket = null;
+      let currentRelayEncoded = '';
+      let currentSms2GText = '';
+      let relayCamStream = null;
+      let relayCamRafId = null;
+
+      function buildSms2GText(payload, draft) {
+        const hasCoords = payload && Number.isFinite(Number(payload.lat)) && Number.isFinite(Number(payload.lng));
+        const locPart = hasCoords
+          ? `${Number(payload.lat).toFixed(4)},${Number(payload.lng).toFixed(4)}`
+          : String(payload?.location_description || payload?.location_landmark || 'NOGPS').slice(0, 48);
+        const ppl = Number(payload?.people_count) || 1;
+        const depth = Math.round(Number(payload?.water_level_cm) || 0);
+        const shortId = String(payload?.client_event_id || draft?.local_id || Date.now()).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase();
+        const raw = `SOS ${locPart} ${ppl}nguoi ${depth}cm ${shortId}`;
+        return raw.length > 160 ? raw.slice(0, 160) : raw;
+      }
+
+      async function showOfflineFailoverPanel(payload, draft) {
+        const panel = document.getElementById('citizen-offline-failover-panel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+
+        // Kênh 1: SMS 2G <= 160 ký tự
+        currentSms2GText = buildSms2GText(payload, draft);
+        const smsPreview = document.getElementById('citizen-sms-2g-preview');
+        const smsLen = document.getElementById('citizen-sms-2g-len');
+        const smsLink = document.getElementById('btn-citizen-open-sms');
+        if (smsPreview) smsPreview.textContent = currentSms2GText;
+        if (smsLen) smsLen.textContent = `${currentSms2GText.length}/160`;
+        if (smsLink) smsLink.href = `sms:112?body=${encodeURIComponent(currentSms2GText)}`;
+
+        // Kênh 2: Gói tin DTN northstar.sos.relay.v1 (max_hops: 5, expires_at: +48h)
+        if (window.SOSRelayManager && typeof window.SOSRelayManager.createRelayPacket === 'function') {
+          try {
+            currentRelayPacket = await window.SOSRelayManager.createRelayPacket(payload, {
+              maxHops: 5,
+              ttlMs: 48 * 60 * 60 * 1000
+            });
+            currentRelayEncoded = window.SOSRelayManager.encodeForShare(currentRelayPacket);
+            const metaBadge = document.getElementById('citizen-relay-meta-badge');
+            if (metaBadge) metaBadge.textContent = `hop ${currentRelayPacket.hop_count}/${currentRelayPacket.max_hops} • 48h`;
+
+            const qrBox = document.getElementById('citizen-relay-qr-box');
+            if (qrBox && typeof window.QRCode === 'function') {
+              qrBox.innerHTML = '';
+              new window.QRCode(qrBox, {
+                text: currentRelayEncoded,
+                width: 220,
+                height: 220,
+                colorDark: '#0f172a',
+                colorLight: '#ffffff',
+                correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.L : 1
+              });
+            }
+          } catch (err) {
+            console.warn('[OfflineFailover] Lỗi tạo gói tin Relay/QR:', err);
+          }
+        }
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (window.lucide) lucide.createIcons();
+        updateSatelliteGatewayUI(payload);
+      }
+
+      let currentSatCompactFrame = null;
+
+      function renderSatelliteStateBar(stateName) {
+        const badge = document.getElementById('citizen-sat-state-badge');
+        if (badge) badge.textContent = stateName || 'NOT_CONFIGURED';
+        document.querySelectorAll('#citizen-sat-stepper [data-sat-state]').forEach(el => {
+          const s = el.getAttribute('data-sat-state');
+          if (s === stateName) {
+            el.className = s === 'FAILED'
+              ? 'px-1 py-1 rounded bg-rose-700 text-white font-bold truncate'
+              : (s === 'ACKNOWLEDGED'
+                ? 'px-1 py-1 rounded bg-emerald-700 text-white font-bold truncate'
+                : 'px-1 py-1 rounded bg-purple-700 text-white font-bold truncate');
+          } else {
+            el.className = 'px-1 py-1 rounded bg-slate-900 text-slate-500 truncate';
+          }
+        });
+      }
+
+      function updateSatelliteGatewayUI(payload) {
+        if (window.SatelliteGatewayAdapter && typeof window.SatelliteGatewayAdapter.encodeCompactFrame === 'function') {
+          currentSatCompactFrame = window.SatelliteGatewayAdapter.encodeCompactFrame(payload || {});
+          const frameEl = document.getElementById('citizen-sat-compact-frame');
+          const ratioEl = document.getElementById('citizen-sat-frame-ratio');
+          if (frameEl) frameEl.textContent = currentSatCompactFrame.frame;
+          if (ratioEl) {
+            ratioEl.textContent = `${currentSatCompactFrame.originalBytes}B → ${currentSatCompactFrame.frameBytes}B (CRC:${currentSatCompactFrame.checksum})`;
+          }
+        }
+        const st = window.SatelliteGatewayAdapter ? window.SatelliteGatewayAdapter.getStatus().state : 'NOT_CONFIGURED';
+        renderSatelliteStateBar(st);
+      }
+
+      function copySatelliteCompactFrame() {
+        const txt = currentSatCompactFrame?.frame || document.getElementById('citizen-sat-compact-frame')?.textContent?.trim() || '';
+        if (!txt || txt === '--') return;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(txt).then(() => showToast('📋 Đã sao chép khung dữ liệu siêu nén.', 'success')).catch(() => { });
+        }
+      }
+
+      function onSatelliteDemoToggle(enabled) {
+        const sendBtn = document.getElementById('btn-citizen-sat-demo-send');
+        const realBox = document.getElementById('citizen-sat-real-status');
+        const demoRes = document.getElementById('citizen-sat-demo-result');
+        if (demoRes) demoRes.classList.add('hidden');
+
+        if (!enabled) {
+          if (sendBtn) sendBtn.classList.add('hidden');
+          if (window.SatelliteGatewayAdapter && typeof window.SatelliteGatewayAdapter.resetForTest === 'function') {
+            window.SatelliteGatewayAdapter.resetForTest();
+          }
+          if (realBox) {
+            realBox.innerHTML = '<span class="font-bold text-amber-300">GATEWAY_UNAVAILABLE:</span> Chưa kết nối phần cứng vệ tinh.';
+          }
+          renderSatelliteStateBar('NOT_CONFIGURED');
+          return;
+        }
+
+        if (sendBtn) sendBtn.classList.remove('hidden');
+        if (realBox) {
+          realBox.innerHTML = '<span class="font-bold text-purple-300">[CHẾ ĐỘ MÔ PHỎNG VỆ TINH]:</span> Đã bật trạm mặt đất mô phỏng phục vụ demo/kiểm thử (không phải sóng vệ tinh thật).';
+        }
+        if (window.SatelliteGatewayAdapter) {
+          window.SatelliteGatewayAdapter.configure({
+            provider: 'SIMULATED_GROUND_GATEWAY',
+            endpoint: '/api/sos/gateway/inbound',
+            transport: async (cmd, data) => {
+              if (cmd === 'PING') return { connected: true };
+              if (cmd === 'SEND_SOS') {
+                const payload = {
+                  compact_frame: currentSatCompactFrame ? currentSatCompactFrame.frame : '',
+                  checksum: currentSatCompactFrame ? currentSatCompactFrame.checksum : '',
+                  message_id: data.message_id,
+                  client_event_id: data.client_event_id,
+                  simulated: true
+                };
+                try {
+                  const res = await NorthStarApi.fetchJson('/api/sos/gateway/inbound', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                  return { acknowledged: true, gateway_ref: res.gateway_ref || `SIM-${Date.now()}` };
+                } catch (err) {
+                  // Endpoint chưa mở hoặc đang offline cục bộ -> vẫn trả về ACK mô phỏng có nhãn rõ ràng khi đang bật Demo
+                  return { acknowledged: true, gateway_ref: `SIM-LOCAL-${Date.now()}`, note: err?.message || 'Local Demo' };
+                }
+              }
+              return null;
+            }
+          });
+          renderSatelliteStateBar(window.SatelliteGatewayAdapter.getStatus().state);
+        }
+      }
+
+      async function sendSatelliteDemo() {
+        const demoToggle = document.getElementById('citizen-sat-demo-toggle');
+        const demoRes = document.getElementById('citizen-sat-demo-result');
+        if (!demoToggle || !demoToggle.checked || !window.SatelliteGatewayAdapter) return;
+
+        renderSatelliteStateBar('CONNECTING');
+        await new Promise(r => setTimeout(r, 180));
+        const conn = await window.SatelliteGatewayAdapter.connect();
+        renderSatelliteStateBar(conn.state);
+        if (!conn.ok) {
+          if (demoRes) {
+            demoRes.classList.remove('hidden');
+            demoRes.className = 'p-2 rounded-lg border border-rose-700 bg-rose-950/50 text-rose-200 text-[10.5px] font-semibold';
+            demoRes.textContent = `[CHẾ ĐỘ MÔ PHỎNG VỆ TINH] Kết nối thất bại: ${conn.message}`;
+          }
+          return;
+        }
+
+        renderSatelliteStateBar('TRANSMITTING');
+        await new Promise(r => setTimeout(r, 220));
+        const pkt = currentRelayPacket || { message_id: `sim-${Date.now()}`, client_event_id: `sim-evt-${Date.now()}`, hop_count: 0 };
+        const tx = await window.SatelliteGatewayAdapter.sendSOS(pkt);
+        renderSatelliteStateBar(tx.state);
+
+        if (demoRes) {
+          demoRes.classList.remove('hidden');
+          demoRes.className = tx.ok
+            ? 'p-2 rounded-lg border border-purple-700 bg-purple-950/50 text-purple-200 text-[10.5px] font-semibold'
+            : 'p-2 rounded-lg border border-rose-700 bg-rose-950/50 text-rose-200 text-[10.5px] font-semibold';
+          demoRes.textContent = tx.ok
+            ? `[CHẾ ĐỘ MÔ PHỎNG VỆ TINH] Đã gửi khung nén ${currentSatCompactFrame?.frameBytes || 0} bytes (ref: ${tx.gateway_ref}). Lưu ý: đây chỉ là mô phỏng, không phải sóng vệ tinh thật.`
+            : `[CHẾ ĐỘ MÔ PHỎNG VỆ TINH] Gửi thất bại: ${tx.message}`;
+        }
+      }
+
+      window.addEventListener('northstar:sos_offline_saved', (e) => {
+        const detail = e && e.detail ? e.detail : {};
+        showOfflineFailoverPanel(detail.payload || {}, detail.draft || {}).catch(() => { });
+      });
+
+      function copySms2G() {
+        if (!currentSms2GText) return;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(currentSms2GText).then(() => showToast('📋 Đã sao chép tin nhắn SMS 2G.', 'success')).catch(() => { });
+        }
+      }
+
+      function copyRelayEncodedString() {
+        if (!currentRelayEncoded) return;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(currentRelayEncoded).then(() => showToast('📋 Đã sao chép chuỗi gói tin ký số.', 'success')).catch(() => { });
+        }
+      }
+
+      function downloadRelayQRPng() {
+        const qrBox = document.getElementById('citizen-relay-qr-box');
+        if (!qrBox) return;
+        const canvas = qrBox.querySelector('canvas');
+        const img = qrBox.querySelector('img');
+        const dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : '');
+        if (!dataUrl) {
+          showToast('Chưa có mã QR để tải.', 'warning');
+          return;
+        }
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `northstar-sos-qr-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      async function exportRelayNsosFile() {
+        if (!currentRelayEncoded) return;
+        const fileName = `northstar-sos-${Date.now()}.nsos`;
+        const blob = new Blob([currentRelayEncoded], { type: 'text/plain;charset=utf-8' });
+        if (typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+          try {
+            const file = new File([blob], fileName, { type: 'text/plain' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ title: 'NORTHSTAR SOS Relay (.nsos)', files: [file] });
+              return;
+            }
+          } catch (_) { }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast(`📦 Đã xuất tệp ${fileName}`, 'success');
+      }
+
+      function openRelayReceiverModal() {
+        const modal = document.getElementById('citizen-relay-receiver-modal');
+        if (modal) modal.classList.remove('hidden');
+        renderHeldRelayPackets();
+        if (window.lucide) lucide.createIcons();
+      }
+
+      function closeRelayReceiverModal() {
+        stopRelayCameraScan();
+        const modal = document.getElementById('citizen-relay-receiver-modal');
+        if (modal) modal.classList.add('hidden');
+      }
+
+      function stopRelayCameraScan() {
+        if (relayCamRafId) {
+          cancelAnimationFrame(relayCamRafId);
+          relayCamRafId = null;
+        }
+        if (relayCamStream) {
+          relayCamStream.getTracks().forEach(t => t.stop());
+          relayCamStream = null;
+        }
+        const wrap = document.getElementById('relay-cam-preview-wrap');
+        const btn = document.getElementById('btn-relay-cam-scan');
+        if (wrap) wrap.classList.add('hidden');
+        if (btn) btn.textContent = 'Bật Camera quét QR';
+      }
+
+      async function toggleRelayCameraScan() {
+        if (relayCamStream) {
+          stopRelayCameraScan();
+          return;
+        }
+        if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+          showRelayReceiveFeedback(false, 'Thiết bị không hỗ trợ Camera. Hãy dùng ảnh QR hoặc tệp .nsos.');
+          return;
+        }
+        try {
+          relayCamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          const video = document.getElementById('relay-cam-video');
+          const canvas = document.getElementById('relay-cam-canvas');
+          const wrap = document.getElementById('relay-cam-preview-wrap');
+          const btn = document.getElementById('btn-relay-cam-scan');
+          if (!video || !canvas) return;
+          video.srcObject = relayCamStream;
+          await video.play();
+          if (wrap) wrap.classList.remove('hidden');
+          if (btn) btn.textContent = 'Tắt Camera';
+
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          const scanTick = () => {
+            if (!relayCamStream) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA && typeof window.jsQR === 'function') {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const decoded = window.jsQR(imgData.data, imgData.width, imgData.height);
+              if (decoded && decoded.data) {
+                stopRelayCameraScan();
+                const pasteEl = document.getElementById('relay-paste-input');
+                if (pasteEl) pasteEl.value = decoded.data;
+                acceptIncomingRelayPacket(decoded.data);
+                return;
+              }
+            }
+            relayCamRafId = requestAnimationFrame(scanTick);
+          };
+          relayCamRafId = requestAnimationFrame(scanTick);
+        } catch (err) {
+          showRelayReceiveFeedback(false, 'Không mở được Camera: ' + (err?.message || 'Từ chối quyền'));
+        }
+      }
+
+      function handleRelayQRImageUpload(inputEl) {
+        const file = inputEl && inputEl.files && inputEl.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            if (typeof window.jsQR !== 'function') {
+              showRelayReceiveFeedback(false, 'Thư viện giải mã jsQR chưa sẵn sàng.');
+              return;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = window.jsQR(imgData.data, imgData.width, imgData.height);
+            if (!code || !code.data) {
+              showRelayReceiveFeedback(false, 'Không đọc được mã QR từ ảnh này.');
+              return;
+            }
+            const pasteEl = document.getElementById('relay-paste-input');
+            if (pasteEl) pasteEl.value = code.data;
+            acceptIncomingRelayPacket(code.data);
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function handleRelayNsosFileUpload(inputEl) {
+        const file = inputEl && inputEl.files && inputEl.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = String(reader.result || '').trim();
+          const pasteEl = document.getElementById('relay-paste-input');
+          if (pasteEl) pasteEl.value = text;
+          acceptIncomingRelayPacket(text);
+        };
+        reader.readAsText(file);
+      }
+
+      function showRelayReceiveFeedback(ok, msg) {
+        const box = document.getElementById('relay-receive-feedback');
+        if (!box) return;
+        box.classList.remove('hidden');
+        box.className = ok
+          ? 'p-2.5 rounded-xl border border-emerald-700/70 bg-emerald-950/50 text-emerald-200 text-[11px] font-semibold'
+          : 'p-2.5 rounded-xl border border-rose-700/70 bg-rose-950/60 text-rose-200 text-[11px] font-semibold';
+        box.textContent = msg;
+      }
+
+      async function acceptIncomingRelayPacket(rawOverride = null) {
+        const raw = (typeof rawOverride === 'string' && rawOverride.trim())
+          ? rawOverride.trim()
+          : (document.getElementById('relay-paste-input')?.value?.trim() || '');
+        if (!raw) {
+          showRelayReceiveFeedback(false, 'Vui lòng chọn ảnh QR, tệp .nsos hoặc dán chuỗi gói tin.');
+          return { ok: false, reason: 'EMPTY' };
+        }
+        if (!window.SOSRelayManager || typeof window.SOSRelayManager.verifyAndAcceptRelayPacket !== 'function') {
+          showRelayReceiveFeedback(false, 'SOSRelayManager chưa sẵn sàng.');
+          return { ok: false };
+        }
+
+        const res = await window.SOSRelayManager.verifyAndAcceptRelayPacket(raw);
+        if (!res.ok) {
+          showRelayReceiveFeedback(false, `❌ TỪ CHỐI GÓI TIN (${res.reason}): ${res.message}`);
+          return res;
+        }
+
+        const pkt = res.packet;
+        const relayPayload = {
+          lat: pkt.location?.lat ?? null,
+          lng: pkt.location?.lng ?? null,
+          location_source: pkt.location_source || 'relay',
+          location_confirmed: false,
+          location_description: pkt.location?.location_description || 'SOS chuyển tiếp DTN',
+          location_landmark: pkt.location?.location_landmark || null,
+          contact_name: `Relay (${pkt.origin_device_id})`,
+          phone: pkt.payload?.contact_phone_masked || '***',
+          people_count: pkt.payload?.people_count || 1,
+          has_elderly_or_children: Boolean(pkt.payload?.has_elderly_or_children),
+          water_level_cm: pkt.payload?.water_level_cm || 0,
+          priority: pkt.payload?.priority || 'high',
+          notes: pkt.payload?.notes || 'SOS chuyển tiếp qua thiết bị trung gian',
+          client_event_id: pkt.client_event_id
+        };
+
+        if (window.OfflineSyncManager && typeof window.OfflineSyncManager.enqueueSOS === 'function') {
+          await window.OfflineSyncManager.enqueueSOS(relayPayload, {
+            client_event_id: pkt.client_event_id,
+            sync_status: 'PENDING',
+            is_relay: true,
+            relay_packet: pkt,
+            triggerSync: typeof navigator !== 'undefined' ? navigator.onLine : false
+          });
+        } else if (window.OfflineDB && typeof window.OfflineDB.addSOS === 'function') {
+          await window.OfflineDB.addSOS({
+            client_event_id: pkt.client_event_id,
+            payload: relayPayload,
+            sync_status: 'PENDING',
+            is_relay: true,
+            relay_packet: pkt
+          });
+        }
+
+        showRelayReceiveFeedback(
+          true,
+          `✅ Đã xác thực & tiếp nhận chuyển tiếp (hop ${pkt.hop_count}/${pkt.max_hops}). Đã lưu vào hàng đợi gửi về Sở Chỉ huy.`
+        );
+        await renderHeldRelayPackets();
+        return { ok: true, packet: pkt };
+      }
+
+      async function renderHeldRelayPackets() {
+        const listEl = document.getElementById('relay-held-packets-list');
+        if (!listEl || !window.OfflineDB || typeof window.OfflineDB.getAllSOS !== 'function') return;
+        const all = await window.OfflineDB.getAllSOS().catch(() => []);
+        const held = all.filter(r => r && r.is_relay);
+        if (!held.length) {
+          listEl.innerHTML = '<div class="text-[11px] text-slate-500">Chưa có gói tin chuyển tiếp nào trên máy.</div>';
+          return;
+        }
+        listEl.innerHTML = held.map(r => {
+          const hop = r.relay_packet?.hop_count ?? 1;
+          const maxHops = r.relay_packet?.max_hops ?? 5;
+          const st = r.sync_status || 'PENDING';
+          return `<div class="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-[10.5px]">
+            <div class="min-w-0">
+              <div class="font-bold text-slate-200 truncate">${r.payload?.contact_name || 'Relay SOS'} • hop ${hop}/${maxHops}</div>
+              <div class="text-slate-400 font-mono truncate">${r.client_event_id}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full font-bold border ${st === 'ACKNOWLEDGED' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-amber-950 text-amber-300 border-amber-700'}">${st}</span>
+          </div>`;
+        }).join('');
+      }
+
       // Giả lập giao diện CommandUIController để tương thích 100% với citizen_portal.js
       window.CommandUIController = {
         showToast: (msg, type) => showToast(msg, type),
@@ -3848,14 +5340,36 @@
         switchBaseMap,
         toggleMapMaximize,
         selectDepth,
+        selectPeopleCount,
+        toggleSOSChip,
+        updateSOSStickySummary,
+        restoreMobileMapHeight,
+        copyTrackingToken,
+        showOfflineFailoverPanel,
+        copySms2G,
+        copySatelliteCompactFrame,
+        onSatelliteDemoToggle,
+        sendSatelliteDemo,
+        downloadRelayQRPng,
+        exportRelayNsosFile,
+        copyRelayEncodedString,
+        openRelayReceiverModal,
+        closeRelayReceiverModal,
+        toggleRelayCameraScan,
+        handleRelayQRImageUpload,
+        handleRelayNsosFileUpload,
+        acceptIncomingRelayPacket,
+        renderHeldRelayPackets,
         showToast,
         trackTicket,
+        updateTrackingStepper,
         revokeCurrentTrackingToken,
         findRoute,
         findEvacuationRoute,
         useRouteOriginGPS,
         classifyRouteStatus,
         loadCitizenShelters,
+        loadCitizenDisasters,
         clearRoute,
         setRoutePoint,
         useReportCurrentLocation,

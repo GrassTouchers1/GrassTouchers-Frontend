@@ -134,6 +134,34 @@
       }
     },
 
+    encodeCompactFrame(sosInput) {
+      const base = (sosInput && sosInput.payload) ? sosInput.payload : (sosInput || {});
+      const rawJson = JSON.stringify(sosInput || {});
+      const originalBytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(rawJson).length : rawJson.length;
+      const latNum = Number(base.lat ?? sosInput?.location?.lat);
+      const lngNum = Number(base.lng ?? sosInput?.location?.lng);
+      const coordStr = (Number.isFinite(latNum) && Number.isFinite(lngNum))
+        ? `${latNum.toFixed(4)},${lngNum.toFixed(4)}`
+        : 'NOGPS';
+      const ppl = Math.max(1, Number(base.people_count) || 1);
+      const depth = Math.max(0, Math.round(Number(base.water_level_cm) || 0));
+      const prioMap = { critical: 'C', high: 'H', medium: 'M', low: 'L' };
+      const prio = prioMap[String(base.priority || 'high').toLowerCase()] || 'H';
+      const shortId = String(sosInput?.client_event_id || base.client_event_id || Date.now()).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase();
+      const body = `NS1|${coordStr}|${ppl}|${depth}|${prio}|${shortId}`;
+      let crc = 0;
+      for (let i = 0; i < body.length; i++) {
+        crc = (crc ^ body.charCodeAt(i)) & 0xff;
+      }
+      const checksum = crc.toString(16).toUpperCase().padStart(2, '0');
+      let frame = `${body}|${checksum}`;
+      if (frame.length > 120) {
+        frame = frame.slice(0, 117) + checksum;
+      }
+      const frameBytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(frame).length : frame.length;
+      return { frame, frameBytes, originalBytes, checksum };
+    },
+
     resetForTest() {
       currentState = GATEWAY_STATES.NOT_CONFIGURED;
       gatewayConfig = null;

@@ -1474,8 +1474,8 @@ window.NorthStarMapLibre = (function () {
       features.forEach(feat => {
         const p = feat.properties;
         if (['rescued', 'resolved', 'cancelled', 'dispatched', 'on_scene'].includes(p.status)) return;
-        const coords = feat.geometry.coordinates; // [Lng, Lat]
-        if (!coords || !coords[0] || !coords[1]) return;
+        const coords = (feat.geometry && Array.isArray(feat.geometry.coordinates)) ? feat.geometry.coordinates : null; // [Lng, Lat]
+        if (!coords || coords[0] == null || coords[1] == null) return;
         if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm ngoài Miền Bắc (Lào, Thái Lan)
 
         const coordKey = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;

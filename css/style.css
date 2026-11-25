@@ -215,10 +215,6 @@ input, textarea, select {
 input.bg-white,
 textarea.bg-white,
 select.bg-white,
-#sos-input-name,
-#sos-input-phone,
-#sos-input-people,
-#sos-input-notes,
 #origin-text,
 #dest-text {
   background-color: #ffffff !important;
@@ -229,18 +225,14 @@ select.bg-white,
 /* Placeholder sắc nét, độ tương phản cao */
 input::placeholder,
 textarea::placeholder,
-#sos-input-name::placeholder,
-#sos-input-phone::placeholder,
-#sos-input-people::placeholder,
-#sos-input-notes::placeholder,
 #origin-text::placeholder,
 #dest-text::placeholder {
   color: #64748b !important; /* Slate 500 */
   opacity: 1 !important;
 }
 
-body.dark-mode input:not(.bg-white):not(#sos-input-name):not(#sos-input-phone):not(#sos-input-people):not(#sos-input-notes):not(#origin-text):not(#dest-text),
-body.dark-mode textarea:not(.bg-white):not(#sos-input-notes),
+body.dark-mode input:not(.bg-white):not(#origin-text):not(#dest-text),
+body.dark-mode textarea:not(.bg-white),
 body.dark-mode select:not(.bg-white) {
   background-color: #1f2937 !important;
   color: #f1f5f9 !important;

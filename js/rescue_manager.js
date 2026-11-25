@@ -642,14 +642,26 @@ const NorthStarRescue = (function () {
   // ==========================================
   // 5. GỬI TÍN HIỆU SOS KHẨN CẤP (CIT-03)
   // ==========================================
-  function renderSOSSubmissionState(submitState, { ticketCode = null, localId = null, message = '' } = {}) {
+  function renderSOSSubmissionState(submitState, { ticketCode = null, trackingToken = null, localId = null, message = '' } = {}) {
     const resultCard = document.getElementById('citizen-sos-result-card');
     const ticketDisplay = document.getElementById('citizen-sos-ticket-code');
     const syncBadge = document.getElementById('citizen-sos-sync-badge');
     const feedbackMsg = document.getElementById('citizen-sos-feedback-msg');
+    const tokenRow = document.getElementById('citizen-sos-tracking-token-row');
+    const tokenDisplay = document.getElementById('citizen-sos-tracking-token');
     if (!resultCard || !ticketDisplay || !syncBadge || !feedbackMsg) return;
 
     resultCard.classList.remove('hidden');
+
+    if (tokenRow && tokenDisplay) {
+      if (submitState === 'SERVER_RECEIVED' && trackingToken) {
+        tokenDisplay.textContent = trackingToken;
+        tokenRow.classList.remove('hidden');
+      } else {
+        tokenDisplay.textContent = '';
+        tokenRow.classList.add('hidden');
+      }
+    }
 
     if (submitState === 'SENDING') {
       ticketDisplay.textContent = 'ĐANG CHỜ MÁY CHỦ...';
@@ -820,6 +832,7 @@ const NorthStarRescue = (function () {
 
       renderSOSSubmissionState('SERVER_RECEIVED', {
         ticketCode,
+        trackingToken,
         message: '✅ Máy chủ Chỉ huy đã tiếp nhận thông tin cứu nạn khẩn cấp của bạn. Đội cứu hộ đang xử lý.'
       });
 
@@ -885,6 +898,11 @@ const NorthStarRescue = (function () {
     if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
       window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP TRÊN MÁY', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
     }
+    try {
+      window.dispatchEvent(new CustomEvent('northstar:sos_offline_saved', {
+        detail: { payload, draft: draftItem }
+      }));
+    } catch (_) {}
   }
 
   /**

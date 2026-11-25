@@ -757,6 +757,30 @@
     },
 
     async _sendItem(eventType, record) {
+      if (record && record.is_relay && record.relay_packet) {
+        const relayPath = '/api/sos/relay';
+        if (global.NorthStarApi && typeof global.NorthStarApi.fetchJson === 'function') {
+          return global.NorthStarApi.fetchJson(relayPath, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record.relay_packet)
+          });
+        }
+        const baseUrl = (global.GRASSTOUCHER_CONFIG && global.GRASSTOUCHER_CONFIG.API_BASE_URL) || '';
+        const resp = await fetch(`${String(baseUrl).replace(/\/$/, '')}${relayPath}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record.relay_packet)
+        });
+        if (!resp.ok) {
+          const err = new Error(`HTTP ${resp.status}`);
+          err.type = 'HTTP';
+          err.status = resp.status;
+          throw err;
+        }
+        return resp.json();
+      }
+
       const path = eventType === EVENT_TYPES.FLOOD_REPORT ? '/api/reports' : '/api/sos';
       const payload = eventType === EVENT_TYPES.FLOOD_REPORT
         ? buildFloodReportPayload(record)

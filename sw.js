@@ -16,8 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Unified Service Worker for NORTHSTAR (Command + Citizen PWA, Phase 5 / CIT-06)
-const CACHE_VERSION = 'v20261125-p5';
+// Unified Service Worker for NORTHSTAR (Command + Citizen PWA, Phase 5 / CIT-06 / Local Vendor)
+const CACHE_VERSION = 'v20261125-p5-local';
 const STATIC_CACHE = `northstar-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `northstar-runtime-${CACHE_VERSION}`;
 const WEATHER_CACHE = `northstar-weather-${CACHE_VERSION}`;
@@ -40,12 +40,17 @@ const STATIC_ASSETS = [
   './css/style.css',
   './css/maplibre-gl.css',
   './js/vendor/maplibre-gl.js',
+  './js/vendor/tailwindcss.min.js',
+  './js/vendor/lucide.min.js',
+  './js/vendor/qrcode.min.js',
+  './js/vendor/jsQR.js',
   './js/config.js',
   './js/offline_db.js',
   './js/offline_sync_manager.js',
   './js/sos_relay.js',
   './js/satellite_gateway_adapter.js',
   './js/rescue_manager.js',
+  './js/voice_sos.js',
   './js/citizen_portal.js',
   './js/offline_knowledge.js',
   './js/ai_assistant.js',
