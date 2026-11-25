@@ -37,6 +37,8 @@ const NorthStarRescue = (function () {
   };
   let activeRescuePopup = null;
   let evacuationRouteGeoJson = { type: 'FeatureCollection', features: [] };
+  let rescueShelterEventsBound = false;
+  let rescueShelterMap = {};
 
   let allShelters = [];
   let allDisasters = [];
@@ -286,7 +288,10 @@ const NorthStarRescue = (function () {
     activeRescueMarkers.shelters.forEach(m => m.remove());
     activeRescueMarkers.shelters = [];
 
-    allShelters.forEach(s => {
+    const features = [];
+    rescueShelterMap = {};
+
+    allShelters.forEach((s, idx) => {
       const p = s.properties || s;
       let latLng = null;
       if (s.geometry && s.geometry.coordinates) {
@@ -298,51 +303,131 @@ const NorthStarRescue = (function () {
       }
       if (!latLng || isNaN(latLng[0]) || isNaN(latLng[1])) return;
 
-      const percent = Math.min(100, Math.round((p.current_occupancy / p.capacity) * 100));
-      let capColor = 'text-emerald-400 bg-emerald-950 border-emerald-800';
-      if (percent >= 90) capColor = 'text-rose-400 bg-rose-950 border-rose-800';
-      else if (percent >= 70) capColor = 'text-amber-400 bg-amber-950 border-amber-800';
-
-      const el = document.createElement('div');
-      el.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer';
-      if (!rescueLayerVisibility.shelters) el.style.display = 'none';
-      el.innerHTML = '<span class="text-sm">🛡️</span>';
-      el.title = `${p.name} (${percent}% sức chứa)`;
-
-      const popupHtml = `
-        <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
-          <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
-            <span class="font-extrabold text-xs text-emerald-400 flex items-center gap-1">🛡️ TRẠM TRÚ ẨN AN TOÀN</span>
-            <span class="text-[9.5px] px-1.5 py-0.2 rounded font-bold border ${capColor}">${percent}% SỨC CHỨA</span>
-          </div>
-          <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.name}</h4>
-          <p class="text-xs text-slate-300 mt-1 leading-relaxed">${p.address || 'Khu vực an toàn đã được thẩm định'}</p>
-          <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
-            <div class="flex justify-between text-slate-300">
-              <span>Đang tiếp nhận:</span>
-              <b class="text-white">${p.current_occupancy} / ${p.capacity} người</b>
-            </div>
-            <div class="flex justify-between text-slate-400 text-[10px]">
-              <span>Liên hệ: ${p.contact_person || 'Ban Chỉ huy'}</span>
-              <a href="tel:${p.contact_phone}" class="text-cyan-400 font-bold">${p.contact_phone || '114'}</a>
-            </div>
-          </div>
-          <button onclick="NorthStarRescue.routeToShelter(${latLng[1]}, ${latLng[0]}, '${p.name.replace(/'/g, "\'")}')" class="mt-2.5 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
-            <span>🧭 Dẫn Đường Sơ Tán Đến Đây</span>
-          </button>
-        </div>
-      `;
-
-      const popup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
-        .setHTML(popupHtml);
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([latLng[1], latLng[0]])
-        .setPopup(popup)
-        .addTo(mapInst);
-
-      activeRescueMarkers.shelters.push(marker);
+      const key = String(p.id || p.shelter_id || `rescue_sh_${idx}`);
+      rescueShelterMap[key] = { p, latLng };
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [latLng[1], latLng[0]] },
+        properties: {
+          shelterKey: key,
+          name: p.name || 'Trạm trú ẩn an toàn'
+        }
+      });
     });
+
+    const vis = rescueLayerVisibility.shelters ? 'visible' : 'none';
+    if (!mapInst.getSource('rescue-shelters-source')) {
+      mapInst.addSource('rescue-shelters-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+        cluster: true,
+        clusterRadius: 55,
+        clusterMaxZoom: 12
+      });
+
+      mapInst.addLayer({
+        id: 'rescue-shelter-clusters',
+        type: 'circle',
+        source: 'rescue-shelters-source',
+        filter: ['has', 'point_count'],
+        layout: { visibility: vis },
+        paint: {
+          'circle-color': '#059669',
+          'circle-radius': ['step', ['get', 'point_count'], 13, 5, 17, 15, 21],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#d1fae5'
+        }
+      });
+
+      mapInst.addLayer({
+        id: 'rescue-shelter-cluster-count',
+        type: 'symbol',
+        source: 'rescue-shelters-source',
+        filter: ['has', 'point_count'],
+        layout: {
+          visibility: vis,
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 11
+        },
+        paint: { 'text-color': '#ffffff' }
+      });
+
+      mapInst.addLayer({
+        id: 'rescue-shelter-unclustered',
+        type: 'circle',
+        source: 'rescue-shelters-source',
+        filter: ['!', ['has', 'point_count']],
+        layout: { visibility: vis },
+        paint: {
+          'circle-color': '#10b981',
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 5.5, 10, 7.5, 13, 9.5],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      });
+
+      if (!rescueShelterEventsBound) {
+        rescueShelterEventsBound = true;
+        mapInst.on('click', 'rescue-shelter-clusters', (e) => {
+          const clicked = mapInst.queryRenderedFeatures(e.point, { layers: ['rescue-shelter-clusters'] });
+          if (!clicked.length) return;
+          const clusterId = clicked[0].properties.cluster_id;
+          mapInst.getSource('rescue-shelters-source').getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            mapInst.easeTo({ center: clicked[0].geometry.coordinates, zoom });
+          });
+        });
+
+        mapInst.on('click', 'rescue-shelter-unclustered', (e) => {
+          if (!e.features || !e.features.length) return;
+          const key = e.features[0].properties.shelterKey;
+          const entry = rescueShelterMap[key];
+          if (!entry) return;
+          const { p, latLng } = entry;
+          const percent = Math.min(100, Math.round((p.current_occupancy / Math.max(1, p.capacity)) * 100));
+          let capColor = 'text-emerald-400 bg-emerald-950 border-emerald-800';
+          if (percent >= 90) capColor = 'text-rose-400 bg-rose-950 border-rose-800';
+          else if (percent >= 70) capColor = 'text-amber-400 bg-amber-950 border-amber-800';
+          const safeName = String(p.name || 'Trạm trú ẩn').replace(/'/g, "\\'");
+          const popupHtml = `
+            <div class="p-2.5 max-w-[310px] text-slate-100 font-sans select-none">
+              <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                <span class="font-extrabold text-xs text-emerald-400 flex items-center gap-1">🛡️ TRẠM TRÚ ẨN AN TOÀN</span>
+                <span class="text-[9.5px] px-1.5 py-0.2 rounded font-bold border ${capColor}">${percent}% SỨC CHỨA</span>
+              </div>
+              <h4 class="font-black text-sm text-white mt-2 leading-snug">${p.name}</h4>
+              <p class="text-xs text-slate-300 mt-1 leading-relaxed">${p.address || 'Khu vực an toàn đã được thẩm định'}</p>
+              <div class="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>Đang tiếp nhận:</span>
+                  <b class="text-white">${p.current_occupancy} / ${p.capacity} người</b>
+                </div>
+                <div class="flex justify-between text-slate-400 text-[10px]">
+                  <span>Liên hệ: ${p.contact_person || 'Ban Chỉ huy'}</span>
+                  <a href="tel:${p.contact_phone}" class="text-cyan-400 font-bold">${p.contact_phone || '114'}</a>
+                </div>
+              </div>
+              <button onclick="NorthStarRescue.routeToShelter(${latLng[1]}, ${latLng[0]}, '${safeName}')" class="mt-2.5 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer">
+                <span>🧭 Dẫn Đường Sơ Tán Đến Đây</span>
+              </button>
+            </div>
+          `;
+          if (activeRescuePopup) activeRescuePopup.remove();
+          activeRescuePopup = new maplibregl.Popup({ className: 'flood-custom-popup', maxWidth: '330px', closeButton: true, closeOnClick: true })
+            .setLngLat([latLng[1], latLng[0]])
+            .setHTML(popupHtml)
+            .addTo(mapInst);
+        });
+
+        ['rescue-shelter-clusters', 'rescue-shelter-unclustered'].forEach(layerId => {
+          mapInst.on('mouseenter', layerId, () => { mapInst.getCanvas().style.cursor = 'pointer'; });
+          mapInst.on('mouseleave', layerId, () => { mapInst.getCanvas().style.cursor = ''; });
+        });
+      }
+    } else {
+      mapInst.getSource('rescue-shelters-source').setData({ type: 'FeatureCollection', features });
+    }
   }
 
   function renderSheltersSidebar() {
@@ -796,6 +881,17 @@ const NorthStarRescue = (function () {
           el.style.display = show ? 'flex' : 'none';
         }
       });
+    }
+    if (layerType === 'shelters') {
+      const mapInst = getMapLibre();
+      if (mapInst) {
+        const vis = show ? 'visible' : 'none';
+        ['rescue-shelter-clusters', 'rescue-shelter-cluster-count', 'rescue-shelter-unclustered'].forEach(id => {
+          if (mapInst.getLayer(id)) {
+            mapInst.setLayoutProperty(id, 'visibility', vis);
+          }
+        });
+      }
     }
   }
 

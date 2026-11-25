@@ -33,6 +33,9 @@ window.NorthStarMapLibre = (function () {
   let currentPitch = 0; // Mặc định góc nhìn 2D phẳng y hệt Leaflet
   let currentBearing = 0;
   let currentBaseKey = 'satellite'; // Vệ Tinh Không Gian y hệt Leaflet
+  let viewportAlertEnabled = false;
+  let mlShelterEventsBound = false;
+  let shelterFeatureMap = {};
 
   // Quản lý các nhóm markers động
   const markersRegistry = {
@@ -1086,7 +1089,7 @@ window.NorthStarMapLibre = (function () {
     const alertDot = document.getElementById('maplibre-alert-dot');
     if (!alertEl || !alertText) return;
 
-    if (!layerVisibility.floodPoints) {
+    if (!viewportAlertEnabled || !layerVisibility.floodPoints) {
       alertEl.classList.add('hidden');
       return;
     }
@@ -1114,6 +1117,29 @@ window.NorthStarMapLibre = (function () {
       if (alertDot) alertDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0';
       alertText.innerHTML = `✓ Khu vực an toàn: <b>${inView.length} trạm</b> quan trắc ghi nhận không có ngập sâu.`;
     }
+  }
+
+  function toggleViewportAlert(forceState) {
+    viewportAlertEnabled = typeof forceState === 'boolean' ? forceState : !viewportAlertEnabled;
+    const btn = document.getElementById('btn-ml-viewport-alert-toggle');
+    if (btn) {
+      btn.className = viewportAlertEnabled
+        ? 'w-full px-2.5 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/40 text-amber-200 border border-amber-500/60 text-[10.5px] font-bold cursor-pointer transition flex items-center justify-between'
+        : 'w-full px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/20 text-[10.5px] font-bold cursor-pointer transition flex items-center justify-between';
+    }
+    if (!viewportAlertEnabled) {
+      const alertEl = document.getElementById('maplibre-viewport-alert');
+      if (alertEl) alertEl.classList.add('hidden');
+      return;
+    }
+    updateMapLibreViewportAlert();
+  }
+
+  function toggleToolsMenu(forceState) {
+    const menu = document.getElementById('ml-tools-menu');
+    if (!menu) return;
+    const shouldShow = typeof forceState === 'boolean' ? forceState : menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !shouldShow);
   }
 
   function buildStationPopupHtml(pt) {
@@ -1523,8 +1549,8 @@ window.NorthStarMapLibre = (function () {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
         cluster: true,
-        clusterRadius: 45,
-        clusterMaxZoom: 14
+        clusterRadius: 62,
+        clusterMaxZoom: 13
       });
 
       mapInstance.addLayer({
@@ -1546,9 +1572,9 @@ window.NorthStarMapLibre = (function () {
           'circle-radius': [
             'step',
             ['get', 'point_count'],
-            18,
-            5, 23,
-            15, 28
+            16,
+            5, 21,
+            15, 25
           ],
           'circle-stroke-width': 2.5,
           'circle-stroke-color': '#ffffff'
@@ -1586,10 +1612,9 @@ window.NorthStarMapLibre = (function () {
             'rgba(245, 158, 11, 0.22)'
           ],
           'circle-radius': [
-            'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5],
-            5, 18,
-            20, 22,
-            45, 26
+            'interpolate', ['linear'], ['zoom'],
+            6, ['case', ['>=', ['coalesce', ['get', 'depth'], -1], 20], 13, 10],
+            10, ['interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5], 5, 18, 20, 22, 45, 26]
           ],
           'circle-stroke-width': 1,
           'circle-stroke-color': [
@@ -1618,11 +1643,9 @@ window.NorthStarMapLibre = (function () {
             '#10b981'
           ],
           'circle-radius': [
-            'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0],
-            -1, 10,
-            0, 11,
-            20, 13.5,
-            40, 16
+            'interpolate', ['linear'], ['zoom'],
+            6, ['case', ['>=', ['coalesce', ['get', 'depth'], -1], 20], 8, ['>=', ['coalesce', ['get', 'depth'], -1], 5], 6.5, 5.5],
+            10, ['interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0], -1, 10, 0, 11, 20, 13.5, 40, 16]
           ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
@@ -1633,6 +1656,7 @@ window.NorthStarMapLibre = (function () {
         id: 'ml-flood-depth-label',
         type: 'symbol',
         source: 'ml-flood-points',
+        minzoom: 8.8,
         filter: ['!', ['has', 'point_count']],
         layout: {
           'visibility': layerVisibility.floodPoints ? 'visible' : 'none',
@@ -1821,6 +1845,150 @@ window.NorthStarMapLibre = (function () {
   /**
    * Đồng bộ Trạm Trú Ẩn An Toàn (Safe Shelters)
    */
+  function setupSheltersGeoJsonLayer() {
+    if (!mapInstance || !isInitialized) return;
+    if (!mapInstance.getSource('ml-shelters')) {
+      mapInstance.addSource('ml-shelters', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterRadius: 55,
+        clusterMaxZoom: 12
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-shelter-clusters',
+        type: 'circle',
+        source: 'ml-shelters',
+        filter: ['has', 'point_count'],
+        layout: {
+          'visibility': layerVisibility.shelters ? 'visible' : 'none'
+        },
+        paint: {
+          'circle-color': '#059669',
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            13,
+            5, 17,
+            15, 21
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#d1fae5'
+        }
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-shelter-cluster-count',
+        type: 'symbol',
+        source: 'ml-shelters',
+        filter: ['has', 'point_count'],
+        layout: {
+          'visibility': layerVisibility.shelters ? 'visible' : 'none',
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 11
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-shelter-unclustered',
+        type: 'circle',
+        source: 'ml-shelters',
+        filter: ['!', ['has', 'point_count']],
+        layout: {
+          'visibility': layerVisibility.shelters ? 'visible' : 'none'
+        },
+        paint: {
+          'circle-color': '#10b981',
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            6, 5.5,
+            10, 7.5,
+            13, 9.5
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-shelter-label',
+        type: 'symbol',
+        source: 'ml-shelters',
+        minzoom: 12,
+        filter: ['!', ['has', 'point_count']],
+        layout: {
+          'visibility': layerVisibility.shelters ? 'visible' : 'none',
+          'text-field': ['get', 'name'],
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 10,
+          'text-offset': [0, 1.3],
+          'text-anchor': 'top'
+        },
+        paint: {
+          'text-color': '#a7f3d0',
+          'text-halo-color': '#0f172a',
+          'text-halo-width': 1.2
+        }
+      });
+
+      if (!mlShelterEventsBound) {
+        mlShelterEventsBound = true;
+        mapInstance.on('click', 'ml-shelter-clusters', (e) => {
+          const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ml-shelter-clusters'] });
+          if (!features.length) return;
+          const clusterId = features[0].properties.cluster_id;
+          mapInstance.getSource('ml-shelters').getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            mapInstance.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+          });
+        });
+
+        mapInstance.on('click', 'ml-shelter-unclustered', (e) => {
+          if (!e.features || !e.features.length) return;
+          const key = e.features[0].properties.shelterKey;
+          const item = shelterFeatureMap[key];
+          if (!item) return;
+          const p = item.properties;
+          const coords = item.coords;
+          const safeName = String(p.name || 'Điểm sơ tán').replace(/'/g, "\\'");
+          const popupHtml = `
+            <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
+              <div class="font-black text-emerald-400 flex items-center gap-1.5 text-xs border-b border-emerald-500/30 pb-1 uppercase">
+                <span>🛡️</span> ${p.name}
+              </div>
+              <div class="text-[11px] text-slate-300">${p.address || ''}</div>
+              <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px]">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Sức chứa:</span>
+                  <span class="font-bold text-white font-mono">${p.capacity || 500} người</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Còn trống:</span>
+                  <span class="font-bold text-emerald-300 font-mono">${p.available_slots || 300} chỗ</span>
+                </div>
+              </div>
+              <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${safeName}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer">
+                <span>Sơ tán tới đây</span>
+              </button>
+            </div>
+          `;
+          const popup = new maplibregl.Popup({ offset: 14, maxWidth: '260px' }).setHTML(popupHtml);
+          openActivePopup(popup, [coords[0], coords[1]]);
+        });
+
+        ['ml-shelter-clusters', 'ml-shelter-unclustered'].forEach(layerId => {
+          mapInstance.on('mouseenter', layerId, () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+          mapInstance.on('mouseleave', layerId, () => { mapInstance.getCanvas().style.cursor = ''; });
+        });
+      }
+    }
+  }
+
   async function syncShelterMarkers() {
     try {
       const res = await fetch(resolveApi('/api/shelters')).catch(() => null);
@@ -1832,57 +2000,35 @@ window.NorthStarMapLibre = (function () {
       markersRegistry.shelters = [];
 
       const shelterList = [];
+      const geoFeatures = [];
+      shelterFeatureMap = {};
 
-      features.forEach(feat => {
-        const p = feat.properties;
-        const coords = feat.geometry.coordinates;
+      features.forEach((feat, idx) => {
+        const p = feat.properties || {};
+        const coords = feat.geometry && feat.geometry.coordinates;
         if (!coords || !coords[0] || !coords[1]) return;
         if (!isWithinNorthernVietnam(coords[0], coords[1])) return; // Khóa chặt: Loại bỏ hoàn toàn điểm sơ tán ngoài Miền Bắc
 
+        const shelterKey = String(p.id || p.shelter_id || `sh_${idx}`);
         shelterList.push({ ...p, coords });
-
-        const el = document.createElement('div');
-        el.className = 'flex items-center justify-center cursor-pointer select-none';
-        el.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; width: 24px; height: 24px; pointer-events: auto !important; z-index: 23;';
-        el.innerHTML = `
-          <div class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border border-white hover:scale-120 transition relative z-10 pointer-events-auto" title="${p.name}">
-            <span class="text-[9.5px] font-bold leading-none">🛡️</span>
-          </div>
-        `;
-
-        const popupHtml = `
-          <div class="p-2.5 font-sans space-y-1.5 text-xs text-slate-100 select-none">
-            <div class="font-black text-emerald-400 flex items-center gap-1.5 text-xs border-b border-emerald-500/30 pb-1 uppercase">
-              <span>🛡️</span> ${p.name}
-            </div>
-            <div class="text-[11px] text-slate-300">${p.address || ''}</div>
-            <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px]">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Sức chứa:</span>
-                <span class="font-bold text-white font-mono">${p.capacity || 500} người</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Còn trống:</span>
-                <span class="font-bold text-emerald-300 font-mono">${p.available_slots || 300} chỗ</span>
-              </div>
-            </div>
-            <button onclick="NorthStarMapLibre.setRouteOriginDestination('dest', ${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer">
-              <span>Sơ tán tới đây</span>
-            </button>
-          </div>
-        `;
-
-        const popup = new maplibregl.Popup({ offset: 18, maxWidth: '260px' }).setHTML(popupHtml);
-        el.onclick = (e) => {
-          e.stopPropagation();
-          openActivePopup(popup, [coords[0], coords[1]]);
-        };
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport', pitchAlignment: 'viewport' })
-          .setLngLat([coords[0], coords[1]])
-          .addTo(mapInstance);
-
-        markersRegistry.shelters.push(marker);
+        shelterFeatureMap[shelterKey] = { properties: p, coords };
+        geoFeatures.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [coords[0], coords[1]] },
+          properties: {
+            shelterKey,
+            name: p.name || 'Điểm sơ tán',
+            capacity: p.capacity || 500,
+            available_slots: p.available_slots || 300
+          }
+        });
       });
+
+      setupSheltersGeoJsonLayer();
+      const src = mapInstance && mapInstance.getSource('ml-shelters');
+      if (src) {
+        src.setData({ type: 'FeatureCollection', features: geoFeatures });
+      }
 
       cachedDrawerData.shelters = shelterList;
       updateDrawerBadge('shelters', shelterList.length);
@@ -2760,6 +2906,13 @@ window.NorthStarMapLibre = (function () {
       syncFloodPointMarkers();
       syncFloodCirclesData();
       updateMapLibreViewportAlert();
+    } else if (layerKey === 'shelters') {
+      ['ml-shelter-clusters', 'ml-shelter-cluster-count', 'ml-shelter-unclustered', 'ml-shelter-label'].forEach(id => {
+        if (mapInstance.getLayer(id)) {
+          mapInstance.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
+        }
+      });
+      if (isVisible) syncShelterMarkers();
     } else {
       syncAllLayers();
     }
@@ -2883,6 +3036,9 @@ window.NorthStarMapLibre = (function () {
     if (!mapInstance || !BASEMAP_STYLES[key]) return;
     currentBaseKey = key;
 
+    const baseSel = document.getElementById('ml-basemap-select');
+    if (baseSel && baseSel.value !== key) baseSel.value = key;
+
     ['dark', 'satellite', 'topo', 'osm'].forEach(k => {
       const btn = document.getElementById(`btn-ml-base-${k}`);
       if (btn) {
@@ -2911,6 +3067,8 @@ window.NorthStarMapLibre = (function () {
       setup3DBuildingsVectorLayer();
       setupRainRadarVectorLayer();
       setupFloodCirclesVectorLayer();
+      setupFloodPointsGeoJsonLayer();
+      setupSheltersGeoJsonLayer();
       syncAllLayers();
 
       if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
@@ -2967,6 +3125,8 @@ window.NorthStarMapLibre = (function () {
     toggleLayer,
     toggleLayerUI,
     toggleLayersDrawer,
+    toggleToolsMenu,
+    toggleViewportAlert,
     jumpToRegion,
     setRouteOriginDestination,
     syncAllLayers,

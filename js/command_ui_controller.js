@@ -4284,34 +4284,9 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       tacticalMarkers.units.push(m);
     });
 
-    // 3. Shelters
+    // 3. Shelters: rendered cleanly via clustered WebGL layer in NorthStarRescue ('rescue-shelters-source')
     tacticalMarkers.shelters.forEach(m => { if (m && typeof m.remove === 'function') m.remove(); });
     tacticalMarkers.shelters = [];
-
-    const sheltersList = (typeof shelterData !== 'undefined' ? shelterData : (typeof sheltersData !== 'undefined' ? sheltersData : []));
-    sheltersList.forEach(sh => {
-      const el = document.createElement('div');
-      el.className = 'cursor-pointer';
-      el.innerHTML = `
-        <div class="w-7 h-7 rounded-full bg-emerald-600 text-white shadow-md border-2 border-white flex items-center justify-center text-xs font-black">
-          🛡️
-        </div>
-      `;
-      const popup = new window.maplibregl.Popup({ offset: 16, className: 'c2-dark-glass-popup' })
-        .setHTML(`
-          <div class="p-2 text-xs font-sans space-y-1 text-slate-800">
-            <div class="font-bold text-emerald-700">🛡️ ${sh.name}</div>
-            <div class="text-[11px] text-slate-600">${sh.address}</div>
-            <div>Sức chứa: <b>${sh.current_occupancy} / ${sh.capacity}</b> người</div>
-            <div>Nhu yếu phẩm: ${sh.supplies_status}</div>
-          </div>
-        `);
-      const m = new window.maplibregl.Marker({ element: el })
-        .setLngLat([sh.lng, sh.lat])
-        .setPopup(popup)
-        .addTo(mapInst);
-      tacticalMarkers.shelters.push(m);
-    });
   }
 
   // =========================================================================

@@ -342,8 +342,8 @@ function setupMapLibreSourcesAndLayers() {
       type: 'geojson',
       data: floodGeoJsonData,
       cluster: true,
-      clusterRadius: 45,
-      clusterMaxZoom: 14
+      clusterRadius: 62,
+      clusterMaxZoom: 13
     });
 
     // Cluster Circles (GPU rendered)
@@ -402,10 +402,9 @@ function setupMapLibreSourcesAndLayers() {
           'rgba(245, 158, 11, 0.25)'
         ],
         'circle-radius': [
-          'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5],
-          5, 17,
-          20, 21,
-          45, 25
+          'interpolate', ['linear'], ['zoom'],
+          6, ['case', ['>=', ['coalesce', ['get', 'depth'], -1], 20], 13, 10],
+          10, ['interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5], 5, 17, 20, 21, 45, 25]
         ],
         'circle-stroke-width': 1,
         'circle-stroke-color': [
@@ -432,22 +431,21 @@ function setupMapLibreSourcesAndLayers() {
           '#10b981'
         ],
         'circle-radius': [
-          'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0],
-          -1, 10,
-          0, 11,
-          20, 13.5,
-          40, 16
+          'interpolate', ['linear'], ['zoom'],
+          6, ['case', ['>=', ['coalesce', ['get', 'depth'], -1], 20], 8, ['>=', ['coalesce', ['get', 'depth'], -1], 5], 6.5, 5.5],
+          10, ['interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0], -1, 10, 0, 11, 20, 13.5, 40, 16]
         ],
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
     });
 
-    // Unclustered Flood Depth Label (e.g. 27cm, 15cm, 0cm)
+    // Unclustered Flood Depth Label (hiện từ zoom >= 8.8 để tránh rối toàn Miền Bắc)
     mapInstance.addLayer({
       id: 'flood-unclustered-label',
       type: 'symbol',
       source: 'flood-points',
+      minzoom: 8.8,
       filter: ['!', ['has', 'point_count']],
       layout: {
         'text-field': [
@@ -641,11 +639,13 @@ function switchBaseLayer(type) {
   if (!mapInstance || !BASEMAP_STYLES[type]) return;
   currentBaseLayer = type;
 
-  // Đồng bộ trạng thái nút nhanh trên thanh công cụ bản đồ chính
+  // Đồng bộ trạng thái nút nhanh & dropdown trên thanh công cụ bản đồ chính
+  const normalized = (type === 'esri') ? 'satellite' : ((type === 'osm' || type === 'intl') ? 'streets' : type);
+  const baseSel = document.getElementById('core-basemap-select');
+  if (baseSel && baseSel.value !== normalized) baseSel.value = normalized;
   ['satellite', 'dark', 'topo', 'streets'].forEach(k => {
     const btn = document.getElementById(`core-base-${k}`);
     if (btn) {
-      const normalized = (type === 'esri') ? 'satellite' : ((type === 'osm' || type === 'intl') ? 'streets' : type);
       if (k === normalized) {
         btn.className = 'px-2 py-0.5 bg-cyan-600 text-white rounded-md text-[10px] font-bold cursor-pointer transition shadow';
       } else {
@@ -1506,6 +1506,24 @@ function zoomToAllPoints() {
   }
 }
 
+let coreViewportAlertEnabled = false;
+
+window.toggleCoreViewportAlert = function (forceState) {
+  coreViewportAlertEnabled = typeof forceState === 'boolean' ? forceState : !coreViewportAlertEnabled;
+  const btn = document.getElementById('btn-core-viewport-alert-toggle');
+  if (btn) {
+    btn.className = coreViewportAlertEnabled
+      ? 'px-1.5 py-0.5 bg-amber-600/40 text-amber-200 border border-amber-500/60 rounded-md text-[10px] font-bold cursor-pointer transition'
+      : 'px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-md text-[10px] font-bold cursor-pointer transition';
+  }
+  const alertEl = document.getElementById('viewport-flood-alert');
+  if (!coreViewportAlertEnabled) {
+    if (alertEl) alertEl.classList.add('hidden');
+    return;
+  }
+  updateViewportFloodAlert();
+};
+
 function updateViewportFloodAlert() {
   if (!floodPoints || floodPoints.length === 0) return;
 
@@ -1514,6 +1532,11 @@ function updateViewportFloodAlert() {
   const alertBtn = document.getElementById('viewport-alert-btn');
   const alertIcon = document.getElementById('viewport-alert-icon');
   if (!alertEl || !alertText || !alertBtn || !alertIcon) return;
+
+  if (!coreViewportAlertEnabled) {
+    alertEl.classList.add('hidden');
+    return;
+  }
 
   let inView = [];
   if (mapInstance && typeof mapInstance.getBounds === 'function') {
