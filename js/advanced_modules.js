@@ -119,6 +119,7 @@ const SarFloodManager = (function () {
   let isVisible = false;
   let sarData = null;
   let activePopup = null;
+  let sarEventsBound = false;
 
   function getMapInstance() {
     if (!window.map) return null;
@@ -157,36 +158,39 @@ const SarFloodManager = (function () {
         }
       });
 
-      mapInst.on('click', 'sar-flood-fill', (e) => {
-        if (!e.features || !e.features.length) return;
-        const p = e.features[0].properties;
-        const popupContent = `
-          <div class="p-2 text-slate-800 font-sans max-w-xs">
-            <div class="flex items-center justify-between text-cyan-700 font-bold text-xs pb-1 border-b border-cyan-100">
-              <span class="flex items-center gap-1">🛰️ SENTINEL-1 SAR</span>
-              <span class="text-[9.5px] px-1.5 py-0.2 rounded bg-cyan-100 text-cyan-800 font-extrabold uppercase">${p.severity || 'C-BAND'}</span>
+      if (!sarEventsBound) {
+        sarEventsBound = true;
+        mapInst.on('click', 'sar-flood-fill', (e) => {
+          if (!e.features || !e.features.length) return;
+          const p = e.features[0].properties;
+          const popupContent = `
+            <div class="p-2.5 text-slate-100 font-sans max-w-xs select-none">
+              <div class="flex items-center justify-between text-cyan-300 font-bold text-xs pb-1.5 border-b border-slate-700">
+                <span class="flex items-center gap-1">🛰️ SENTINEL-1 SAR</span>
+                <span class="text-[9.5px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-200 border border-cyan-700 font-extrabold uppercase">${p.severity || 'C-BAND'}</span>
+              </div>
+              <h4 class="font-extrabold text-sm text-white mt-1.5">${p.title || 'Vùng ngập SAR'}</h4>
+              <p class="text-xs text-slate-300 mt-1">${p.description || ''}</p>
+              <div class="mt-2 text-[11px] bg-slate-900/90 p-2 rounded border border-slate-700 space-y-1 text-slate-200">
+                <div><b>Độ tin cậy mặt nước:</b> <span class="text-cyan-300 font-bold">${p.water_confidence || 95}%</span></div>
+                <div><b>Ước tính diện tích:</b> ~${p.area_km2 || 12.5} km²</div>
+                <div><b>Mực nước ước đoán:</b> ${p.water_depth_est || '1.2m'}</div>
+                <div><b>Cảm biến:</b> ${p.sensor || 'Sentinel-1A'} (${p.satellite_pass || 'Descending'})</div>
+              </div>
             </div>
-            <h4 class="font-extrabold text-sm text-slate-900 mt-1">${p.title || 'Vùng ngập SAR'}</h4>
-            <p class="text-xs text-slate-600 mt-1">${p.description || ''}</p>
-            <div class="mt-2 text-[11px] bg-cyan-50/80 p-2 rounded border border-cyan-200/80 space-y-0.5">
-              <div><b>Độ tin cậy mặt nước:</b> <span class="text-cyan-800 font-bold">${p.water_confidence || 95}%</span></div>
-              <div><b>Ước tính diện tích:</b> ~${p.area_km2 || 12.5} km²</div>
-              <div><b>Mực nước ước đoán:</b> ${p.water_depth_est || '1.2m'}</div>
-              <div><b>Cảm biến:</b> ${p.sensor || 'Sentinel-1A'} (${p.satellite_pass || 'Descending'})</div>
-            </div>
-          </div>
-        `;
-        if (activePopup) activePopup.remove();
-        if (window.maplibregl) {
-          activePopup = new window.maplibregl.Popup({ maxWidth: '320px', className: 'c2-dark-glass-popup' })
-            .setLngLat(e.lngLat)
-            .setHTML(popupContent)
-            .addTo(mapInst);
-        }
-      });
+          `;
+          if (activePopup) activePopup.remove();
+          if (window.maplibregl) {
+            activePopup = new window.maplibregl.Popup({ maxWidth: '320px', className: 'c2-dark-glass-popup' })
+              .setLngLat(e.lngLat)
+              .setHTML(popupContent)
+              .addTo(mapInst);
+          }
+        });
 
-      mapInst.on('mouseenter', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = 'pointer'; });
-      mapInst.on('mouseleave', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = ''; });
+        mapInst.on('mouseenter', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = 'pointer'; });
+        mapInst.on('mouseleave', 'sar-flood-fill', () => { mapInst.getCanvas().style.cursor = ''; });
+      }
     }
   }
 
@@ -194,13 +198,16 @@ const SarFloodManager = (function () {
     const mapInst = getMapInstance();
     if (!mapInst) return;
     try {
-      const res = await fetch(getApiUrl('/api/satellite/sar-flood-polygons'));
-      if (!res.ok) return;
-      sarData = await res.json();
-      if (mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
+      if (!sarData) {
+        const res = await fetch(getApiUrl('/api/satellite/sar-flood-polygons'));
+        if (!res.ok) return;
+        sarData = await res.json();
+      }
+      const styleReady = (mapInst.getStyle && mapInst.getStyle()) || (mapInst.isStyleLoaded && mapInst.isStyleLoaded());
+      if (styleReady) {
         setupSarLayers(mapInst);
       } else if (mapInst.once) {
-        mapInst.once('load', () => setupSarLayers(mapInst));
+        mapInst.once('style.load', () => setupSarLayers(mapInst));
       }
     } catch (e) {
       console.warn("Lỗi tải lớp viễn thám SAR:", e);
@@ -229,6 +236,7 @@ const SarFloodManager = (function () {
     get isVisible() { return isVisible; }
   };
 })();
+window.SarFloodManager = SarFloodManager;
 
 // ============================================================================
 // 3. RESCUE DISPATCH MANAGER (ĐIỀU PHỐI CỨU HỘ ĐA ĐIỂM TSP/VRP)

@@ -330,19 +330,12 @@ const StormSimulator = (function () {
       }
     }
 
-    // 6.5. Dừng mô phỏng xe chạy và xóa lộ trình nếu có
+    // 6.5. Dừng mô phỏng xe chạy và xóa lộ trình trên MapLibre nếu có
     if (window.VehicleSim && typeof VehicleSim.stop === 'function') {
       VehicleSim.stop();
     }
-    if (typeof routeLayers !== 'undefined') {
-      if (routeLayers.safe && typeof map !== 'undefined' && map) {
-        map.removeLayer(routeLayers.safe);
-        routeLayers.safe = null;
-      }
-      if (routeLayers.fastest && typeof map !== 'undefined' && map) {
-        map.removeLayer(routeLayers.fastest);
-        routeLayers.fastest = null;
-      }
+    if (typeof window.clearActiveRoute === 'function') {
+      window.clearActiveRoute();
     }
     const resultCard = document.getElementById('route-results');
     if (resultCard) resultCard.classList.add('hidden');

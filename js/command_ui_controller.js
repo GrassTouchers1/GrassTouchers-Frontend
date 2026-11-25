@@ -35,7 +35,7 @@ const CommandUIController = (function () {
       title: 'Chỉ huy trưởng Tác chiến (Command Director)',
       badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
       description: 'Toàn quyền điều hành chiến dịch, ban bố tình trạng khẩn cấp, xuất quân lực lượng và quản trị hệ thống.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_roles', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_weather', 'cmd_flood_intel', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_rescue_field', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_roles', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: true,
       canManageFleet: true,
@@ -57,7 +57,7 @@ const CommandUIController = (function () {
       title: 'Điều phối viên Tác chiến (Operations Dispatcher)',
       badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
       description: 'Tiếp nhận đa kênh, lập lệnh xuất quân, phân bổ ca-nô/xe 4x4, tính toán lộ trình cứu hộ né ngập TSP.',
-      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_intake', 'cmd_sos', 'cmd_reports', 'cmd_verification', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_rescue_field', 'cmd_safe_zones', 'cmd_operations', 'cmd_resolved_archive', 'cmd_sitrep', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: true,
       canManageFleet: true,
@@ -123,7 +123,7 @@ const CommandUIController = (function () {
       title: 'Điều phối viên Cứu hộ Thực địa (Rescue Coordinator)',
       badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
       description: 'Chỉ huy 5 đơn vị cơ động (Ca-nô 150HP, Xuồng phao, Xe 4x4, Đội lặn, Trực thăng Mi-17); giám sát cứu nạn P1.',
-      allowedViews: ['cmd_dashboard', 'cmd_sos', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_operations', 'cmd_resolved_archive', 'cmd_citizen_preview', 'cmd_licenses'],
+      allowedViews: ['cmd_dashboard', 'cmd_sos', 'cmd_disaster_map', 'cmd_maplibre_3d', 'cmd_rescue_teams', 'cmd_rescue_field', 'cmd_operations', 'cmd_resolved_archive', 'cmd_citizen_preview', 'cmd_licenses'],
       canDispatch: true,
       canVerify: false,
       canManageFleet: true,
@@ -181,6 +181,7 @@ const CommandUIController = (function () {
     archiveSearchQuery: '',
     lastSyncTime: new Date().toLocaleTimeString('vi-VN'),
     selectedIncidentId: null,
+    selectedRescueUnitId: 'UNIT-101',
     activeMapLayers: {
       sensors: true,
       disasters: true,
@@ -195,6 +196,7 @@ const CommandUIController = (function () {
   let mapInstance = null;
   let isInitialized = false;
   let intakeData = [];
+  let reliefQueueData = [];
   let sosData = [];
   let reportData = [];
   let shelterData = [];
@@ -436,8 +438,9 @@ const CommandUIController = (function () {
       if (sosRes && sosRes.ok) {
         const data = await sosRes.json();
         sosData = (data.features || []).map(f => {
-          const p = f.properties;
-          const c = f.geometry.coordinates;
+          const p = f.properties || {};
+          const hasCoords = !!(f.geometry && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length >= 2);
+          const c = hasCoords ? f.geometry.coordinates : [p.lng != null ? p.lng : null, p.lat != null ? p.lat : null];
           return {
             id: `SOS-${p.id}`,
             raw_id: p.id,
@@ -450,6 +453,7 @@ const CommandUIController = (function () {
             status: p.status || 'pending',
             lat: c[1],
             lng: c[0],
+            location_description: p.location_description || p.location_landmark || null,
             notes: p.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
             created_at: p.created_at || new Date().toISOString()
           };
@@ -505,6 +509,13 @@ const CommandUIController = (function () {
             lng: c[0]
           };
         });
+      }
+
+      // 4. Lấy hàng đợi phân loại AI Qwen3-8B (Relief Triage Queue)
+      const relRes = await fetch(getApiUrl('/api/relief/queue')).catch(() => null);
+      if (relRes && relRes.ok) {
+        const relData = await relRes.json();
+        reliefQueueData = Array.isArray(relData.items) ? relData.items : [];
       }
 
       // Hợp nhất dữ liệu thành dòng tin tiếp nhận Information Hub
@@ -785,29 +796,68 @@ const CommandUIController = (function () {
     ];
   }
 
+  function normalizePriorityCode(p) {
+    const val = String(p || 'P3').toUpperCase().trim();
+    if (val === 'P1' || val === 'CRITICAL') return 'P1';
+    if (val === 'P2' || val === 'HIGH') return 'P2';
+    if (val === 'P3' || val === 'MEDIUM') return 'P3';
+    if (val === 'P4' || val === 'LOW') return 'P4';
+    return 'P3';
+  }
+
+  function priorityRank(p) {
+    const code = normalizePriorityCode(p);
+    return code === 'P1' ? 1 : (code === 'P2' ? 2 : (code === 'P3' ? 3 : 4));
+  }
+
   function buildUnifiedIntakeFeed() {
     intakeData = [];
+    const reliefMap = {};
+    (reliefQueueData || []).forEach(r => {
+      if (r && r.request_id) reliefMap[r.request_id] = r;
+    });
 
-    // Nạp SOS khẩn cấp
+    // Nạp SOS khẩn cấp + merge kết quả phân tích AI Qwen3-8B & Guardrails
     sosData.forEach(item => {
+      const reqKey = item.id || `SOS-${item.raw_id}`;
+      const aiRec = reliefMap[reqKey] || {};
+      const aiExt = aiRec.extracted || {};
+      const aiVer = aiRec.verification || {};
+      const finalP = normalizePriorityCode(aiRec.final_priority || item.priority || 'P2');
+      const rawStatus = item.status || 'pending';
+      const normStatus = rawStatus === 'rescued' ? 'resolved' : rawStatus;
+
       intakeData.push({
-        id: item.id || `SOS-${Math.random().toString().slice(2, 6)}`,
+        id: reqKey,
         raw_id: item.raw_id,
         source: 'sos_beacon',
         source_label: '🆘 Tín Hiệu SOS',
         source_badge_color: 'bg-rose-600 text-white',
-        contact_name: item.contact_name || 'Người dân kêu cứu',
-        phone: String(item.phone || '098xxxxxxx'),
-        people_count: Number(item.people_count || 1),
-        has_vulnerable: !!item.has_vulnerable,
-        water_level_cm: Number(item.water_level_cm || 0),
-        priority: item.priority || 'critical',
-        status: item.status || 'pending',
+        contact_name: item.contact_name || aiExt.contact_name || 'Người dân kêu cứu',
+        phone: String(item.phone || aiExt.contact_phone || '098xxxxxxx'),
+        people_count: Number(item.people_count || aiExt.people_count || 1),
+        has_vulnerable: !!item.has_vulnerable || (Array.isArray(aiExt.vulnerable_people) && aiExt.vulnerable_people.length > 0),
+        vulnerable_people: aiExt.vulnerable_people || [],
+        water_level_cm: Number(item.water_level_cm || (aiExt.water_level_m ? aiExt.water_level_m * 100 : 0)),
+        water_trend: aiExt.water_trend || 'unknown',
+        mobility_status: aiExt.mobility_status || 'unknown',
+        relief_needs: aiExt.relief_needs || [],
+        location_text: aiExt.location_text || '',
+        priority: finalP === 'P1' ? 'critical' : (finalP === 'P2' ? 'high' : (finalP === 'P3' ? 'medium' : 'low')),
+        final_priority: finalP,
+        raw_ai_priority: aiExt.raw_ai_priority || finalP,
+        ai_priority_reasons: aiRec.priority_reasons || [],
+        guardrails_applied: aiRec.guardrails_applied || [],
+        was_downgrade_prevented: !!aiRec.was_downgrade_prevented,
+        verification_status: aiVer.verification_status || (rawStatus === 'verified' ? 'content_verified' : 'needs_verification'),
+        requires_human_review: aiRec.requires_human_review !== undefined ? !!aiRec.requires_human_review : (rawStatus === 'pending'),
+        override_history: aiRec.override_history || [],
+        status: normStatus,
         lat: Number(item.lat || 21.0285),
         lng: Number(item.lng || 105.8542),
         description: item.notes || 'Cần cứu trợ khẩn cấp, đang bị cô lập.',
         created_at: item.created_at || new Date().toISOString(),
-        is_verified: item.priority === 'critical' || item.status !== 'pending'
+        is_verified: rawStatus === 'verified' || rawStatus === 'dispatched' || rawStatus === 'on_scene' || rawStatus === 'resolved' || aiVer.verification_status === 'content_verified'
       });
     });
 
@@ -1004,16 +1054,28 @@ const CommandUIController = (function () {
       targetPane.classList.remove('hidden');
     }
 
-    // Xử lý di chuyển container bản đồ giữa Dashboard và Fullscreen GIS
+    // Xử lý di chuyển container bản đồ giữa Dashboard, Fullscreen GIS, Đội Cứu Hộ và Cổng Dân Sự
     const mapContainer = document.getElementById('map-container');
     const dashPane = document.getElementById('pane-cmd_dashboard');
     const triagePanel = document.getElementById('dashboard-triage-panel');
     const fsPane = document.getElementById('pane-cmd_disaster_map');
+    const citizenMapSlot = document.getElementById('citizen-map-slot');
+    const rescueMapSlot = document.getElementById('rescue-map-slot');
 
     if (viewId === 'cmd_disaster_map' && fsPane && mapContainer) {
       if (mapContainer.parentElement !== fsPane) {
         fsPane.innerHTML = '';
         fsPane.appendChild(mapContainer);
+      }
+    } else if (viewId === 'cmd_citizen_preview' && citizenMapSlot && mapContainer) {
+      if (mapContainer.parentElement !== citizenMapSlot) {
+        citizenMapSlot.innerHTML = '';
+        citizenMapSlot.appendChild(mapContainer);
+      }
+    } else if (viewId === 'cmd_rescue_field' && rescueMapSlot && mapContainer) {
+      if (mapContainer.parentElement !== rescueMapSlot) {
+        rescueMapSlot.innerHTML = '';
+        rescueMapSlot.appendChild(mapContainer);
       }
     } else if (dashPane && mapContainer && mapContainer.parentElement !== dashPane) {
       // Đưa bản đồ về lại Bảng điều hành COP Dashboard
@@ -1021,6 +1083,24 @@ const CommandUIController = (function () {
         dashPane.insertBefore(mapContainer, triagePanel);
       } else {
         dashPane.prepend(mapContainer);
+      }
+    }
+
+    // Cập nhật nút chuyển đổi 3 Góc nhìn trên Top Header
+    const btnCmd = document.getElementById('btn-mode-command');
+    const btnRes = document.getElementById('btn-mode-rescue');
+    const btnCit = document.getElementById('btn-mode-citizen');
+    if (btnCmd && btnCit) {
+      const inactiveCls = 'px-2 py-1 rounded-md text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1';
+      btnCmd.className = inactiveCls;
+      if (btnRes) btnRes.className = inactiveCls;
+      btnCit.className = inactiveCls;
+      if (viewId === 'cmd_citizen_preview') {
+        btnCit.className = 'px-2 py-1 rounded-md text-[10px] font-black bg-blue-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1';
+      } else if (viewId === 'cmd_rescue_field' && btnRes) {
+        btnRes.className = 'px-2 py-1 rounded-md text-[10px] font-black bg-amber-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1';
+      } else {
+        btnCmd.className = 'px-2 py-1 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-xs transition cursor-pointer flex items-center gap-1';
       }
     }
 
@@ -1040,14 +1120,26 @@ const CommandUIController = (function () {
       fetchAndRenderOpenAQStations();
     }
 
-    if (viewId === 'cmd_maplibre_3d' || viewId === 'cmd_disaster_map') {
-      // Tự động thu gọn bảng chỉ số KPI và sidebar để nhường 100% không gian khoáng đạt cho bản đồ
-      toggleTopStatsCollapse(true);
-      toggleSidebarCollapse(true);
+    if (viewId === 'cmd_maplibre_3d' || viewId === 'cmd_disaster_map' || viewId === 'cmd_citizen_preview' || viewId === 'cmd_rescue_field') {
+      // Thu gọn thanh KPI & sidebar ở các góc nhìn chuyên biệt để không gian thoáng và tập trung
+      toggleTopStatsCollapse(true, true);
+      toggleSidebarCollapse(true, true);
+      if (viewId === 'cmd_citizen_preview' || viewId === 'cmd_rescue_field') {
+        const flSidebar = document.getElementById('floating-btn-expand-sidebar');
+        const flStats = document.getElementById('floating-stats-hud');
+        if (flSidebar) { flSidebar.classList.add('hidden'); flSidebar.classList.remove('flex'); }
+        if (flStats) { flStats.classList.add('hidden'); flStats.classList.remove('flex'); }
+      }
     } else if (viewId === 'cmd_dashboard') {
-      // Khôi phục lại trạng thái đầy đủ khi quay lại Dashboard điều hành
-      toggleTopStatsCollapse(false);
-      toggleSidebarCollapse(false);
+      // Khôi phục lại trạng thái đầy đủ khi quay lại Dashboard điều hành (trên mobile tự thu gọn sidebar để ưu tiên bản đồ)
+      toggleTopStatsCollapse(false, true);
+      toggleSidebarCollapse(window.innerWidth < 1024, true);
+    }
+
+    if (viewId === 'cmd_citizen_preview' && window.NorthStarRescue) {
+      window.NorthStarRescue.loadShelters();
+      window.NorthStarRescue.loadDisasters();
+      window.NorthStarRescue.loadSOSBeacons();
     }
 
     if (viewId === 'cmd_maplibre_3d' && window.NorthStarMapLibre) {
@@ -1180,30 +1272,28 @@ const CommandUIController = (function () {
       songda: { lat: 21.05, lng: 105.30, zoom: 10, name: 'Sông Đà' }
     };
 
-    const target = regionCoords[regionKey] || regionCoords.all;
+    const dynTargets = (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.getRegionTargets === 'function')
+      ? window.ProvinceWeatherLayer.getRegionTargets()
+      : {};
+    const target = dynTargets[regionKey] || regionCoords[regionKey] || regionCoords.all;
     if (window.map) {
       window.map.flyTo([target.lat, target.lng], target.zoom, { duration: 1.2 });
     }
 
-    const regSelect = document.getElementById('cmd-region-selector');
-    if (regSelect && regSelect.value !== regionKey) {
-      if (Array.from(regSelect.options).some(opt => opt.value === regionKey)) {
-        regSelect.value = regionKey;
+    ['cmd-region-selector', 'region-jump-select', 'ml-region-select'].forEach(selId => {
+      const selEl = document.getElementById(selId);
+      if (selEl && selEl.value !== regionKey) {
+        if (Array.from(selEl.options).some(opt => opt.value === regionKey)) {
+          selEl.value = regionKey;
+        }
       }
-    }
-
-    const mapJumpSelect = document.getElementById('region-jump-select');
-    if (mapJumpSelect && mapJumpSelect.value !== regionKey) {
-      if (Array.from(mapJumpSelect.options).some(opt => opt.value === regionKey)) {
-        mapJumpSelect.value = regionKey;
-      }
-    }
+    });
 
     const regionName = target.name || regionKey.toUpperCase();
     showToast('📍 CHUYỂN VÙNG TÁC CHIẾN', `Trọng tâm giám sát: ${regionName}`, 'info');
   }
 
-  function toggleSidebarCollapse(forceState) {
+  function toggleSidebarCollapse(forceState, silent = false) {
     if (typeof forceState === 'boolean') {
       state.sidebarCollapsed = forceState;
     } else {
@@ -1221,7 +1311,7 @@ const CommandUIController = (function () {
           floatingBtn.classList.add('flex');
         }
         if (collapseIcon) collapseIcon.setAttribute('data-lucide', 'menu');
-        showToast('SIDEBAR TÁC CHIẾN', 'Đã thu gọn sidebar để mở rộng bản đồ (Phím [)', 'info', 1500);
+        if (!silent) showToast('SIDEBAR TÁC CHIẾN', 'Đã thu gọn sidebar để mở rộng bản đồ (Phím [)', 'info', 1500);
       } else {
         sidebarEl.classList.remove('hidden');
         sidebarEl.classList.add('w-64');
@@ -1271,7 +1361,7 @@ const CommandUIController = (function () {
     }, 150);
   }
 
-  function toggleTopStatsCollapse(forceState) {
+  function toggleTopStatsCollapse(forceState, silent = false) {
     if (typeof forceState === 'boolean') {
       state.topStatsCollapsed = forceState;
     } else {
@@ -1291,7 +1381,7 @@ const CommandUIController = (function () {
         }
         if (iconBtn) iconBtn.setAttribute('data-lucide', 'panel-top-open');
         if (textBtn) textBtn.innerText = 'Mở rộng chỉ số';
-        showToast('BẢNG CHỈ SỐ', 'Đã thu gọn thanh chỉ số để mở rộng bản đồ (Phím \\)', 'info', 1500);
+        if (!silent) showToast('BẢNG CHỈ SỐ', 'Đã thu gọn thanh chỉ số để mở rộng bản đồ (Phím \\)', 'info', 1500);
       } else {
         statsContainer.classList.remove('hidden');
         if (floatingHud) {
@@ -1382,6 +1472,7 @@ const CommandUIController = (function () {
     renderWeatherView();
     renderMissionsView();
     renderFleetView();
+    renderRescueFieldView();
     renderSheltersView();
     renderSitRepView();
     renderRolesView();
@@ -1493,10 +1584,15 @@ const CommandUIController = (function () {
 
     const roleCfg = ROLES_CONFIG[state.userRole] || ROLES_CONFIG.director;
 
-    // Lấy tối đa 8 tin khẩn cấp nhất chưa giải quyết (loại bỏ hoàn toàn tin đã cứu hộ/giải quyết xong)
+    // Lấy tối đa 10 tin khẩn cấp nhất chưa giải quyết, sắp xếp ưu tiên P1 -> P4 trước rồi đến thời gian mới nhất
     const urgentItems = intakeData
       .filter(i => !i.is_duplicate && i.status !== 'resolved' && i.status !== 'rescued')
-      .slice(0, 8);
+      .sort((a, b) => {
+        const rDiff = priorityRank(a.final_priority || a.priority) - priorityRank(b.final_priority || b.priority);
+        if (rDiff !== 0) return rDiff;
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      })
+      .slice(0, 10);
 
     if (urgentItems.length === 0) {
       feedEl.innerHTML = `
@@ -1584,12 +1680,32 @@ const CommandUIController = (function () {
 
     // Lọc theo trạng thái xử lý cứu hộ
     if (state.activeIntakeStatusFilter === 'pending') {
-      items = items.filter(i => i.status === 'pending' || i.status === 'verified');
+      items = items.filter(i => i.status === 'pending' || i.status === 'verified' || i.status === 'acknowledged');
     } else if (state.activeIntakeStatusFilter === 'dispatched') {
       items = items.filter(i => i.status === 'dispatched' || i.status === 'on_scene');
     } else if (state.activeIntakeStatusFilter === 'resolved') {
       items = items.filter(i => i.status === 'resolved' || i.status === 'rescued');
     }
+
+    // Lọc theo mức độ ưu tiên AI (P1-P4)
+    if (state.activePriorityFilter && state.activePriorityFilter !== 'all') {
+      const targetP = state.activePriorityFilter.toUpperCase();
+      items = items.filter(i => normalizePriorityCode(i.final_priority || i.priority) === targetP);
+    }
+
+    // Lọc theo cấp độ xác minh
+    if (state.activeVerificationFilter === 'verified') {
+      items = items.filter(i => i.is_verified || i.verification_status === 'content_verified' || i.verification_status === 'source_verified');
+    } else if (state.activeVerificationFilter === 'needs_verification') {
+      items = items.filter(i => !i.is_verified && (i.verification_status === 'needs_verification' || i.requires_human_review));
+    }
+
+    // Sắp xếp chuẩn P1 -> P4 (FIFO theo thời gian)
+    items.sort((a, b) => {
+      const rDiff = priorityRank(a.final_priority || a.priority) - priorityRank(b.final_priority || b.priority);
+      if (rDiff !== 0) return rDiff;
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
     if (items.length === 0) {
       listEl.innerHTML = `
@@ -1598,8 +1714,8 @@ const CommandUIController = (function () {
             <div class="max-w-md mx-auto space-y-2">
               <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-500 opacity-60"></i>
               <div class="font-bold text-slate-300">Không có tin tiếp nhận nào phù hợp với bộ lọc hiện tại.</div>
-              <button onclick="CommandUIController.filterIntake('all')" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer text-xs">
-                Nhấn vào đây để xem tất cả tin tiếp nhận
+              <button onclick="CommandUIController.filterIntake('all'); CommandUIController.filterIntakeStatus('all'); CommandUIController.filterIntakePriority('all'); CommandUIController.filterIntakeVerification('all');" class="text-rose-400 font-bold underline hover:text-rose-300 cursor-pointer text-xs">
+                Nhấn vào đây để đặt lại tất cả bộ lọc
               </button>
             </div>
           </td>
@@ -1610,12 +1726,22 @@ const CommandUIController = (function () {
     }
 
     listEl.innerHTML = items.map(item => {
-      let priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap shadow-xs">⚪ Bình thường</span>';
-      if (item.priority === 'critical') {
+      const pCode = normalizePriorityCode(item.final_priority || item.priority);
+      let priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap shadow-xs">⚪ P4 Theo dõi</span>';
+      if (pCode === 'P1') {
         priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-black bg-rose-950/90 text-rose-300 border border-rose-700/80 whitespace-nowrap shadow-xs animate-pulse">🔴 P1 Khẩn Cấp</span>';
-      } else if (item.priority === 'high') {
-        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-amber-950/90 text-amber-300 border border-amber-700/80 whitespace-nowrap shadow-xs">🟠 P2 Ưu Tiên</span>';
+      } else if (pCode === 'P2') {
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-amber-950/90 text-amber-300 border border-amber-700/80 whitespace-nowrap shadow-xs">🟠 P2 Nguy Cơ Cao</span>';
+      } else if (pCode === 'P3') {
+        priorityBadge = '<span class="inline-flex items-center gap-1.5 text-[10.5px] px-2.5 py-1 rounded-md font-bold bg-sky-950/90 text-sky-300 border border-sky-700/80 whitespace-nowrap shadow-xs">🟡 P3 Cần Cứu Trợ</span>';
       }
+
+      const antiDowngradeBadge = item.was_downgrade_prevented
+        ? '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-black bg-indigo-950 text-indigo-300 border border-indigo-700" title="Guardrails đã chặn hạ mức ưu tiên">🛡️ Guardrail</span>'
+        : '';
+      const missingInfoBadge = (!item.is_verified && (item.verification_status === 'needs_verification' || item.requires_human_review))
+        ? '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-950/90 text-amber-300 border border-amber-700/70" title="Cần Xác minh viên đối soát">❓ Cần XM</span>'
+        : '';
 
       const verifyBtnHtml = roleCfg.canVerify ? `
         <button onclick="CommandUIController.verifyIncident('${item.id}')" title="Xác minh tin chính xác" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[10.5px] cursor-pointer transition whitespace-nowrap">
@@ -1657,10 +1783,12 @@ const CommandUIController = (function () {
           </td>
           <td class="p-3 whitespace-nowrap">${priorityBadge}${antiDowngradeBadge}${missingInfoBadge}</td>
           <td class="p-3 whitespace-nowrap">
-            ${item.status === 'resolved' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800 whitespace-nowrap">✅ Đã cứu</span>' :
-              (item.status === 'dispatched' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-blue-950/80 text-blue-300 border border-blue-800 whitespace-nowrap animate-pulse">🚑 Đang ứng cứu</span>' :
-                (item.is_verified ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-teal-950/80 text-teal-300 border border-teal-800 whitespace-nowrap">✓ Đã duyệt</span>' :
-                  '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-amber-950/80 text-amber-300 border border-amber-800 whitespace-nowrap">⏳ Chờ duyệt</span>'))}
+            ${(item.status === 'resolved' || item.status === 'rescued') ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800 whitespace-nowrap">✅ Đã cứu</span>' :
+              (item.status === 'on_scene' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-purple-950/80 text-purple-300 border border-purple-800 whitespace-nowrap animate-pulse">🎯 Tại hiện trường</span>' :
+                (item.status === 'dispatched' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-blue-950/80 text-blue-300 border border-blue-800 whitespace-nowrap animate-pulse">🚑 Đang ứng cứu</span>' :
+                  (item.status === 'acknowledged' ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800 whitespace-nowrap">📥 Đội đã nhận</span>' :
+                    (item.is_verified ? '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-teal-950/80 text-teal-300 border border-teal-800 whitespace-nowrap">✓ Đã duyệt</span>' :
+                      '<span class="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded font-bold bg-amber-950/80 text-amber-300 border border-amber-800 whitespace-nowrap">⏳ Chờ duyệt</span>'))))}
           </td>
           <td class="p-3 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1.5">
@@ -2288,6 +2416,214 @@ const CommandUIController = (function () {
     if (window.lucide) lucide.createIcons();
   }
 
+  // KHỐI 8B: RESCUE TEAM FIELD WORKSPACE (GÓC NHÌN ĐỘI CỨU HỘ THỰC ĐỊA)
+  function renderRescueFieldView() {
+    const container = document.getElementById('rescue-field-tasks-list');
+    const unitSelect = document.getElementById('rescue-field-unit-select');
+    const unitStatusBadge = document.getElementById('rescue-field-unit-status');
+    const activeCountEl = document.getElementById('rescue-field-active-count');
+    const doneCountEl = document.getElementById('rescue-field-done-count');
+    if (!container) return;
+
+    if (unitSelect && unitSelect.options.length === 0 && unitsData.length > 0) {
+      unitSelect.innerHTML = unitsData.map(u => `<option value="${u.id}">${u.id} — ${u.name}</option>`).join('');
+      unitSelect.value = state.selectedRescueUnitId || unitsData[0].id;
+    }
+
+    const activeUnit = unitsData.find(u => u.id === state.selectedRescueUnitId) || unitsData[0];
+    if (unitStatusBadge && activeUnit) {
+      const stLabels = {
+        ready: ['🟢 SẴN SÀNG XUẤT QUÂN', 'bg-emerald-950 text-emerald-300 border-emerald-700'],
+        en_route: ['🚑 ĐANG CƠ ĐỘNG', 'bg-blue-950 text-blue-300 border-blue-700 animate-pulse'],
+        on_scene: ['🎯 TẠI HIỆN TRƯỜNG', 'bg-purple-950 text-purple-300 border-purple-700 animate-pulse'],
+        standby: ['⚪ BẢO DƯỠNG', 'bg-slate-800 text-slate-300 border-slate-700']
+      };
+      const [txt, cls] = stLabels[activeUnit.status] || stLabels.ready;
+      unitStatusBadge.textContent = txt;
+      unitStatusBadge.className = `px-2.5 py-1 rounded-full text-[10px] font-black border ${cls}`;
+    }
+
+    const allSosTasks = intakeData
+      .filter(i => i.source === 'sos_beacon' && !i.is_duplicate)
+      .sort((a, b) => priorityRank(a.final_priority || a.priority) - priorityRank(b.final_priority || b.priority));
+
+    const openTasks = allSosTasks.filter(t => t.status !== 'resolved' && t.status !== 'rescued');
+    const completedTasks = allSosTasks.filter(t => t.status === 'resolved' || t.status === 'rescued');
+
+    if (activeCountEl) activeCountEl.textContent = `${openTasks.length} nhiệm vụ`;
+    if (doneCountEl) doneCountEl.textContent = `${completedTasks.length} đã cứu`;
+
+    if (openTasks.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 bg-slate-900 border border-slate-800 rounded-xl text-center space-y-2">
+          <i data-lucide="shield-check" class="w-10 h-10 mx-auto text-emerald-400"></i>
+          <div class="text-sm font-bold text-white">Tất cả yêu cầu SOS trong khu vực đã được giải cứu an toàn!</div>
+          <div class="text-xs text-slate-400">Đội cứu hộ đang ở trạng thái trực chiến sẵn sàng.</div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = openTasks.map(t => {
+      const pCode = normalizePriorityCode(t.final_priority || t.priority);
+      const pBadge = pCode === 'P1'
+        ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-black animate-pulse">🔴 P1 KHẨN CẤP</span>'
+        : (pCode === 'P2'
+          ? '<span class="px-2 py-0.5 rounded bg-amber-600 text-white text-[10px] font-bold">🟠 P2 NGUY CƠ CAO</span>'
+          : '<span class="px-2 py-0.5 rounded bg-sky-700 text-white text-[10px] font-bold">🟡 ' + pCode + '</span>');
+
+      const stMap = {
+        pending: { label: '⏳ Chờ tiếp nhận', cls: 'bg-amber-950 text-amber-300 border-amber-800' },
+        verified: { label: '✓ Đã xác minh', cls: 'bg-teal-950 text-teal-300 border-teal-800' },
+        acknowledged: { label: '📥 Đã tiếp nhận', cls: 'bg-cyan-950 text-cyan-300 border-cyan-800' },
+        dispatched: { label: '🚑 Đang di chuyển', cls: 'bg-blue-950 text-blue-300 border-blue-800 animate-pulse' },
+        on_scene: { label: '🎯 Tại hiện trường', cls: 'bg-purple-950 text-purple-300 border-purple-800 animate-pulse' }
+      };
+      const stInfo = stMap[t.status] || stMap.pending;
+      const distKm = activeUnit ? getHaversineDistanceKm(t.lat, t.lng, activeUnit.lat, activeUnit.lng) : '--';
+
+      let nextStepBtns = '';
+      if (t.status === 'pending' || t.status === 'verified') {
+        nextStepBtns = `
+          <button onclick="CommandUIController.fieldAdvanceSOS('${t.raw_id}', 'acknowledged')" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black text-xs cursor-pointer transition">
+            📥 Tiếp Nhận Nhiệm Vụ
+          </button>
+          <button onclick="CommandUIController.fieldAdvanceSOS('${t.raw_id}', 'dispatched')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-xs cursor-pointer transition">
+            🚤 Xuất Quân Ngay
+          </button>
+        `;
+      } else if (t.status === 'acknowledged' || t.status === 'dispatched') {
+        nextStepBtns = `
+          <button onclick="CommandUIController.fieldAdvanceSOS('${t.raw_id}', 'on_scene')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-black text-xs cursor-pointer transition">
+            🎯 Đã Tới Hiện Trường
+          </button>
+          <button onclick="CommandUIController.fieldCompleteSOS('${t.raw_id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-black text-xs cursor-pointer transition">
+            ✅ Hoàn Thành Giải Cứu
+          </button>
+        `;
+      } else if (t.status === 'on_scene') {
+        nextStepBtns = `
+          <button onclick="CommandUIController.fieldCompleteSOS('${t.raw_id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-black text-xs cursor-pointer shadow-lg shadow-emerald-600/30 transition animate-pulse">
+            ✅ Hoàn Thành Giải Cứu & Bàn Giao
+          </button>
+        `;
+      }
+
+      return `
+        <div class="p-3.5 bg-slate-900 border ${pCode === 'P1' ? 'border-rose-700/70' : 'border-slate-800'} rounded-xl space-y-2.5 shadow-md">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-black text-xs text-sky-400">${t.id}</span>
+              ${pBadge}
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${stInfo.cls}">${stInfo.label}</span>
+          </div>
+
+          <div>
+            <div class="font-bold text-white text-sm flex items-center justify-between">
+              <span>${t.contact_name} (${t.people_count} người ${t.has_vulnerable ? '• ⚠️ Có trẻ nhỏ/người già' : ''})</span>
+              <span class="text-[11px] font-mono text-amber-300">~${distKm} km</span>
+            </div>
+            <div class="text-xs text-slate-300 mt-0.5 flex items-center gap-3 flex-wrap">
+              <a href="tel:${t.phone}" class="text-emerald-400 font-bold hover:underline">📞 ${t.phone}</a>
+              ${t.water_level_cm > 0 ? `<span class="text-cyan-300 font-semibold">🌊 Ngập ~${t.water_level_cm}cm</span>` : ''}
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-300 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 leading-relaxed">"${t.description}"</p>
+
+          <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+            <div class="flex items-center gap-2">
+              <button onclick="CommandUIController.flyToLocation(${t.lat}, ${t.lng}, '${t.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer transition">
+                🎯 Xem Vị Trí
+              </button>
+              <button onclick="CommandUIController.openIncidentDocket('${t.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer transition">
+                📝 Ghi Chú
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${nextStepBtns}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function selectFieldUnit(unitId) {
+    state.selectedRescueUnitId = unitId;
+    const unit = unitsData.find(u => u.id === unitId);
+    if (unit) {
+      flyToLocation(unit.lat, unit.lng, unit.name);
+    }
+    renderRescueFieldView();
+  }
+
+  async function fieldAdvanceSOS(idOrRawId, newStatus) {
+    const rawId = String(idOrRawId || '').replace(/^SOS-/i, '');
+    try {
+      const res = await fetch(getApiUrl(`/api/sos/${rawId}/status`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const unit = unitsData.find(u => u.id === state.selectedRescueUnitId);
+      if (unit) {
+        unit.status = (newStatus === 'on_scene') ? 'on_scene' : 'en_route';
+      }
+
+      const sosItem = sosData.find(s => String(s.raw_id) === String(rawId));
+      if (sosItem) sosItem.status = newStatus;
+
+      const intakeItem = intakeData.find(i => i.source === 'sos_beacon' && String(i.raw_id) === String(rawId));
+      if (intakeItem) {
+        intakeItem.status = newStatus;
+        intakeItem.is_verified = true;
+        intakeItem.audit_trail = intakeItem.audit_trail || [];
+        intakeItem.audit_trail.push({
+          time: new Date().toLocaleTimeString('vi-VN'),
+          icon: 'navigation',
+          color: 'sky',
+          title: `Đội cứu hộ cập nhật: ${newStatus}`,
+          note: `${unit ? unit.name : 'Đội cứu hộ'} đã chuyển trạng thái nhiệm vụ sang [${newStatus}].`
+        });
+      }
+
+      renderAllComponents();
+      renderTacticalMapLayers();
+      if (window.NorthStarRescue) window.NorthStarRescue.loadSOSBeacons();
+      showToast('🚒 CẬP NHẬT THỰC ĐỊA', `Hồ sơ SOS-${rawId} đã chuyển sang trạng thái [${newStatus.toUpperCase()}].`, 'success');
+    } catch (err) {
+      showToast('Lỗi cập nhật nhiệm vụ', err.message, 'error');
+    }
+  }
+
+  async function fieldCompleteSOS(idOrRawId) {
+    const rawId = String(idOrRawId || '').replace(/^SOS-/i, '');
+    try {
+      const res = await fetch(getApiUrl(`/api/sos/${rawId}/status`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rescued' })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const unit = unitsData.find(u => u.id === state.selectedRescueUnitId);
+      if (unit) unit.status = 'ready';
+
+      updateSOSStatus(rawId, 'rescued');
+      if (window.NorthStarRescue) window.NorthStarRescue.loadSOSBeacons();
+      showToast('✅ HOÀN THÀNH GIẢI CỨU', `Nạn nhân SOS-${rawId} đã được giải cứu an toàn! Dữ liệu Dashboard & Người dân đã đồng bộ.`, 'success');
+    } catch (err) {
+      showToast('Lỗi hoàn thành nhiệm vụ', err.message, 'error');
+    }
+  }
+
   // KHỐI 8: RESCUE FLEET VIEW
   function renderFleetView() {
     const listEl = document.getElementById('cmd-fleet-container');
@@ -2785,28 +3121,14 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       badgeClass: 'bg-teal-950/80 text-teal-300 border-teal-700'
     },
 
-    // 2. Thư viện & Công nghệ Giao diện Client (6 thành phần)
-    {
-      id: 'leaflet',
-      name: 'Leaflet.js',
-      version: 'v1.9.4',
-      category: 'frontend',
-      categoryLabel: 'Giao diện & Bản đồ (Frontend)',
-      role: 'Engine hiển thị bản đồ tương tác GIS, quản lý Tiles, GeoJSON Polygons, Popups và Tooltips',
-      license: 'BSD 2-Clause (OSI Approved)',
-      licenseUrl: 'https://opensource.org/licenses/BSD-2-Clause',
-      termsUrl: 'https://github.com/Leaflet/Leaflet/blob/main/LICENSE',
-      icon: '🍃',
-      type: 'Interactive Map JavaScript Library',
-      badgeClass: 'bg-blue-950/80 text-blue-300 border-blue-700'
-    },
+    // 2. Thư viện & Công nghệ Giao diện Client (Thành phần WebGL Bản đồ duy nhất)
     {
       id: 'maplibre-gl',
       name: 'MapLibre GL JS',
-      version: 'v4.7.1 (Dual Engine)',
+      version: 'v4.7.1 (Unified WebGL Engine)',
       category: 'frontend',
       categoryLabel: 'Giao diện & Bản đồ (Frontend)',
-      role: 'Engine hiển thị bản đồ 3D Vector WebGL song song với Leaflet, hỗ trợ nghiêng góc 3D, xoay 360 độ và tăng tốc phần cứng GPU',
+      role: 'Engine hiển thị bản đồ GIS 2D & 3D Vector/Vệ tinh WebGL duy nhất toàn hệ thống, hỗ trợ gom cụm GPU 225 trạm đo, Popups, Tooltips và Terrain 3D',
       license: 'BSD 3-Clause (OSI Approved)',
       licenseUrl: 'https://opensource.org/licenses/BSD-3-Clause',
       termsUrl: 'https://github.com/maplibre/maplibre-gl-js/blob/main/LICENSE.txt',
@@ -3208,17 +3530,6 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
               <tbody class="divide-y divide-slate-800/60 text-[11.5px]">
                 <tr class="hover:bg-slate-800/40">
                   <td class="p-2 font-bold text-white flex items-center gap-1.5">
-                    <span class="text-emerald-400">🍃</span> Leaflet.js (v1.9.4)
-                  </td>
-                  <td class="p-2 font-mono font-bold text-emerald-300">BSD-2-Clause</td>
-                  <td class="p-2">
-                    <a href="https://opensource.org/license/bsd-2-clause" target="_blank" class="text-cyan-400 underline font-semibold">OSI Approved (#18) ↗</a>
-                  </td>
-                  <td class="p-2 text-emerald-400 font-bold">✓ 100% FOSS Mở tự do</td>
-                  <td class="p-2 text-slate-300 font-medium">Lõi tác chiến 2D C2, nhẹ, ổn định trên mọi thiết bị di động</td>
-                </tr>
-                <tr class="hover:bg-slate-800/40">
-                  <td class="p-2 font-bold text-white flex items-center gap-1.5">
                     <span class="text-cyan-400">🌐</span> MapLibre GL JS (v4.7.1)
                   </td>
                   <td class="p-2 font-mono font-bold text-cyan-300">BSD-3-Clause</td>
@@ -3226,7 +3537,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
                     <a href="https://opensource.org/license/bsd-3-clause" target="_blank" class="text-cyan-400 underline font-semibold">OSI Approved (#19) ↗</a>
                   </td>
                   <td class="p-2 text-emerald-400 font-bold">✓ 100% FOSS (Linux Foundation)</td>
-                  <td class="p-2 text-slate-300 font-medium">Lõi Vector 3D WebGL, xoay góc nghiêng 360°, tăng tốc GPU</td>
+                  <td class="p-2 text-slate-300 font-medium">Engine duy nhất toàn hệ thống (2D/3D WebGL, GPU Clustering)</td>
                 </tr>
                 <tr class="hover:bg-slate-800/40 bg-rose-950/20">
                   <td class="p-2 font-bold text-rose-300 flex items-center gap-1.5">
@@ -3241,7 +3552,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
             </table>
           </div>
           <div class="p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-amber-300/90 leading-relaxed">
-            💡 <b>Ghi chú phản biện trước Ban Giám Khảo:</b> Thư viện bị đóng mã nguồn thương mại là <b>Mapbox GL JS (từ v2.0)</b>, chính vì vậy cộng đồng mã nguồn mở và Linux Foundation đã fork ra <b>MapLibre GL JS</b>. Còn <b>Leaflet.js</b> từ khi ra đời đến nay vẫn luôn là FOSS 100% dưới giấy phép mở BSD-2-Clause. Hệ thống NorthStar tích hợp <b>cả hai động cơ mở (Dual-Engine)</b> nhằm tối ưu hóa 100% khả năng cứu nạn.
+            💡 <b>Ghi chú phản biện trước Ban Giám Khảo:</b> Thư viện bị đóng mã nguồn thương mại là <b>Mapbox GL JS (từ v2.0)</b>, chính vì vậy cộng đồng mã nguồn mở và Linux Foundation đã fork ra <b>MapLibre GL JS (BSD-3-Clause)</b>. Toàn bộ hệ thống NorthStar sử dụng <b>duy nhất MapLibre GL JS</b> tăng tốc GPU trên cả 2D và 3D.
           </div>
         </div>
 
@@ -4632,6 +4943,15 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     if (item) {
       item.is_verified = true;
       item.status = 'verified';
+      item.verification_status = 'content_verified';
+
+      if (item.source === 'sos_beacon' && item.raw_id) {
+        fetch(getApiUrl(`/api/sos/${item.raw_id}/status`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'verified' })
+        }).catch(e => console.warn(e));
+      }
 
       if (!item.audit_trail) item.audit_trail = [];
       item.audit_trail.push({
@@ -4799,7 +5119,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
       if (e.key === 'Escape') {
         closeDispatchModal();
-      } else if (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'm') {
+      } else if (e.key.toLowerCase() === 'z') {
         toggleZenMapMode();
       } else if (e.key === '[') {
         toggleSidebarCollapse();
@@ -4827,7 +5147,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     if (!container) {
       container = document.createElement('div');
       container.id = 'command-toast-container';
-      container.className = 'fixed bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none';
+      container.className = 'fixed bottom-12 right-4 z-[9990] flex flex-col gap-2 pointer-events-none';
       document.body.appendChild(container);
     }
 
@@ -5077,7 +5397,7 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     }
 
     try {
-      await fetch(`/api/relief/queue/${reqId}/override`, {
+      const ovRes = await fetch(getApiUrl(`/api/relief/queue/${reqId}/override`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -5086,6 +5406,11 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
           reason: reason
         })
       });
+      if (!ovRes.ok) {
+        const errPayload = await ovRes.json().catch(() => ({}));
+        showToast('⛔ KHÔNG ĐỦ QUYỀN / LỖI GHI ĐÈ', errPayload.detail || `HTTP ${ovRes.status}: Cần vai trò Điều phối (Coordinator) hoặc Admin.`, 'warning');
+        return;
+      }
     } catch (e) {
       console.warn('API override fallback locally:', e);
     }
@@ -5246,6 +5571,10 @@ IV. MỆNH LỆNH CHỈ ĐẠO TÁC CHIẾN TRONG 12 GIỜ TIẾP THEO:
     rejectIncident,
     toggleUnitStatus,
     updateMissionStatus,
+    renderRescueFieldView,
+    selectFieldUnit,
+    fieldAdvanceSOS,
+    fieldCompleteSOS,
     updateShelterCapacity,
     drawTacticalMissionRoute,
     copySitRepToClipboard,

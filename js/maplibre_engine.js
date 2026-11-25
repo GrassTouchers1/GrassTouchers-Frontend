@@ -79,6 +79,7 @@ window.NorthStarMapLibre = (function () {
   const BASEMAP_STYLES = {
     dark: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'esri-dark': {
           type: 'raster',
@@ -103,6 +104,7 @@ window.NorthStarMapLibre = (function () {
     },
     satellite: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'esri-satellite': {
           type: 'raster',
@@ -127,6 +129,7 @@ window.NorthStarMapLibre = (function () {
     },
     topo: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'esri-topo': {
           type: 'raster',
@@ -143,6 +146,7 @@ window.NorthStarMapLibre = (function () {
     },
     osm: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'esri-streets': {
           type: 'raster',
@@ -315,6 +319,7 @@ window.NorthStarMapLibre = (function () {
         setup3DBuildingsVectorLayer();
         setupRainRadarVectorLayer();
         setupFloodCirclesVectorLayer();
+        setupFloodPointsGeoJsonLayer();
         syncAllLayers();
         setupSpotlightSearch();
         initTacticalDrawerData();
@@ -351,18 +356,20 @@ window.NorthStarMapLibre = (function () {
       });
 
       // Tự động gom cụm hoặc mở rộng điểm đo ngập khi zoom / di chuyển
-      mapInstance.on('zoomend', () => {
-        if (layerVisibility.floodPoints) syncFloodPointMarkers();
+      const onViewportUpdated = () => {
+        if (layerVisibility.floodPoints) {
+          if (cachedRawFloodPoints.length > 0) {
+            renderClusteredFloodMarkers();
+          } else {
+            syncFloodPointMarkers();
+          }
+        }
         syncFloodCirclesData();
         updateMapLibreViewportAlert();
         renderHanoiDistrictMarkers();
-      });
-      mapInstance.on('moveend', () => {
-        if (layerVisibility.floodPoints) syncFloodPointMarkers();
-        syncFloodCirclesData();
-        updateMapLibreViewportAlert();
-        renderHanoiDistrictMarkers();
-      });
+      };
+      mapInstance.on('zoomend', onViewportUpdated);
+      mapInstance.on('moveend', onViewportUpdated);
 
     } catch (err) {
       console.error('[NorthStar MapLibre] Lỗi khởi tạo maplibregl:', err);
@@ -857,7 +864,7 @@ window.NorthStarMapLibre = (function () {
   }
 
   function setupFloodCirclesVectorLayer() {
-    if (!mapInstance || !mapInstance.isStyleLoaded()) return;
+    if (!mapInstance || !isInitialized) return;
 
     if (!mapInstance.getSource('flood-circles-source')) {
       mapInstance.addSource('flood-circles-source', {
@@ -898,9 +905,9 @@ window.NorthStarMapLibre = (function () {
   function syncFloodCirclesData() {
     if (!mapInstance || !mapInstance.getSource('flood-circles-source')) return;
 
-    // Chỉ vẽ vòng sóng khi zoom >= 13.0 để chống rối mắt
+    // Hiển thị vùng ngập đồng tâm từ mức zoom thành phố (>= 10.5) trở lên
     const currentZ = mapInstance.getZoom();
-    if (!layerVisibility.floodPoints || currentZ < 13.0) {
+    if (!layerVisibility.floodPoints || currentZ < 10.5) {
       mapInstance.getSource('flood-circles-source').setData({
         type: 'FeatureCollection',
         features: []
@@ -1507,8 +1514,9 @@ window.NorthStarMapLibre = (function () {
     // =========================================================================
   // GPU-ACCELERATED CLUSTERED FLOOD POINTS (PURE WEBGL 60 FPS)
   // =========================================================================
+  let mlFloodEventsBound = false;
   function setupFloodPointsGeoJsonLayer() {
-    if (!mapInstance || !mapInstance.isStyleLoaded()) return;
+    if (!mapInstance || !isInitialized) return;
 
     if (!mapInstance.getSource('ml-flood-points')) {
       mapInstance.addSource('ml-flood-points', {
@@ -1555,11 +1563,40 @@ window.NorthStarMapLibre = (function () {
         layout: {
           'visibility': layerVisibility.floodPoints ? 'visible' : 'none',
           'text-field': '{point_count_abbreviated}',
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-font': ['Noto Sans Bold'],
           'text-size': 12
         },
         paint: {
           'text-color': '#ffffff'
+        }
+      });
+
+      mapInstance.addLayer({
+        id: 'ml-flood-unclustered-halo',
+        type: 'circle',
+        source: 'ml-flood-points',
+        filter: ['all', ['!', ['has', 'point_count']], ['>=', ['coalesce', ['get', 'depth'], -1], 5]],
+        layout: {
+          'visibility': layerVisibility.floodPoints ? 'visible' : 'none'
+        },
+        paint: {
+          'circle-color': [
+            'case',
+            ['>=', ['coalesce', ['get', 'depth'], -1], 20], 'rgba(239, 68, 68, 0.28)',
+            'rgba(245, 158, 11, 0.22)'
+          ],
+          'circle-radius': [
+            'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5],
+            5, 18,
+            20, 22,
+            45, 26
+          ],
+          'circle-stroke-width': 1,
+          'circle-stroke-color': [
+            'case',
+            ['>=', ['coalesce', ['get', 'depth'], -1], 20], 'rgba(239, 68, 68, 0.65)',
+            'rgba(245, 158, 11, 0.5)'
+          ]
         }
       });
 
@@ -1574,36 +1611,79 @@ window.NorthStarMapLibre = (function () {
         paint: {
           'circle-color': [
             'case',
-            ['>=', ['get', 'depth'], 20], '#ef4444',
-            ['>=', ['get', 'depth'], 5], '#f59e0b',
+            ['==', ['get', 'status'], 'offline'], '#64748b',
+            ['<', ['coalesce', ['get', 'depth'], -1], 0], '#64748b',
+            ['>=', ['coalesce', ['get', 'depth'], -1], 20], '#ef4444',
+            ['>=', ['coalesce', ['get', 'depth'], -1], 5], '#f59e0b',
             '#10b981'
           ],
-          'circle-radius': 7.5,
+          'circle-radius': [
+            'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0],
+            -1, 10,
+            0, 11,
+            20, 13.5,
+            40, 16
+          ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
         }
       });
 
-      mapInstance.on('click', 'ml-flood-clusters', (e) => {
-        const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ml-flood-clusters'] });
-        if (!features.length) return;
-        const clusterId = features[0].properties.cluster_id;
-        mapInstance.getSource('ml-flood-points').getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err) return;
-          mapInstance.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+      mapInstance.addLayer({
+        id: 'ml-flood-depth-label',
+        type: 'symbol',
+        source: 'ml-flood-points',
+        filter: ['!', ['has', 'point_count']],
+        layout: {
+          'visibility': layerVisibility.floodPoints ? 'visible' : 'none',
+          'text-field': [
+            'case',
+            ['==', ['get', 'status'], 'offline'], 'OFF',
+            ['<', ['coalesce', ['get', 'depth'], -1], 0], '--',
+            ['concat', ['to-string', ['round', ['get', 'depth']]], 'cm']
+          ],
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 9.5,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': '#0f172a',
+          'text-halo-width': 1.1
+        }
+      });
+
+      if (!mlFloodEventsBound) {
+        mlFloodEventsBound = true;
+        mapInstance.on('click', 'ml-flood-clusters', (e) => {
+          const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['ml-flood-clusters'] });
+          if (!features.length) return;
+          const clusterId = features[0].properties.cluster_id;
+          mapInstance.getSource('ml-flood-points').getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            mapInstance.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+          });
         });
-      });
 
-      mapInstance.on('click', 'ml-flood-unclustered', (e) => {
-        if (!e.features || !e.features.length) return;
-        const p = e.features[0].properties;
-        openStationPopupById(p.id || p.sensor_id);
-      });
+        mapInstance.on('click', 'ml-flood-unclustered', (e) => {
+          if (!e.features || !e.features.length) return;
+          const p = e.features[0].properties;
+          openStationPopupById(p.pointId || p.id || p.sensor_id);
+        });
+        mapInstance.on('click', 'ml-flood-depth-label', (e) => {
+          if (!e.features || !e.features.length) return;
+          const p = e.features[0].properties;
+          openStationPopupById(p.pointId || p.id || p.sensor_id);
+        });
 
-      mapInstance.on('mouseenter', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
-      mapInstance.on('mouseleave', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = ''; });
-      mapInstance.on('mouseenter', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
-      mapInstance.on('mouseleave', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = ''; });
+        mapInstance.on('mouseenter', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'ml-flood-clusters', () => { mapInstance.getCanvas().style.cursor = ''; });
+        mapInstance.on('mouseenter', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'ml-flood-unclustered', () => { mapInstance.getCanvas().style.cursor = ''; });
+        mapInstance.on('mouseenter', 'ml-flood-depth-label', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'ml-flood-depth-label', () => { mapInstance.getCanvas().style.cursor = ''; });
+      }
     }
   }
 
@@ -1622,9 +1702,10 @@ window.NorthStarMapLibre = (function () {
         coordinates: [pt.lng, pt.lat]
       },
       properties: {
-        id: pt.sensor_id || pt.id,
+        id: pt.id,
+        pointId: pt.id,
         sensor_id: pt.sensor_id || pt.id,
-        depth: pt.depth,
+        depth: (pt.depth !== null && pt.depth !== undefined && !isNaN(pt.depth)) ? pt.depth : -1,
         location: pt.location,
         status: pt.status
       }
@@ -2671,12 +2752,11 @@ window.NorthStarMapLibre = (function () {
         mapInstance.setLayoutProperty('rain-radar-heat', 'visibility', isVisible ? 'visible' : 'none');
       }
     } else if (layerKey === 'floodPoints') {
-      if (mapInstance.getLayer('flood-circles-fill')) {
-        mapInstance.setLayoutProperty('flood-circles-fill', 'visibility', isVisible ? 'visible' : 'none');
-      }
-      if (mapInstance.getLayer('flood-circles-line')) {
-        mapInstance.setLayoutProperty('flood-circles-line', 'visibility', isVisible ? 'visible' : 'none');
-      }
+      ['flood-circles-fill', 'flood-circles-line', 'ml-flood-clusters', 'ml-flood-cluster-count', 'ml-flood-unclustered-halo', 'ml-flood-unclustered', 'ml-flood-depth-label'].forEach(id => {
+        if (mapInstance.getLayer(id)) {
+          mapInstance.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
+        }
+      });
       syncFloodPointMarkers();
       syncFloodCirclesData();
       updateMapLibreViewportAlert();
@@ -2709,8 +2789,14 @@ window.NorthStarMapLibre = (function () {
    * PHÂN VÙNG TÁC CHIẾN TỨC THÌ (REGIONAL JUMP)
    */
   function jumpToRegion(regionKey) {
-    if (!mapInstance || !REGIONAL_JUMP_TARGETS[regionKey]) return;
-    const tgt = REGIONAL_JUMP_TARGETS[regionKey];
+    const dynTargets = (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.getRegionTargets === 'function')
+      ? window.ProvinceWeatherLayer.getRegionTargets()
+      : {};
+    const fallbackTarget = dynTargets[regionKey]
+      ? { center: [dynTargets[regionKey].lng, dynTargets[regionKey].lat], zoom: dynTargets[regionKey].zoom || 10.5, pitch: 0, bearing: 0 }
+      : null;
+    const tgt = REGIONAL_JUMP_TARGETS[regionKey] || fallbackTarget;
+    if (!mapInstance || !tgt) return;
     mapInstance.flyTo({
       center: tgt.center,
       zoom: tgt.zoom,
@@ -2719,6 +2805,15 @@ window.NorthStarMapLibre = (function () {
       duration: 2000,
       essential: true
     });
+
+    const regionSelect = document.getElementById('ml-region-select');
+    if (regionSelect && regionSelect.value !== regionKey) {
+      regionSelect.value = regionKey;
+    }
+    const hdrSelect = document.getElementById('cmd-region-selector');
+    if (hdrSelect && hdrSelect.value !== regionKey && Array.from(hdrSelect.options).some(o => o.value === regionKey)) {
+      hdrSelect.value = regionKey;
+    }
 
     ['all', 'hanoi', 'taybac', 'vietbac', 'dongbac', 'quangninh', 'songda'].forEach(k => {
       const btn = document.getElementById(`ml-jump-${k}`);

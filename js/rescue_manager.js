@@ -30,6 +30,11 @@ const NorthStarRescue = (function () {
     shelters: [],
     sos: []
   };
+  let rescueLayerVisibility = {
+    disasters: true,
+    shelters: true,
+    sos: true
+  };
   let activeRescuePopup = null;
   let evacuationRouteGeoJson = { type: 'FeatureCollection', features: [] };
 
@@ -207,6 +212,7 @@ const NorthStarRescue = (function () {
 
       const el = document.createElement('div');
       el.className = 'relative flex items-center justify-center cursor-pointer';
+      if (!rescueLayerVisibility.disasters) el.style.display = 'none';
       el.innerHTML = `
         <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
         <div class="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold" style="background-color: ${color}">
@@ -241,16 +247,16 @@ const NorthStarRescue = (function () {
       if (p.severity === 'critical') badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse';
 
       return `
-        <div onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-white hover:bg-slate-50 cursor-pointer transition shadow-sm">
+        <div onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="p-2.5 rounded-xl border border-slate-800 hover:border-amber-500/70 bg-slate-950 hover:bg-slate-900 cursor-pointer transition shadow-sm">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-slate-900">${p.title}</span>
+            <span class="text-xs font-bold text-white">${p.title}</span>
             <span class="text-[10px] px-1.5 py-0.5 rounded font-bold border ${badgeClass}">${p.hazard_type}</span>
           </div>
-          <div class="text-[11px] text-slate-600 mt-1 line-clamp-2">${p.description || ''}</div>
+          <div class="text-[11px] text-slate-300 mt-1 line-clamp-2">${p.description || ''}</div>
           <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
             <span>Bán kính ảnh hưởng: ${p.radius_m}m</span>
             <span>•</span>
-            <span class="text-blue-600 font-semibold hover:underline">Xem trên bản đồ</span>
+            <span class="text-sky-400 font-semibold hover:underline">Xem trên bản đồ</span>
           </div>
         </div>
       `;
@@ -299,6 +305,7 @@ const NorthStarRescue = (function () {
 
       const el = document.createElement('div');
       el.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition cursor-pointer';
+      if (!rescueLayerVisibility.shelters) el.style.display = 'none';
       el.innerHTML = '<span class="text-sm">🛡️</span>';
       el.title = `${p.name} (${percent}% sức chứa)`;
 
@@ -352,26 +359,26 @@ const NorthStarRescue = (function () {
       const percent = Math.min(100, Math.round((p.current_occupancy / p.capacity) * 100));
 
       return `
-        <div class="p-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-sm transition">
+        <div class="p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/70 hover:shadow-sm transition">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-slate-900">${p.name}</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">${p.status}</span>
+            <span class="text-xs font-bold text-white">${p.name}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">${p.status}</span>
           </div>
-          <div class="text-[11px] text-slate-500 mt-0.5 line-clamp-1">${p.address || ''}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${p.address || ''}</div>
           
           <div class="mt-2 space-y-1">
             <div class="flex justify-between text-[11px]">
-              <span class="text-slate-500">Chỗ tiếp nhận:</span>
-              <span class="font-bold text-slate-800">${p.current_occupancy}/${p.capacity} (${p.available_slots} còn trống)</span>
+              <span class="text-slate-400">Chỗ tiếp nhận:</span>
+              <span class="font-bold text-slate-200">${p.current_occupancy}/${p.capacity} (${p.available_slots} còn trống)</span>
             </div>
-            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
               <div class="h-full ${percent > 85 ? 'bg-amber-500' : 'bg-emerald-500'}" style="width: ${percent}%"></div>
             </div>
           </div>
 
-          <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-            ${p.contact_phone ? `<a href="tel:${p.contact_phone}" class="text-[11px] text-blue-600 font-semibold hover:underline flex items-center gap-1">📞 ${p.contact_phone}</a>` : '<span></span>'}
-            <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition">
+          <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+            ${p.contact_phone ? `<a href="tel:${p.contact_phone}" class="text-[11px] text-sky-400 font-semibold hover:underline flex items-center gap-1">📞 ${p.contact_phone}</a>` : '<span></span>'}
+            <button onclick="NorthStarRescue.routeToShelter(${coords[0]}, ${coords[1]}, '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 rounded-lg text-xs font-bold transition cursor-pointer">
               Sơ tán tới đây
             </button>
           </div>
@@ -384,6 +391,8 @@ const NorthStarRescue = (function () {
   // 3. TẢI VÀ VẼ TÍN HIỆU SOS (BEACONS)
   // ==========================================
   async function loadSOSBeacons() {
+    if (document.getElementById('citizen-sos-form')) return;
+    if (window.NorthStarAuth && ['guest', 'citizen'].includes(window.NorthStarAuth.getRole())) return;
     try {
       const res = await fetch(getApiUrl('/api/sos'));
       if (!res.ok) return;
@@ -426,6 +435,7 @@ const NorthStarRescue = (function () {
 
       const el = document.createElement('div');
       el.className = 'relative flex items-center justify-center cursor-pointer';
+      if (!rescueLayerVisibility.sos) el.style.display = 'none';
       el.innerHTML = `
         <span class="absolute w-8 h-8 rounded-full opacity-75 animate-ping" style="background-color: ${color}"></span>
         <div class="w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white select-none" style="background-color: ${color}">
@@ -477,16 +487,16 @@ const NorthStarRescue = (function () {
       const coords = f.geometry.coordinates;
 
       return `
-        <div class="p-2.5 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-50 transition shadow-sm">
+        <div class="p-2.5 rounded-xl border border-rose-800/60 bg-rose-950/30 hover:bg-rose-950/50 transition shadow-sm">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-bold text-rose-900">🆘 ${p.contact_name} (${p.people_count} người)</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded font-bold bg-rose-200 text-rose-900">${p.priority}</span>
+            <span class="text-xs font-bold text-rose-200">🆘 ${p.contact_name} (${p.people_count} người)</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded font-bold bg-rose-900 text-rose-200 border border-rose-700">${p.priority}</span>
           </div>
-          <div class="text-[11px] text-slate-600 mt-1">SĐT: <a href="tel:${p.phone}" class="text-blue-600 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• Có trẻ nhỏ/người già' : ''}</div>
-          ${p.notes ? `<div class="text-[11px] text-slate-500 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
+          <div class="text-[11px] text-slate-300 mt-1">SĐT: <a href="tel:${p.phone}" class="text-sky-400 font-bold">${p.phone}</a> ${p.has_elderly_or_children ? '• Có trẻ nhỏ/người già' : ''}</div>
+          ${p.notes ? `<div class="text-[11px] text-slate-400 italic mt-0.5 line-clamp-2">"${p.notes}"</div>` : ''}
           <div class="mt-2 flex items-center justify-between">
-            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-blue-600 font-semibold hover:underline">Vị trí bản đồ</button>
-            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-slate-500 hover:text-emerald-600 font-medium">Đánh dấu đã cứu</button>
+            <button onclick="NorthStarRescue.flyToPoint(${coords[1]}, ${coords[0]})" class="text-[11px] text-sky-400 font-semibold hover:underline cursor-pointer">Vị trí bản đồ</button>
+            <button onclick="NorthStarRescue.resolveSOS(${p.id})" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer">Đánh dấu đã cứu</button>
           </div>
         </div>
       `;
@@ -617,8 +627,8 @@ const NorthStarRescue = (function () {
     const priority = document.getElementById('sos-select-priority')?.value || 'high';
     const notes = document.getElementById('sos-input-notes')?.value.trim();
 
-    if (!name || !phone) {
-      alert('Vui lòng nhập họ tên và số điện thoại liên hệ để lực lượng cứu nạn có thể gọi lại.');
+    if (!name || !phone || phone.length < 8) {
+      alert('Vui lòng nhập đầy đủ họ tên và số điện thoại hợp lệ (>= 8 số) để lực lượng cứu nạn liên hệ.');
       return;
     }
 
@@ -629,6 +639,23 @@ const NorthStarRescue = (function () {
       coords = { lng: c.lng, lat: c.lat };
     }
     if (!coords) coords = { lng: 105.8030, lat: 21.0285 };
+
+    // Xác nhận trước khi gửi SOS
+    const confirmBox = document.getElementById('sos-confirm-overlay');
+    if (confirmBox && !window._skipSosConfirmOnce) {
+      const summaryEl = document.getElementById('sos-confirm-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div><b>Người liên hệ:</b> ${name} (${phone})</div>
+          <div><b>Số người mắc kẹt:</b> ${people} người ${hasVulnerable ? '<span class="text-rose-400 font-bold">(Có người già/trẻ nhỏ)</span>' : ''}</div>
+          <div><b>Toạ độ gửi đi:</b> <span class="font-mono text-cyan-300">[${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]</span></div>
+          <div><b>Tình trạng:</b> ${notes || 'Cần hỗ trợ khẩn cấp'}</div>
+        `;
+      }
+      confirmBox.classList.remove('hidden');
+      return;
+    }
+    window._skipSosConfirmOnce = false;
 
     const payload = {
       contact_name: name,
@@ -651,9 +678,43 @@ const NorthStarRescue = (function () {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const savedBeacon = await res.json();
+      const sosId = savedBeacon?.properties?.id;
+      const ticketCode = sosId ? `SOS-${sosId}` : 'SOS-NEW';
 
-      alert('✅ ĐÃ PHÁT TÍN HIỆU CỨU HỘ KHẨN CẤP THÀNH CÔNG!\nLực lượng cứu hộ và chính quyền địa phương đã nhận được toạ độ của bạn.');
-      // Xoá trắng form
+      // Đồng bộ phân tích AI Qwen3-8B & Guardrails trên /api/relief/requests
+      if (sosId) {
+        fetch(getApiUrl('/api/relief/requests'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request_id: ticketCode,
+            message: notes || `Cần cứu hộ khẩn cấp ${people} người tại [${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]`,
+            contact_name: name,
+            phone: phone,
+            lat: coords.lat,
+            lng: coords.lng,
+            source: 'web_form'
+          })
+        }).catch(() => {});
+      }
+
+      // Hiển thị kết quả kèm Mã hồ sơ để người dân theo dõi
+      const receiptEl = document.getElementById('sos-sent-receipt');
+      if (receiptEl) {
+        receiptEl.classList.remove('hidden');
+        const codeEl = document.getElementById('sos-sent-ticket-code');
+        if (codeEl) codeEl.textContent = ticketCode;
+      }
+      const trackInput = document.getElementById('citizen-tracking-input');
+      if (trackInput) trackInput.value = ticketCode;
+
+      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
+        window.CommandUIController.showToast('🚨 ĐÃ PHÁT TÍN HIỆU SOS', `Mã hồ sơ của bạn: ${ticketCode}. Trung tâm điều phối đang xử lý!`, 'success');
+      } else {
+        alert(`✅ ĐÃ PHÁT TÍN HIỆU SOS THÀNH CÔNG! Mã hồ sơ: ${ticketCode}`);
+      }
+
+      // Xoá trắng ghi chú form
       if (document.getElementById('sos-input-notes')) document.getElementById('sos-input-notes').value = '';
       
       // 1. Cập nhật marker cứu hộ trên bản đồ
@@ -674,6 +735,13 @@ const NorthStarRescue = (function () {
     } catch (err) {
       alert(`Không thể gửi tín hiệu SOS: ${err.message}. Vui lòng gọi trực tiếp hotline 114 hoặc 112.`);
     }
+  }
+
+  function confirmSendSOSBeacon() {
+    const confirmBox = document.getElementById('sos-confirm-overlay');
+    if (confirmBox) confirmBox.classList.add('hidden');
+    window._skipSosConfirmOnce = true;
+    submitSOSBeacon();
   }
 
   async function resolveSOS(sosId) {
@@ -719,13 +787,15 @@ const NorthStarRescue = (function () {
   }
 
   function toggleLayer(layerType, show) {
-    if (!window.map) return;
-    if (layerType === 'disasters' && disasterLayerGroup) {
-      show ? window.map.addLayer(disasterLayerGroup) : window.map.removeLayer(disasterLayerGroup);
-    } else if (layerType === 'shelters' && shelterLayerGroup) {
-      show ? window.map.addLayer(shelterLayerGroup) : window.map.removeLayer(shelterLayerGroup);
-    } else if (layerType === 'sos' && sosLayerGroup) {
-      show ? window.map.addLayer(sosLayerGroup) : window.map.removeLayer(sosLayerGroup);
+    rescueLayerVisibility[layerType] = !!show;
+    const markers = activeRescueMarkers[layerType];
+    if (Array.isArray(markers)) {
+      markers.forEach(marker => {
+        const el = marker && typeof marker.getElement === 'function' ? marker.getElement() : null;
+        if (el) {
+          el.style.display = show ? 'flex' : 'none';
+        }
+      });
     }
   }
 
@@ -737,6 +807,7 @@ const NorthStarRescue = (function () {
     findEvacuationRoute,
     routeToShelter,
     submitSOSBeacon,
+    confirmSendSOSBeacon,
     resolveSOS,
     flyToPoint,
     toggleLayer,

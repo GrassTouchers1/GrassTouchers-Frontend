@@ -248,3 +248,7 @@ const AIAssistant = (function () {
     classifyEmergency
   };
 })();
+
+if (typeof window !== 'undefined') {
+  window.AIAssistant = AIAssistant;
+}

@@ -208,10 +208,9 @@
     }
   }
 
-  let provincesLayerGroup = null;
-  let geoJsonLayer = null;
-  let labelMarkersGroup = null;
   let targetMap = null;
+  let isProvincesVisible = true;
+  let provincesEventsBound = false;
 
   function buildHoverCardHtml(provinceName) {
     const meta = PROVINCE_METADATA[provinceName] || { icon: '📍', region: 'Khu vực Miền Bắc', floodAlert: 'Bình thường', alertLevel: 'safe' };
@@ -374,22 +373,94 @@
   const REGION_NAME_MAP = {
     'Hà Nội': 'hanoi',
     'Quảng Ninh': 'quangninh',
+    'Hải Phòng': 'haiphong',
+    'Hải Dương': 'haiduong',
+    'Hưng Yên': 'hungyen',
+    'Bắc Ninh': 'bacninh',
+    'Bắc Giang': 'bacgiang',
+    'Vĩnh Phúc': 'vinhphuc',
+    'Phú Thọ': 'phutho',
+    'Thái Nguyên': 'thainguyen',
+    'Bắc Kạn': 'backan',
+    'Cao Bằng': 'caobang',
+    'Lạng Sơn': 'langson',
+    'Hà Giang': 'hagiang',
+    'Tuyên Quang': 'tuyenquang',
     'Lào Cai': 'laocai',
     'Yên Bái': 'yenbai',
-    'Cao Bằng': 'caobang',
-    'Thái Nguyên': 'thainguyen',
-    'Tuyên Quang': 'tuyenquang'
+    'Hòa Bình': 'hoabinh',
+    'Sơn La': 'sonla',
+    'Điện Biên': 'dienbien',
+    'Lai Châu': 'laichau',
+    'Hà Nam': 'hanam',
+    'Nam Định': 'namdinh',
+    'Thái Bình': 'thaibinh',
+    'Ninh Bình': 'ninhbinh',
+    'Thanh Hóa': 'thanhhoa'
   };
+
+  function getRegionTargets() {
+    const targets = {
+      all: { lat: 21.35, lng: 105.40, zoom: 7.4, name: 'Toàn Miền Bắc', icon: '🌐' },
+      taybac: { lat: 22.05, lng: 104.35, zoom: 9.0, name: 'Tây Bắc', icon: '⛰️' },
+      vietbac: { lat: 21.60, lng: 105.80, zoom: 9.5, name: 'Việt Bắc', icon: '🌊' },
+      dongbac: { lat: 22.40, lng: 106.25, zoom: 9.2, name: 'Đông Bắc', icon: '🏔️' },
+      duyenhai: { lat: 20.95, lng: 106.95, zoom: 9.8, name: 'Duyên Hải Bắc Bộ', icon: '🏖️' },
+      songda: { lat: 21.05, lng: 105.30, zoom: 9.6, name: 'Lưu vực Sông Đà', icon: '🏞️' }
+    };
+    Object.keys(PROVINCE_METADATA).forEach(provName => {
+      const slug = REGION_NAME_MAP[provName];
+      const meta = PROVINCE_METADATA[provName];
+      if (slug && meta) {
+        targets[slug] = {
+          lat: meta.lat,
+          lng: meta.lng,
+          zoom: provName === 'Hà Nội' ? 11.5 : 10.5,
+          name: provName,
+          icon: meta.icon || '📍'
+        };
+      }
+    });
+    return targets;
+  }
+
+  function populateRegionSelect(selectEl) {
+    if (!selectEl) return;
+    const currentVal = selectEl.value || 'all';
+    const provincesHtml = Object.keys(PROVINCE_METADATA).map(name => {
+      const slug = REGION_NAME_MAP[name];
+      const icon = PROVINCE_METADATA[name].icon || '📍';
+      return `<option value="${slug}" class="bg-slate-900 text-white">${icon} ${name}</option>`;
+    }).join('');
+    selectEl.innerHTML = `
+      <optgroup label="── Vùng Tác Chiến ──" class="bg-slate-900 text-sky-300">
+        <option value="all" class="bg-slate-900 text-white">🌐 Toàn Miền Bắc</option>
+        <option value="taybac" class="bg-slate-900 text-white">⛰️ Vùng Tây Bắc</option>
+        <option value="vietbac" class="bg-slate-900 text-white">🌊 Vùng Việt Bắc</option>
+        <option value="dongbac" class="bg-slate-900 text-white">🏔️ Vùng Đông Bắc</option>
+        <option value="duyenhai" class="bg-slate-900 text-white">🏖️ Duyên Hải Bắc Bộ</option>
+        <option value="songda" class="bg-slate-900 text-white">🏞️ Lưu vực Sông Đà</option>
+      </optgroup>
+      <optgroup label="── 26 Tỉnh / Thành Miền Bắc ──" class="bg-slate-900 text-amber-300">
+        ${provincesHtml}
+      </optgroup>
+    `;
+    if (Array.from(selectEl.options).some(o => o.value === currentVal)) {
+      selectEl.value = currentVal;
+    }
+  }
 
   function syncRegionSelector(provinceName) {
     const regionKey = REGION_NAME_MAP[provinceName];
     if (regionKey) {
-      const regSelect = document.getElementById('cmd-region-selector');
-      if (regSelect && regSelect.value !== regionKey) {
-        if (Array.from(regSelect.options).some(opt => opt.value === regionKey)) {
-          regSelect.value = regionKey;
+      ['cmd-region-selector', 'ml-region-select'].forEach(selId => {
+        const regSelect = document.getElementById(selId);
+        if (regSelect && regSelect.value !== regionKey) {
+          if (Array.from(regSelect.options).some(opt => opt.value === regionKey)) {
+            regSelect.value = regionKey;
+          }
         }
-      }
+      });
       if (window.CommandUIController && typeof window.CommandUIController.setCurrentRegionKey === 'function') {
         window.CommandUIController.setCurrentRegionKey(regionKey);
       }
@@ -473,15 +544,23 @@
     // toàn bộ tương tác chuyển sang click trực tiếp vào ô vùng tỉnh khổng lồ.
   }
 
+  function syncAllRegionDropdowns() {
+    ['cmd-region-selector', 'ml-region-select', 'region-jump-select'].forEach(id => {
+      populateRegionSelect(document.getElementById(id));
+    });
+  }
+
   function init(map) {
+    syncAllRegionDropdowns();
     targetMap = map;
     const mapInst = (map && map._maplibre) ? map._maplibre : (map || null);
     if (!mapInst) return;
 
-    if (mapInst.isStyleLoaded && mapInst.isStyleLoaded()) {
+    const styleReady = (mapInst.getStyle && mapInst.getStyle()) || (mapInst.isStyleLoaded && mapInst.isStyleLoaded());
+    if (styleReady) {
       setupProvincesLayers(mapInst);
     } else if (mapInst.once) {
-      mapInst.once('load', () => setupProvincesLayers(mapInst));
+      mapInst.once('style.load', () => setupProvincesLayers(mapInst));
     }
 
     fetchLiveOpenMeteo();
@@ -501,16 +580,34 @@
         id: 'provinces-fill-layer',
         type: 'fill',
         source: 'northern-provinces-source',
+        layout: {
+          visibility: isProvincesVisible ? 'visible' : 'none'
+        },
         paint: {
           'fill-color': [
             'case',
-            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.15)',
+            ['==', ['get', 'name'], 'Lào Cai'], 'rgba(239, 68, 68, 0.16)',
             ['==', ['get', 'name'], 'Yên Bái'], 'rgba(245, 158, 11, 0.14)',
-            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.10)',
-            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.10)',
-            'rgba(2, 132, 199, 0.06)'
+            ['==', ['get', 'name'], 'Thái Nguyên'], 'rgba(245, 158, 11, 0.12)',
+            ['==', ['get', 'name'], 'Hà Nội'], 'rgba(14, 165, 233, 0.08)',
+            ['==', ['get', 'name'], 'Quảng Ninh'], 'rgba(14, 165, 233, 0.08)',
+            'rgba(2, 132, 199, 0.05)'
           ],
-          'fill-opacity': 0.8
+          'fill-opacity': 0.9
+        }
+      });
+
+      mapInst.addLayer({
+        id: 'provinces-outer-glow',
+        type: 'line',
+        source: 'northern-provinces-source',
+        layout: {
+          visibility: isProvincesVisible ? 'visible' : 'none'
+        },
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 2.8,
+          'line-opacity': 0.95
         }
       });
 
@@ -518,42 +615,47 @@
         id: 'provinces-line-layer',
         type: 'line',
         source: 'northern-provinces-source',
+        layout: {
+          visibility: isProvincesVisible ? 'visible' : 'none'
+        },
         paint: {
           'line-color': '#06b6d4',
           'line-width': 1.6,
           'line-dasharray': [4, 3],
-          'line-opacity': 0.75
+          'line-opacity': 0.85
         }
       });
 
-      mapInst.on('click', 'provinces-fill-layer', (e) => {
-        if (!e.features || !e.features.length) return;
-        const name = e.features[0].properties.name;
-        onFeatureClick(e, name);
-      });
+      if (!provincesEventsBound) {
+        provincesEventsBound = true;
+        mapInst.on('click', 'provinces-fill-layer', (e) => {
+          if (!e.features || !e.features.length) return;
+          const name = e.features[0].properties.name;
+          onFeatureClick(e, name);
+        });
 
-      mapInst.on('mouseenter', 'provinces-fill-layer', () => {
-        mapInst.getCanvas().style.cursor = 'pointer';
-      });
-      mapInst.on('mouseleave', 'provinces-fill-layer', () => {
-        mapInst.getCanvas().style.cursor = '';
-      });
+        mapInst.on('mouseenter', 'provinces-fill-layer', () => {
+          mapInst.getCanvas().style.cursor = 'pointer';
+        });
+        mapInst.on('mouseleave', 'provinces-fill-layer', () => {
+          mapInst.getCanvas().style.cursor = '';
+        });
+      }
     }
 
-    console.log('[ProvinceWeather] Lớp Phân vùng Tỉnh thành khổng lồ (Interactive Tactical Regions) đã kích hoạt thành công.');
+    console.log('[ProvinceWeather] Lớp Phân vùng Tỉnh thành (MapLibre Vector) đã kích hoạt thành công.');
   }
 
   function toggle(visible) {
-    if (!targetMap || !provincesLayerGroup) return;
-    if (visible) {
-      if (!targetMap.hasLayer(provincesLayerGroup)) {
-        provincesLayerGroup.addTo(targetMap);
+    isProvincesVisible = !!visible;
+    const mapInst = (targetMap && targetMap._maplibre) ? targetMap._maplibre : targetMap;
+    if (!mapInst || typeof mapInst.getLayer !== 'function') return;
+    const vis = isProvincesVisible ? 'visible' : 'none';
+    ['provinces-fill-layer', 'provinces-outer-glow', 'provinces-line-layer'].forEach(id => {
+      if (mapInst.getLayer(id)) {
+        mapInst.setLayoutProperty(id, 'visibility', vis);
       }
-    } else {
-      if (targetMap.hasLayer(provincesLayerGroup)) {
-        targetMap.removeLayer(provincesLayerGroup);
-      }
-    }
+    });
   }
 
   function updateWeatherPaneCards() {
@@ -619,8 +721,10 @@
   }
 
   function updateTheme(isDark) {
-    if (geoJsonLayer) {
-      geoJsonLayer.setStyle(getFeatureStyle);
+    const mapInst = (targetMap && targetMap._maplibre) ? targetMap._maplibre : targetMap;
+    if (!mapInst || typeof mapInst.getLayer !== 'function') return;
+    if (mapInst.getLayer('provinces-line-layer')) {
+      mapInst.setPaintProperty('provinces-line-layer', 'line-opacity', isDark ? 0.8 : 0.6);
     }
   }
 
@@ -634,7 +738,8 @@
     get cache() { return weatherCache; },
     provincesGeoJSON: NORTHERN_PROVINCES_GEOJSON,
     metadata: PROVINCE_METADATA,
-    getLayerGroup: () => provincesLayerGroup,
+    getRegionTargets: getRegionTargets,
+    populateRegionSelect: populateRegionSelect,
     zoomToProvince: zoomToProvince,
     focusProvinceRegion: focusProvinceRegion
   };

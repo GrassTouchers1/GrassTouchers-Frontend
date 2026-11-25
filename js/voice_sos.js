@@ -590,8 +590,8 @@ const VoiceSOSManager = (function () {
     setUIState('success');
 
     // Xóa marker tạm nếu có
-    if (tempSOSMarker && window.map) {
-      window.map.removeLayer(tempSOSMarker);
+    if (tempSOSMarker && typeof tempSOSMarker.remove === 'function') {
+      tempSOSMarker.remove();
       tempSOSMarker = null;
     }
 

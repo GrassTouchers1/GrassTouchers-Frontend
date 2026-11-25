@@ -1121,3 +1121,404 @@ body.command-mode-active .floating-header {
   background: #ef4444 !important;
   border-color: #f87171 !important;
 }
+
+
+/* ==========================================================================
+   NORTHSTAR CITIZEN – Interactive Location Picker & Verification Styles
+   Phụ trách: Thành viên 1 | Tiêu chuẩn: VIC-04 & V-04
+   ========================================================================== */
+
+.citizen-pin-pulse-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.citizen-pin-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(225, 29, 72, 0.4);
+  animation: citizen-pin-ripple 1.8s infinite ease-out;
+}
+
+.citizen-pin-pulse-core {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e11d48;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.8);
+}
+
+@keyframes citizen-pin-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.citizen-loc-verified {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.citizen-loc-unverified {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fde68a !important;
+}
+
+/* ==========================================================================
+   Tactical Location Picking Toolbar & Accuracy Styling (VIC-04 & V-04)
+   ========================================================================== */
+.citizen-map-pin-toolbar {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: auto;
+  animation: citizen-toolbar-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes citizen-toolbar-slide-down {
+  0% {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.citizen-tb-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 14px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2);
+  color: #f8fafc;
+}
+
+.citizen-tb-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.citizen-tb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 1.5s infinite;
+}
+
+.citizen-tb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.citizen-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.citizen-tb-btn:active {
+  transform: scale(0.95);
+}
+
+.citizen-tb-gps {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.citizen-tb-gps:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.citizen-tb-confirm {
+  background: #0284c7;
+  color: #ffffff;
+  border: 1px solid #38bdf8;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);
+}
+
+.citizen-tb-confirm:hover {
+  background: #0369a1;
+}
+
+.citizen-tb-cancel {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  padding: 5px 7px;
+}
+
+.citizen-tb-cancel:hover {
+  background: #e11d48;
+  color: #ffffff;
+/* =========================================================================
+ * C2 DARK GLASS NAVIGATION & SCALE CONTROLS (MAPLIBRE GL JS)
+ * ========================================================================= */
+.maplibregl-ctrl-top-right {
+  top: 54px !important;
+  right: 12px !important;
+  margin: 0 !important;
+  z-index: 25 !important;
+}
+
+.maplibregl-ctrl-group {
+  background: rgba(11, 15, 25, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25) !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 34px !important;
+  height: 34px !important;
+  background-color: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.maplibregl-ctrl-group button:active {
+  background-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(2.2) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+  opacity: 0.92 !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon {
+  opacity: 1 !important;
+  filter: invert(1) brightness(2.8) drop-shadow(0 0 5px #38bdf8) !important;
+}
+
+.maplibregl-ctrl-scale {
+  background: rgba(11, 15, 25, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-top: none !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  border-radius: 0 0 6px 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* =========================================================================
+ * NORTHSTAR CITIZEN – NEO-GLASSMORHPISM & EMERGENCY UI DESIGN SYSTEM
+ * Tiêu chuẩn giao diện Dân sự Cao cấp: Tối ưu trực quan, phản ứng nhanh
+ * ========================================================================= */
+
+.citizen-glass-header {
+  background: rgba(11, 15, 25, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.citizen-glass-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.citizen-glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.45), 0 0 15px rgba(56, 189, 248, 0.1);
+}
+
+/* Floating Segmented Navigation */
+.citizen-segmented-nav {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.citizen-tab-item {
+  color: #94a3b8;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.citizen-tab-item:hover {
+  color: #f1f5f9;
+}
+
+.citizen-tab-item.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff !important;
+  font-weight: 800;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.45);
+}
+
+/* Tab SOS Khẩn cấp nhấp nháy phát sáng */
+.citizen-tab-sos {
+  color: #fb7185 !important;
+}
+
+.citizen-tab-sos.active,
+.citizen-tab-sos:hover {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  box-shadow: 0 0 18px rgba(225, 29, 72, 0.6) !important;
+}
+
+/* Nút Gọi Khẩn Cấp 114 Siêu Nổi Bật */
+.citizen-hotline-114 {
+  background: linear-gradient(135deg, #e11d48 0%, #b91c1c 100%);
+  border: 1px solid rgba(254, 205, 211, 0.3);
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.45);
+  animation: hotline-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes hotline-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.5);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 8px rgba(225, 29, 72, 0);
+  }
+}
+
+/* Hero Weather Card Banner */
+.citizen-weather-hero {
+  background: radial-gradient(100% 100% at 50% 0%, rgba(14, 165, 233, 0.2) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Thước đo Cấp độ Rủi ro (Disaster Risk Meter) */
+.citizen-risk-meter {
+  display: flex;
+  height: 6px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: rgba(30, 41, 59, 0.8);
+  gap: 2px;
+}
+
+.citizen-risk-step {
+  flex: 1;
+  transition: all 0.3s ease;
+  opacity: 0.35;
+}
+
+.citizen-risk-step.active {
+  opacity: 1;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Visual Depth Selector Cards for SOS */
+.citizen-depth-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.citizen-depth-card:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.citizen-depth-card.selected {
+  background: rgba(2, 132, 199, 0.18);
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.35);
+}
+
+.citizen-depth-card.selected-danger {
+  background: rgba(225, 29, 72, 0.2);
+  border-color: #f43f5e;
+  box-shadow: 0 0 15px rgba(225, 29, 72, 0.45);
+}
+
+/* Nút SOS Cứu Hộ Siêu Cấp 1-Chạm */
+.citizen-sos-primary-btn {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 50%, #9f1239 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 25px -4px rgba(225, 29, 72, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.citizen-sos-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px -4px rgba(225, 29, 72, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.citizen-sos-primary-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+
+
+
+

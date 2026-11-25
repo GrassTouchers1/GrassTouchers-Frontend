@@ -26,7 +26,7 @@
 
 let map = null;
 let mapInstance = null;
-let currentBaseLayer = 'dark';
+let currentBaseLayer = 'satellite';
 let activeMapLibrePopup = null;
 
 let pickMarkers = { origin: null, destination: null, report: null };
@@ -38,6 +38,8 @@ let coords = {
   report: null
 };
 
+let floodPointsLayerVisible = true;
+let coreMapEventsBound = false;
 let currentPickMode = null; // 'origin' | 'destination' | 'report' | null
 let floodPoints = [];
 let floodGeoJsonData = { type: 'FeatureCollection', features: [] };
@@ -50,6 +52,7 @@ let currentRouteGeoJson = {
 const BASEMAP_STYLES = {
   dark: {
     version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'base-dark': {
         type: 'raster',
@@ -70,6 +73,7 @@ const BASEMAP_STYLES = {
   },
   satellite: {
     version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'base-satellite': {
         type: 'raster',
@@ -90,6 +94,7 @@ const BASEMAP_STYLES = {
   },
   streets: {
     version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'base-streets': {
         type: 'raster',
@@ -102,8 +107,24 @@ const BASEMAP_STYLES = {
       { id: 'base-streets-layer', type: 'raster', source: 'base-streets', minzoom: 0, maxzoom: 19 }
     ]
   },
+  topo: {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: {
+      'base-topo': {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256,
+        attribution: '&copy; Esri, USGS, OpenStreetMap contributors'
+      }
+    },
+    layers: [
+      { id: 'base-topo-layer', type: 'raster', source: 'base-topo', minzoom: 0, maxzoom: 19 }
+    ]
+  },
   osm: {
     version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'base-osm': {
         type: 'raster',
@@ -117,12 +138,14 @@ const BASEMAP_STYLES = {
     ]
   }
 };
+BASEMAP_STYLES.esri = BASEMAP_STYLES.satellite;
+BASEMAP_STYLES.intl = BASEMAP_STYLES.streets;
 
 function createClusterIcon(cluster) {
   return '';
 }
 
-function syncFloodCirclesWithZoom() {}
+function syncFloodCirclesWithZoom() { }
 
 function initMap() {
   if (mapInstance) return window.map;
@@ -133,18 +156,22 @@ function initMap() {
   try {
     mapInstance = new maplibregl.Map({
       container: 'map',
-      style: BASEMAP_STYLES.dark,
-      center: [105.70, 21.25],
-      zoom: 8.2,
+      style: BASEMAP_STYLES.satellite,
+      center: [105.4000, 21.3500],
+      zoom: 7.4,
       minZoom: 6.5,
       maxZoom: 18.5,
+      maxBounds: [
+        [100.8, 18.8],
+        [109.8, 24.2]
+      ],
       pitch: 0,
       bearing: 0,
       antialias: true
     });
 
-    // Navigation control
-    mapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: true }), 'top-right');
+    // Navigation control (Hỗ trợ xoay & nghiêng 3D ngay trên bản đồ chính)
+    mapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: true, showCompass: true }), 'top-right');
     // Scale control
     mapInstance.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
@@ -174,6 +201,9 @@ function initMap() {
 
     mapInstance.on('click', (e) => {
       onMapClick(e);
+    });
+    mapInstance.on('moveend', () => {
+      updateViewportFloodAlert();
     });
 
     return window.map;
@@ -297,8 +327,8 @@ function buildMapCompatibilityFacade() {
     },
 
     hasLayer: function () { return true; },
-    addLayer: function () {},
-    removeLayer: function () {}
+    addLayer: function () { },
+    removeLayer: function () { }
   };
   map = window.map;
 }
@@ -351,7 +381,7 @@ function setupMapLibreSourcesAndLayers() {
       filter: ['has', 'point_count'],
       layout: {
         'text-field': '{point_count_abbreviated}',
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-font': ['Noto Sans Bold'],
         'text-size': 12
       },
       paint: {
@@ -364,21 +394,24 @@ function setupMapLibreSourcesAndLayers() {
       id: 'flood-unclustered-glow',
       type: 'circle',
       source: 'flood-points',
-      filter: ['!', ['has', 'point_count']],
+      filter: ['all', ['!', ['has', 'point_count']], ['>=', ['coalesce', ['get', 'depth'], -1], 5]],
       paint: {
         'circle-color': [
           'case',
-          ['>=', ['get', 'depth'], 20], 'rgba(239, 68, 68, 0.35)',
-          ['>=', ['get', 'depth'], 5], 'rgba(245, 158, 11, 0.3)',
-          'rgba(6, 182, 212, 0.25)'
+          ['>=', ['coalesce', ['get', 'depth'], -1], 20], 'rgba(239, 68, 68, 0.30)',
+          'rgba(245, 158, 11, 0.25)'
         ],
-        'circle-radius': 14,
+        'circle-radius': [
+          'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 5],
+          5, 17,
+          20, 21,
+          45, 25
+        ],
         'circle-stroke-width': 1,
         'circle-stroke-color': [
           'case',
-          ['>=', ['get', 'depth'], 20], '#ef4444',
-          ['>=', ['get', 'depth'], 5], '#f59e0b',
-          '#06b6d4'
+          ['>=', ['coalesce', ['get', 'depth'], -1], 20], '#ef4444',
+          '#f59e0b'
         ]
       }
     });
@@ -392,43 +425,85 @@ function setupMapLibreSourcesAndLayers() {
       paint: {
         'circle-color': [
           'case',
-          ['>=', ['get', 'depth'], 20], '#ef4444',
-          ['>=', ['get', 'depth'], 5], '#f59e0b',
-          '#0284c7'
+          ['==', ['get', 'status'], 'offline'], '#64748b',
+          ['<', ['coalesce', ['get', 'depth'], -1], 0], '#64748b',
+          ['>=', ['coalesce', ['get', 'depth'], -1], 20], '#ef4444',
+          ['>=', ['coalesce', ['get', 'depth'], -1], 5], '#f59e0b',
+          '#10b981'
         ],
-        'circle-radius': 7.5,
+        'circle-radius': [
+          'interpolate', ['linear'], ['coalesce', ['get', 'depth'], 0],
+          -1, 10,
+          0, 11,
+          20, 13.5,
+          40, 16
+        ],
         'circle-stroke-width': 2,
         'circle-stroke-color': '#ffffff'
       }
     });
 
-    // Click cluster to expand
-    mapInstance.on('click', 'flood-clusters', (e) => {
-      const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['flood-clusters'] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id;
-      mapInstance.getSource('flood-points').getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        mapInstance.easeTo({
-          center: features[0].geometry.coordinates,
-          zoom: zoom + 0.5,
-          duration: 600
+    // Unclustered Flood Depth Label (e.g. 27cm, 15cm, 0cm)
+    mapInstance.addLayer({
+      id: 'flood-unclustered-label',
+      type: 'symbol',
+      source: 'flood-points',
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'text-field': [
+          'case',
+          ['==', ['get', 'status'], 'offline'], 'OFF',
+          ['<', ['coalesce', ['get', 'depth'], -1], 0], '--',
+          ['concat', ['to-string', ['round', ['get', 'depth']]], 'cm']
+        ],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 9.5,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': '#0f172a',
+        'text-halo-width': 1.1
+      }
+    });
+
+    if (!coreMapEventsBound) {
+      coreMapEventsBound = true;
+      // Click cluster to expand
+      mapInstance.on('click', 'flood-clusters', (e) => {
+        const features = mapInstance.queryRenderedFeatures(e.point, { layers: ['flood-clusters'] });
+        if (!features.length) return;
+        const clusterId = features[0].properties.cluster_id;
+        mapInstance.getSource('flood-points').getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          mapInstance.easeTo({
+            center: features[0].geometry.coordinates,
+            zoom: zoom + 0.5,
+            duration: 600
+          });
         });
       });
-    });
 
-    // Click unclustered point to show popup
-    mapInstance.on('click', 'flood-unclustered-point', (e) => {
-      if (!e.features || !e.features.length) return;
-      const f = e.features[0];
-      const p = f.properties;
-      showFloodPointMapLibrePopup(p, f.geometry.coordinates);
-    });
+      // Click unclustered point to show popup
+      mapInstance.on('click', 'flood-unclustered-point', (e) => {
+        if (!e.features || !e.features.length) return;
+        const f = e.features[0];
+        showFloodPointMapLibrePopup(f.properties, f.geometry.coordinates);
+      });
+      mapInstance.on('click', 'flood-unclustered-label', (e) => {
+        if (!e.features || !e.features.length) return;
+        const f = e.features[0];
+        showFloodPointMapLibrePopup(f.properties, f.geometry.coordinates);
+      });
 
-    mapInstance.on('mouseenter', 'flood-clusters', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
-    mapInstance.on('mouseleave', 'flood-clusters', () => { mapInstance.getCanvas().style.cursor = ''; });
-    mapInstance.on('mouseenter', 'flood-unclustered-point', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
-    mapInstance.on('mouseleave', 'flood-unclustered-point', () => { mapInstance.getCanvas().style.cursor = ''; });
+      mapInstance.on('mouseenter', 'flood-clusters', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+      mapInstance.on('mouseleave', 'flood-clusters', () => { mapInstance.getCanvas().style.cursor = ''; });
+      mapInstance.on('mouseenter', 'flood-unclustered-point', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+      mapInstance.on('mouseleave', 'flood-unclustered-point', () => { mapInstance.getCanvas().style.cursor = ''; });
+      mapInstance.on('mouseenter', 'flood-unclustered-label', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+      mapInstance.on('mouseleave', 'flood-unclustered-label', () => { mapInstance.getCanvas().style.cursor = ''; });
+    }
   }
 
   // 2. Safe Route Layer
@@ -550,15 +625,46 @@ function showFloodPointMapLibrePopup(p, lngLat) {
     .addTo(mapInstance);
 }
 
+function toggleFloodPointsLayer(show) {
+  floodPointsLayerVisible = !!show;
+  if (!mapInstance) return;
+  const vis = floodPointsLayerVisible ? 'visible' : 'none';
+  ['flood-clusters', 'flood-cluster-count', 'flood-unclustered-glow', 'flood-unclustered-point', 'flood-unclustered-label'].forEach(id => {
+    if (mapInstance.getLayer(id)) {
+      mapInstance.setLayoutProperty(id, 'visibility', vis);
+    }
+  });
+}
+window.toggleFloodPointsLayer = toggleFloodPointsLayer;
+
 function switchBaseLayer(type) {
   if (!mapInstance || !BASEMAP_STYLES[type]) return;
   currentBaseLayer = type;
-  mapInstance.setStyle(BASEMAP_STYLES[type]);
 
-  mapInstance.once('style.load', () => {
+  // Đồng bộ trạng thái nút nhanh trên thanh công cụ bản đồ chính
+  ['satellite', 'dark', 'topo', 'streets'].forEach(k => {
+    const btn = document.getElementById(`core-base-${k}`);
+    if (btn) {
+      const normalized = (type === 'esri') ? 'satellite' : ((type === 'osm' || type === 'intl') ? 'streets' : type);
+      if (k === normalized) {
+        btn.className = 'px-2 py-0.5 bg-cyan-600 text-white rounded-md text-[10px] font-bold cursor-pointer transition shadow';
+      } else {
+        btn.className = 'px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-[10px] font-bold cursor-pointer transition';
+      }
+    }
+  });
+
+  let rehydrated = false;
+  const rehydrate = () => {
+    if (rehydrated) return;
+    rehydrated = true;
     setupMapLibreSourcesAndLayers();
+    toggleFloodPointsLayer(floodPointsLayerVisible);
     if (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.init === 'function') {
       window.ProvinceWeatherLayer.init(window.map);
+    }
+    if (window.SarFloodManager && typeof window.SarFloodManager.init === 'function') {
+      window.SarFloodManager.init();
     }
     if (window.NorthStarRescue && typeof window.NorthStarRescue.initRescueLayers === 'function') {
       window.NorthStarRescue.initRescueLayers(window.map);
@@ -567,9 +673,33 @@ function switchBaseLayer(type) {
       window.NorthStarRescue.loadSOSBeacons();
     }
     renderFloodPoints(floodPoints);
-  });
+  };
+
+  mapInstance.once('style.load', rehydrate);
+  mapInstance.setStyle(BASEMAP_STYLES[type], { diff: false });
+  setTimeout(() => {
+    if (!rehydrated && mapInstance && mapInstance.getStyle && mapInstance.getStyle()) {
+      rehydrate();
+    }
+  }, 250);
 }
 window.switchBaseLayer = switchBaseLayer;
+
+function setCoreMapPitch(deg) {
+  if (!mapInstance) return;
+  mapInstance.easeTo({ pitch: deg, duration: 900 });
+  [0, 45, 60].forEach(p => {
+    const btn = document.getElementById(`core-pitch-${p}`);
+    if (btn) {
+      if (p === deg) {
+        btn.className = 'px-1.5 py-0.5 bg-cyan-600 text-white rounded-md text-[10px] font-bold cursor-pointer transition shadow';
+      } else {
+        btn.className = 'px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-[10px] font-bold cursor-pointer transition';
+      }
+    }
+  });
+}
+window.setCoreMapPitch = setCoreMapPitch;
 
 
 async function loadFloodPoints() {
@@ -1005,7 +1135,7 @@ function renderDrainageForecastHtml(fp) {
 
   // Trường hợp đang ngập hoặc có dự báo chi tiết -> hiển thị đầy đủ 2 cột
   const drainTimeDisplay = drainTime || 'Đang phân tích...';
-  const statusBadge = isSupported 
+  const statusBadge = isSupported
     ? '<span class="text-[9.5px] font-semibold text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-full border border-cyan-200">Đã cập nhật</span>'
     : '<span class="text-[9.5px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">Chờ dữ liệu đo</span>';
 
@@ -1053,10 +1183,10 @@ function getStationLocationDisplay(name, lat, lng) {
 
   // Nhận diện theo từ khóa các tỉnh / thành miền Bắc
   const northernProvinces = [
-    'Lào Cai', 'Yên Bái', 'Thái Nguyên', 'Bắc Giang', 'Cao Bằng', 
+    'Lào Cai', 'Yên Bái', 'Thái Nguyên', 'Bắc Giang', 'Cao Bằng',
     'Phú Thọ', 'Quảng Ninh', 'Hải Phòng', 'Hòa Bình', 'Tuyên Quang',
-    'Lạng Sơn', 'Bắc Kạn', 'Hà Giang', 'Sơn La', 'Điện Biên', 
-    'Lai Châu', 'Nam Định', 'Ninh Bình', 'Thái Bình', 'Hà Nam', 
+    'Lạng Sơn', 'Bắc Kạn', 'Hà Giang', 'Sơn La', 'Điện Biên',
+    'Lai Châu', 'Nam Định', 'Ninh Bình', 'Thái Bình', 'Hà Nam',
     'Hưng Yên', 'Hải Dương', 'Vĩnh Phúc', 'Bắc Ninh'
   ];
 
@@ -1093,10 +1223,10 @@ function getStationLocationDisplay(name, lat, lng) {
 
   // Nhận diện theo tên các quận huyện phổ biến của Hà Nội
   const hanoiDistricts = [
-    'Ba Đình', 'Hoàn Kiếm', 'Tây Hồ', 'Long Biên', 'Cầu Giấy', 'Đống Đa', 'Hai Bà Trưng', 
-    'Hoàng Mai', 'Thanh Xuân', 'Sóc Sơn', 'Đông Anh', 'Gia Lâm', 'Nam Từ Liêm', 'Thanh Trì', 
-    'Bắc Từ Liêm', 'Mê Linh', 'Hà Đông', 'Sơn Tây', 'Ba Vì', 'Phúc Thọ', 'Đan Phượng', 
-    'Hoài Đức', 'Quốc Oai', 'Thạch Thất', 'Chương Mỹ', 'Thanh Oai', 'Thường Tín', 'Phú Xuyên', 
+    'Ba Đình', 'Hoàn Kiếm', 'Tây Hồ', 'Long Biên', 'Cầu Giấy', 'Đống Đa', 'Hai Bà Trưng',
+    'Hoàng Mai', 'Thanh Xuân', 'Sóc Sơn', 'Đông Anh', 'Gia Lâm', 'Nam Từ Liêm', 'Thanh Trì',
+    'Bắc Từ Liêm', 'Mê Linh', 'Hà Đông', 'Sơn Tây', 'Ba Vì', 'Phúc Thọ', 'Đan Phượng',
+    'Hoài Đức', 'Quốc Oai', 'Thạch Thất', 'Chương Mỹ', 'Thanh Oai', 'Thường Tín', 'Phú Xuyên',
     'Ứng Hòa', 'Mỹ Đức', 'Tiên Dương', 'Nhật Tân'
   ];
 
@@ -1110,39 +1240,59 @@ function getStationLocationDisplay(name, lat, lng) {
 }
 
 function renderFloodPoints(data) {
-  floodPoints = data || [];
+  const rawList = Array.isArray(data)
+    ? data
+    : (data && Array.isArray(data.features) ? data.features : (data && Array.isArray(data.points) ? data.points : []));
+
+  floodPoints = rawList.map(fp => {
+    const p = (fp && fp.properties) ? fp.properties : (fp || {});
+    const geomCoords = (fp && fp.geometry && Array.isArray(fp.geometry.coordinates)) ? fp.geometry.coordinates : null;
+    const lat = parseFloat(p.lat !== undefined ? p.lat : (p.latitude !== undefined ? p.latitude : (geomCoords ? geomCoords[1] : NaN)));
+    const lng = parseFloat(p.lng !== undefined ? p.lng : (p.longitude !== undefined ? p.longitude : (geomCoords ? geomCoords[0] : NaN)));
+    const rawDepth = p.depth_cm !== undefined ? p.depth_cm : (p.depth !== undefined ? p.depth : p.current_depth_cm);
+    const depth_cm = (rawDepth === null || rawDepth === undefined || rawDepth === '' || isNaN(Number(rawDepth))) ? null : Number(rawDepth);
+    const threshold_cm = Number(p.threshold_cm || 20);
+    const status = p.status || (depth_cm === null ? 'no_data' : (depth_cm >= threshold_cm ? 'danger' : (depth_cm >= 5 ? 'warning' : 'safe')));
+
+    return {
+      ...p,
+      id: p.id || Math.floor(Math.random() * 100000),
+      name: p.name || p.location || 'Điểm đo ngập',
+      lat,
+      lng,
+      depth_cm,
+      threshold_cm,
+      status,
+      location: p.location || p.name || '',
+      sensor_id: p.sensor_id || '',
+      last_reading_at: p.last_reading_at || null,
+      water_trend: p.water_trend || 'stable',
+      estimated_drainage_time: p.estimated_drainage_time || null
+    };
+  }).filter(fp => !isNaN(fp.lat) && !isNaN(fp.lng));
+
   window.floodPoints = floodPoints;
 
-  const features = [];
-  floodPoints.forEach(fp => {
-    const lat = parseFloat(fp.lat || (fp.geometry && fp.geometry.coordinates[1]) || fp.latitude);
-    const lng = parseFloat(fp.lng || (fp.geometry && fp.geometry.coordinates[0]) || fp.longitude);
-    if (isNaN(lat) || isNaN(lng)) return;
-
-    const depth = parseFloat(fp.depth_cm !== undefined ? fp.depth_cm : (fp.depth !== undefined ? fp.depth : fp.current_depth_cm || 0));
-    const threshold_cm = parseFloat(fp.threshold_cm || 20);
-    const status = fp.status || (depth >= threshold_cm ? 'danger' : (depth >= 5 ? 'warning' : 'safe'));
-
-    features.push({
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [lng, lat]
-      },
-      properties: {
-        id: fp.id || Math.floor(Math.random() * 100000),
-        name: fp.name || fp.location || 'Điểm đo ngập',
-        depth: depth,
-        threshold_cm: threshold_cm,
-        status: status,
-        location: fp.location || fp.name || '',
-        sensor_id: fp.sensor_id || '',
-        last_reading_at: fp.last_reading_at || new Date().toISOString(),
-        water_trend: fp.water_trend || 'stable',
-        estimated_drainage_time: fp.estimated_drainage_time || null
-      }
-    });
-  });
+  const features = floodPoints.map(fp => ({
+    type: 'Feature',
+    geometry: {
+      type: 'Point',
+      coordinates: [fp.lng, fp.lat]
+    },
+    properties: {
+      id: fp.id,
+      name: fp.name,
+      depth: fp.depth_cm !== null ? fp.depth_cm : -1,
+      depth_cm: fp.depth_cm,
+      threshold_cm: fp.threshold_cm,
+      status: fp.status,
+      location: fp.location,
+      sensor_id: fp.sensor_id,
+      last_reading_at: fp.last_reading_at,
+      water_trend: fp.water_trend,
+      estimated_drainage_time: fp.estimated_drainage_time
+    }
+  }));
 
   floodGeoJsonData = {
     type: 'FeatureCollection',
@@ -1157,6 +1307,7 @@ function renderFloodPoints(data) {
   updateViewportFloodAlert();
   renderPointsList();
 }
+window.renderFloodPoints = renderFloodPoints;
 
 function setAsRouteTarget(lng, lat, type) {
 
@@ -1241,17 +1392,17 @@ function renderPointsList() {
       badgeText = 'Nguy hiểm';
     }
 
-    const inViewBadge = isInView ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">Khung nhìn</span>' : '';
+    const inViewBadge = isInView ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-medium">Khung nhìn</span>' : '';
 
     const div = document.createElement('div');
-    div.className = `p-3 bg-white rounded-xl border ${isInView ? 'border-blue-300 shadow-sm' : 'border-slate-200 opacity-80'} space-y-2 hover:border-blue-500 transition`;
+    div.className = `p-3 bg-slate-950 rounded-xl border ${isInView ? 'border-blue-500/60 shadow-sm' : 'border-slate-800 opacity-85'} space-y-2 hover:border-blue-400 transition`;
 
     const sliderVal = hasValidDepth ? depth : 0;
     const depthText = hasValidDepth ? `${depth}cm` : '--';
 
     div.innerHTML = `
       <div class="flex items-center justify-between gap-1">
-        <h4 class="font-bold text-xs text-slate-800 cursor-pointer hover:text-blue-600 truncate flex-1" onclick="flyToPoint(${lat}, ${lng})" title="Nhấp để chuyển tới điểm này">
+        <h4 class="font-bold text-xs text-slate-100 cursor-pointer hover:text-sky-400 truncate flex-1" onclick="flyToPoint(${lat}, ${lng})" title="Nhấp để chuyển tới điểm này">
           ${name}
         </h4>
         <div class="flex items-center gap-1 flex-shrink-0">
@@ -1260,12 +1411,12 @@ function renderPointsList() {
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-[11px] text-slate-500">Mực nước:</span>
+        <span class="text-[11px] text-slate-400">Mực nước:</span>
         <input type="range" min="0" max="60" value="${sliderVal}" 
-               class="flex-1 accent-blue-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+               class="flex-1 accent-blue-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
                onchange="updateSensorDepth(${id}, this.value)"
                oninput="this.nextElementSibling.innerText = this.value + 'cm'">
-        <span class="text-[11px] font-mono w-10 text-right font-bold text-slate-700">${depthText}</span>
+        <span class="text-[11px] font-mono w-10 text-right font-bold text-sky-300">${depthText}</span>
       </div>
     `;
 
@@ -1309,7 +1460,11 @@ const NORTHERN_REGIONAL_PRESETS = {
 
 function jumpToRegion(regionKey) {
   if (!map) return;
-  const target = NORTHERN_REGIONAL_PRESETS[regionKey] || NORTHERN_REGIONAL_PRESETS.all;
+  const dynTargets = (window.ProvinceWeatherLayer && typeof window.ProvinceWeatherLayer.getRegionTargets === 'function')
+    ? window.ProvinceWeatherLayer.getRegionTargets()
+    : {};
+  const dyn = dynTargets[regionKey];
+  const target = dyn ? { center: [dyn.lat, dyn.lng], zoom: dyn.zoom || 10.5, name: dyn.name } : (NORTHERN_REGIONAL_PRESETS[regionKey] || NORTHERN_REGIONAL_PRESETS.all);
   map.flyTo(target.center, target.zoom, { duration: 1.2 });
 
   const selEl = document.getElementById('region-jump-select');
@@ -1661,7 +1816,7 @@ function setPresetRoute(oLng, oLat, dLng, dLat, name) {
   calculateRoute();
 }
 
-window.setDestinationPoint = function(lng, lat, name) {
+window.setDestinationPoint = function (lng, lat, name) {
   coords.destination = { lng: Number(lng), lat: Number(lat) };
   const destEl = document.getElementById('dest-text');
   if (destEl) destEl.value = name || `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}`;
@@ -2205,7 +2360,10 @@ async function submitReport() {
 
       document.getElementById('report-coord-text').innerText = 'Nhấp vào đây rồi bấm lên bản đồ';
 
-      if (pickMarkers.report) map.removeLayer(pickMarkers.report);
+      if (pickMarkers.report) {
+        if (typeof pickMarkers.report.remove === 'function') pickMarkers.report.remove();
+        pickMarkers.report = null;
+      }
 
       loadFloodPoints();
 
@@ -2228,6 +2386,12 @@ async function submitReport() {
 
 // 10. Chuyển đổi Tab Sidebar & Thanh công cụ Header
 function switchTab(tabId) {
+  if (tabId !== 'command' && window.CommandUIController && typeof window.CommandUIController.switchView === 'function') {
+    const citizenPane = document.getElementById('pane-cmd_citizen_preview');
+    if (citizenPane && citizenPane.classList.contains('hidden')) {
+      window.CommandUIController.switchView('cmd_citizen_preview');
+    }
+  }
   ['route', 'points', 'report', 'rescue', 'command', 'tracking'].forEach(id => {
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`tab-btn-${id}`);
@@ -2371,7 +2535,7 @@ function closeHelpGuide() {
 
     localStorage.setItem('floodnav_tour_seen', 'true');
 
-  } catch (e) {}
+  } catch (e) { }
 
 }
 
@@ -2405,7 +2569,7 @@ function checkFirstTimeVisitor() {
 
     }
 
-  } catch (e) {}
+  } catch (e) { }
 
 }
 
@@ -2755,7 +2919,7 @@ function handleAddressInput(type, query) {
   if (!query || query.trim().length === 0) {
     coords[targetType] = null;
     if (pickMarkers[targetType]) {
-      map.removeLayer(pickMarkers[targetType]);
+      if (typeof pickMarkers[targetType].remove === 'function') pickMarkers[targetType].remove();
       pickMarkers[targetType] = null;
     }
     container.innerHTML = '';
@@ -2788,8 +2952,8 @@ async function executeAddressSearch(type, query, currentLocalMatches = []) {
   if (!container) return;
 
   // Lấy kết quả địa phương mới nhất
-  const localMatches = (currentLocalMatches && currentLocalMatches.length > 0) 
-    ? currentLocalMatches 
+  const localMatches = (currentLocalMatches && currentLocalMatches.length > 0)
+    ? currentLocalMatches
     : getLocalAddressMatches(query);
 
   // Nếu chưa có kết quả địa phương nào, hiển thị spinner tìm kiếm
@@ -2859,13 +3023,13 @@ function selectAddress(type, lat, lng, displayName) {
 
     displayName = decodeURIComponent(displayName);
 
-  } catch (e) {}
+  } catch (e) { }
 
   const { targetType, input, clearBtn, container } = getAddressElements(type);
 
   coords[targetType] = { lat: Number(lat), lng: Number(lng) };
 
-  
+
 
   if (input) input.value = displayName;
 
@@ -2914,11 +3078,8 @@ function clearLocation(type) {
 
 
   if (pickMarkers[targetType]) {
-
-    map.removeLayer(pickMarkers[targetType]);
-
+    if (typeof pickMarkers[targetType].remove === 'function') pickMarkers[targetType].remove();
     pickMarkers[targetType] = null;
-
   }
 
 }
@@ -3033,7 +3194,7 @@ async function loadWeatherInfo() {
       if (window.lucide) lucide.createIcons();
       return;
     }
-  } catch (e) {}
+  } catch (e) { }
   el.innerHTML = `<i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i><span>Hà Nội: <b>28°C • Tạnh</b></span>`;
   if (window.lucide) lucide.createIcons();
 }
@@ -3105,11 +3266,11 @@ function showToast(message, type = 'info') {
     toast.id = 'app-toast';
     document.body.appendChild(toast);
   }
-  
+
   const bgClass = type === 'success' ? 'bg-emerald-600 text-white shadow-emerald-500/30' :
-                  type === 'warning' ? 'bg-amber-600 text-white shadow-amber-500/30' :
-                  type === 'error' ? 'bg-rose-600 text-white shadow-rose-500/30' :
-                  'bg-slate-800 text-white shadow-slate-900/30';
+    type === 'warning' ? 'bg-amber-600 text-white shadow-amber-500/30' :
+      type === 'error' ? 'bg-rose-600 text-white shadow-rose-500/30' :
+        'bg-slate-800 text-white shadow-slate-900/30';
   const icon = type === 'success' ? 'check-circle' : 'info';
 
   toast.className = `fixed bottom-6 right-6 z-[9999] px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 transform translate-y-0 opacity-100 ${bgClass} pointer-events-auto`;
@@ -3154,7 +3315,7 @@ window.showToast = showToast;
 window.clearActiveRoute = clearActiveRoute;
 window.selectActiveRoute = selectActiveRoute;
 window.updateSidebarFloodSummary = updateSidebarFloodSummary;
-window.resetToDefaultState = function() {
+window.resetToDefaultState = function () {
   if (window.StormSimulator && typeof StormSimulator.resetToDefault === 'function') {
     StormSimulator.resetToDefault();
   }
