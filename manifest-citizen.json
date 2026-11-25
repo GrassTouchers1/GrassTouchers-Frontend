@@ -1,0 +1,32 @@
+{
+  "name": "NORTHSTAR Citizen",
+  "short_name": "Citizen",
+  "description": "Ứng dụng phòng chống thiên tai, cảnh báo nguy hiểm và gửi SOS khẩn cấp dành cho Người dân",
+  "start_url": "./citizen.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "./assets/icons/citizen-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icons/citizen-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icons/citizen-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

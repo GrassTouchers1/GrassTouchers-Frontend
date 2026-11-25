@@ -1,5 +1,5 @@
 /**
- * Copyright 2026 GrassTouchers Team
+ * Copyright 2026 GrassTouchers Team - NORTHSTAR Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,349 +12,915 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * =========================================================================
- * NorthStar Command - Offline-First Mode & Local Sync Engine
- * Giữ vững năng lực tác chiến khi đứt cáp quang, mất sóng hoặc cô lập lũ lụt.
- * Chuẩn OLP 2026 PMNM: Mã nguồn mở 100%, không phụ thuộc dịch vụ ngoài.
- * =========================================================================
+ * NORTHSTAR CITIZEN - Offline Sync Manager (Phase 4 / CIT-05)
+ * Unified Outbox backed by IndexedDB (OfflineDB) with:
+ * - Stable client_event_id (generated once, never regenerated on retry)
+ * - Exponential backoff + jitter + Retry-After support
+ * - Stuck SENDING recovery on startup
+ * - In-tab mutex + cross-tab localStorage timed lock
+ * - Citizen UI sync status synchronization
  */
+(function (global) {
+  'use strict';
 
-const OfflineSyncManager = (() => {
-  const STORAGE_KEY = 'northstar_offline_outbox';
-  let queue = [];
-  let isOnline = navigator.onLine;
+  const EVENT_TYPES = Object.freeze({
+    SOS: 'SOS_BEACON_DISPATCH',
+    FLOOD_REPORT: 'FLOOD_REPORT_SUBMIT'
+  });
 
-  function init() {
-    loadQueue();
-    updateUI();
+  const SYNC_STATUS = Object.freeze({
+    PENDING_OFFLINE: 'PENDING_OFFLINE',
+    SENDING: 'SENDING',
+    ACKNOWLEDGED: 'ACKNOWLEDGED',
+    FAILED: 'FAILED'
+  });
 
-    window.addEventListener('online', () => {
-      isOnline = true;
-      updateUI();
-      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-        window.CommandUIController.showToast('🟢 ĐÃ KHÔI PHỤC KẾT NỐI', 'Hệ thống đã trực tuyến trở lại. Đang tự động đồng bộ dữ liệu ngoại tuyến...', 'success');
+  const LEGACY_QUEUE_STORAGE_KEY = 'northstar_offline_sync_queue';
+  const TAB_LOCK_STORAGE_KEY = 'northstar_sync_tab_lock';
+  const TAB_LOCK_TTL_MS = 20000;
+  const DEFAULT_STUCK_SENDING_MS = 30000;
+  const MAX_RETRIES = 5;
+  const BACKOFF_SCHEDULE_MS = [2000, 5000, 15000, 30000, 60000];
+
+  function generateClientEventId() {
+    if (global.crypto && typeof global.crypto.randomUUID === 'function') {
+      return global.crypto.randomUUID();
+    }
+    if (global.crypto && typeof global.crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      global.crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+    return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function parseRetryAfterMs(retryAfterHeader) {
+    if (!retryAfterHeader) return null;
+    const raw = String(retryAfterHeader).trim();
+    const sec = Number(raw);
+    if (Number.isFinite(sec) && sec >= 0) {
+      return Math.min(sec * 1000, 120000);
+    }
+    const targetMs = Date.parse(raw);
+    if (!Number.isNaN(targetMs)) {
+      const diff = targetMs - Date.now();
+      return diff > 0 ? Math.min(diff, 120000) : 1000;
+    }
+    return null;
+  }
+
+  function classifySyncError(error) {
+    const status = Number(error && error.status);
+    const errType = error && error.type ? String(error.type) : '';
+
+    if (Number.isFinite(status) && status > 0) {
+      if (status === 408 || status === 429 || status >= 500) {
+        return {
+          retryable: true,
+          status,
+          code: status === 429 ? 'RATE_LIMITED' : `HTTP_${status}`,
+          retryAfterMs: parseRetryAfterMs(error.retryAfter || error.retry_after)
+        };
       }
-      syncQueue();
-    });
-
-    window.addEventListener('offline', () => {
-      isOnline = false;
-      updateUI();
-      if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-        window.CommandUIController.showToast('🟠 MẤT KẾT NỐI INTERNET', 'Chuyển sang Chế độ Ngoại Tuyến (Offline-First). Toàn bộ thao tác chỉ huy sẽ được lưu an toàn tại máy cục bộ.', 'warning');
-      }
-    });
-
-    console.log('[OfflineSyncManager] Initialized. Status:', isOnline ? 'Online' : 'Offline', 'Queue items:', queue.length);
-  }
-
-  function loadQueue() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      queue = raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      console.error('[OfflineSyncManager] Failed to load offline queue:', e);
-      queue = [];
-    }
-  }
-
-  function saveQueue() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-    } catch (e) {
-      console.error('[OfflineSyncManager] Failed to save offline queue:', e);
-    }
-  }
-
-  function updateUI() {
-    const statusEl = document.getElementById('cmd-network-status');
-    const dotEl = document.getElementById('cmd-network-dot');
-    const labelEl = document.getElementById('cmd-network-label');
-    const badgeEl = document.getElementById('cmd-network-queue-badge');
-
-    if (!statusEl) return;
-
-    if (isOnline) {
-      statusEl.className = 'hidden xl:flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-1 rounded-lg border bg-emerald-950/80 border-emerald-700/80 text-emerald-300 shrink-0 select-none shadow-xs cursor-pointer hover:bg-emerald-900/80 transition';
-      statusEl.title = 'Trạng thái mạng: Trực tuyến (Sẵn sàng đồng bộ 2 chiều). Click để xem chi tiết / Sao lưu.';
-      if (dotEl) dotEl.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-      if (labelEl) labelEl.innerText = 'Trực tuyến';
-    } else {
-      statusEl.className = 'hidden xl:flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-1 rounded-lg border bg-amber-950/90 border-amber-600 text-amber-300 shrink-0 select-none shadow-xs cursor-pointer hover:bg-amber-900 transition animate-pulse';
-      statusEl.title = 'Trạng thái mạng: Ngoại tuyến (Offline-First). Dữ liệu được lưu tại máy. Click để xem chi tiết / Sao lưu.';
-      if (dotEl) dotEl.className = 'w-2 h-2 rounded-full bg-amber-400';
-      if (labelEl) labelEl.innerText = 'Ngoại tuyến';
-    }
-
-    if (badgeEl) {
-      if (queue.length > 0) {
-        badgeEl.classList.remove('hidden');
-        badgeEl.innerText = queue.length;
-      } else {
-        badgeEl.classList.add('hidden');
+      if (status >= 400 && status < 500) {
+        return {
+          retryable: false,
+          status,
+          code: `HTTP_${status}`,
+          retryAfterMs: null
+        };
       }
     }
-  }
 
-  const SOS_DRAFTS_STORAGE_KEY = 'northstar_sos_drafts';
+    if (errType === 'CONFIG' || errType === 'JSON_PARSE') {
+      return { retryable: false, status: status || 0, code: errType, retryAfterMs: null };
+    }
 
-  /**
-   * Lưu bản nháp cứu nạn SOS khi mất kết nối mạng (Tiêu chí V-03)
-   * Không coi bản nháp offline như dữ liệu đã gửi máy chủ.
-   */
-  function enqueueSOSDraft(payload) {
-    const draftId = `SOS-DRAFT-${Date.now()}`;
-    const draftItem = {
-      id: draftId,
-      action: 'SOS_BEACON_DISPATCH',
-      status: 'Lưu trên máy (chưa gửi)',
-      label: '[Lưu trên máy (chưa gửi)]',
-      payload: payload,
-      queued_at: new Date().toISOString(),
-      display_time: new Date().toLocaleTimeString('vi-VN'),
-      synced: false
+    // NETWORK, TIMEOUT, ABORTED, or fetch TypeError -> transient
+    return {
+      retryable: true,
+      status: status || 0,
+      code: errType || 'NETWORK',
+      retryAfterMs: null
     };
-
-    // 1. Lưu vào danh sách bản nháp riêng biệt của Người dân
-    try {
-      const rawDrafts = localStorage.getItem(SOS_DRAFTS_STORAGE_KEY);
-      const drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
-      drafts.unshift(draftItem);
-      localStorage.setItem(SOS_DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
-    } catch (e) {
-      console.warn('[OfflineSyncManager] Không thể ghi localStorage:', e);
-    }
-
-    // 2. Đưa vào hàng đợi tổng để tự động đẩy đi khi có mạng lại
-    queue.push(draftItem);
-    saveQueue();
-    updateUI();
-
-    // 3. Thông báo rõ ràng cho người dân (Tiêu chí V-03)
-    const alertMsg = 
-      '📦 ĐÃ LƯU BẢN NHÁP SOS VÀO BỘ NHỚ THIẾT BỊ!\n\n' +
-      '⚠️ LƯU Ý QUAN TRỌNG: Thiết bị đang mất mạng Internet, thông tin này CHƯA ĐƯỢC gửi tới máy chủ cứu hộ.\n' +
-      '• Hệ thống sẽ TỰ ĐỘNG GỬI LẠI ngay khi điện thoại có sóng 3G/4G/Wifi.\n' +
-      '• Nếu tình huống đe dọa tính mạng tức thì, vui lòng gọi điện thoại trực tiếp hotline 114 hoặc 112!';
-
-    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-      window.CommandUIController.showToast('📦 ĐÃ LƯU BẢN NHÁP SOS TRÊN THIẾT BỊ', 'Dữ liệu chưa gửi máy chủ. Sẽ tự động tải lên khi có sóng.', 'warning');
-    } else {
-      alert(alertMsg);
-    }
-
-    return draftItem;
   }
 
-  /**
-   * Lấy danh sách toàn bộ bản nháp SOS lưu cục bộ
-   */
-  function getSOSDrafts() {
-    try {
-      const raw = localStorage.getItem(SOS_DRAFTS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
+  function computeBackoffDelayMs(retryCount, retryAfterMs) {
+    if (Number.isFinite(retryAfterMs) && retryAfterMs > 0) {
+      return retryAfterMs;
     }
+    const idx = Math.max(0, Math.min(retryCount - 1, BACKOFF_SCHEDULE_MS.length - 1));
+    const base = BACKOFF_SCHEDULE_MS[idx];
+    const jitter = Math.floor(Math.random() * Math.round(base * 0.2));
+    return base + jitter;
   }
 
-  function enqueue(actionType, payload) {
-    const item = {
-      id: `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      action: actionType,
-      payload: payload,
-      queued_at: new Date().toISOString(),
-      display_time: new Date().toLocaleTimeString('vi-VN')
+  function buildSOSPayload(record) {
+    const base = record && record.payload && typeof record.payload === 'object'
+      ? { ...record.payload }
+      : { ...(record || {}) };
+
+    const clientEventId = record.client_event_id || base.client_event_id;
+    const payload = {
+      contact_name: base.contact_name || 'Người dân',
+      phone: base.phone || base.contact_phone || '0000000000',
+      lng: base.lng !== undefined ? base.lng : null,
+      lat: base.lat !== undefined ? base.lat : null,
+      location_source: base.location_source || 'manual',
+      location_accuracy_m: base.location_accuracy_m ?? null,
+      location_captured_at: base.location_captured_at ?? null,
+      location_confirmed: base.location_confirmed !== undefined ? Boolean(base.location_confirmed) : true,
+      location_description: base.location_description ?? null,
+      location_landmark: base.location_landmark ?? null,
+      people_count: Number(base.people_count) || 1,
+      has_elderly_or_children: Boolean(base.has_elderly_or_children),
+      water_level_cm: Number.isFinite(Number(base.water_level_cm)) ? Number(base.water_level_cm) : 0,
+      priority: base.priority || base.urgency_level || 'high',
+      notes: base.notes !== undefined ? base.notes : (base.note || null),
+      client_event_id: clientEventId
     };
-
-    queue.push(item);
-    saveQueue();
-    updateUI();
-
-    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-      window.CommandUIController.showToast(
-        '📦 ĐÃ LƯU HÀNG ĐỢI NGOẠI TUYẾN',
-        `Thao tác [${actionType}] đã lưu cục bộ (Hàng đợi: ${queue.length} gói tin). Sẽ tự động tải lên khi có mạng.`,
-        'info'
-      );
-    }
-
-    return item;
+    return payload;
   }
 
-  async function syncQueue() {
-    if (!isOnline || queue.length === 0) return;
+  function buildFloodReportPayload(record) {
+    const base = record && record.payload && typeof record.payload === 'object'
+      ? { ...record.payload }
+      : { ...(record || {}) };
+    const clientEventId = record.client_event_id || base.client_event_id;
+    return {
+      lat: Number(base.lat),
+      lng: Number(base.lng),
+      level: base.level || 'medium',
+      photo_url: base.photo_url || null,
+      user_id: base.user_id || null,
+      client_event_id: clientEventId
+    };
+  }
 
-    const count = queue.length;
-    console.log(`[OfflineSyncManager] Flushing ${count} queued actions to backend...`);
+  const OfflineSyncManager = {
+    EVENT_TYPES,
+    SYNC_STATUS,
+    MAX_RETRIES,
+    BACKOFF_SCHEDULE_MS,
+    STUCK_SENDING_TIMEOUT_MS: DEFAULT_STUCK_SENDING_MS,
+    TAB_LOCK_TTL_MS,
 
-    try {
-      const remaining = [];
-      let successCount = 0;
+    _tabId: `tab-${generateClientEventId().slice(0, 8)}`,
+    _initialized: false,
+    _syncPromise: null,
+    _retryTimerId: null,
+    _listenersBound: false,
 
-      for (const item of queue) {
-        if (item.action === 'SOS_BEACON_DISPATCH' && item.payload) {
-          try {
-            const res = await fetch(getApiUrl('/api/sos'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(item.payload)
-            });
-            if (res.ok) {
-              successCount++;
-              const result = await res.json();
-              const recId = result.properties?.id || result.id || Math.floor(1000 + Math.random() * 9000);
-              const ticketCode = `#SOS-2026-${String(recId).padStart(4, '0')}`;
-              try { localStorage.setItem('northstar_last_sos_ticket', ticketCode); } catch (e) {}
-              console.log('[OfflineSyncManager] Đã đồng bộ thành công SOS lên server:', ticketCode);
-            } else {
-              remaining.push(item);
-            }
-          } catch (netErr) {
-            remaining.push(item);
+    generateClientEventId,
+    classifySyncError,
+    computeBackoffDelayMs,
+
+    async init(options = {}) {
+      if (Number.isFinite(options.stuckSendingTimeoutMs) && options.stuckSendingTimeoutMs > 0) {
+        this.STUCK_SENDING_TIMEOUT_MS = options.stuckSendingTimeoutMs;
+      }
+
+      if (global.OfflineDB && typeof global.OfflineDB.init === 'function') {
+        await global.OfflineDB.init();
+      }
+      if (global.OfflineDB && typeof global.OfflineDB.saveMetadata === 'function') {
+        const apiBase = (global.GRASSTOUCHER_CONFIG && global.GRASSTOUCHER_CONFIG.API_BASE_URL)
+          || (global.location ? global.location.origin : '');
+        if (apiBase) {
+          global.OfflineDB.saveMetadata('api_base_url', apiBase).catch(() => {});
+        }
+      }
+
+      await this._migrateLegacyLocalStorageQueue();
+      await this._ensureClientEventIds();
+      await this.recoverStuckSending();
+
+      this._bindGlobalListeners();
+      this._initialized = true;
+      await this.refreshSyncUI();
+
+      if (this._isOnline()) {
+        // Trigger non-blocking initial sync
+        this.syncNow({ reason: 'startup' }).catch(() => {});
+      }
+    },
+
+    _isOnline() {
+      return typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+    },
+
+    _bindGlobalListeners() {
+      if (this._listenersBound || typeof global.addEventListener !== 'function') return;
+      this._listenersBound = true;
+
+      global.addEventListener('online', () => {
+        this.refreshSyncUI().catch(() => {});
+        this.syncNow({ reason: 'online' }).catch(() => {});
+      });
+
+      global.addEventListener('offline', () => {
+        this._clearRetryTimer();
+        this.refreshSyncUI().catch(() => {});
+      });
+
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && this._isOnline()) {
+            this.syncNow({ reason: 'visibilitychange' }).catch(() => {});
           }
+        });
+      }
+    },
+
+    async _migrateLegacyLocalStorageQueue() {
+      if (!global.localStorage || !global.OfflineDB) return;
+      let raw = null;
+      try {
+        raw = global.localStorage.getItem(LEGACY_QUEUE_STORAGE_KEY);
+      } catch (_) {
+        return;
+      }
+      if (!raw) return;
+
+      try {
+        const items = JSON.parse(raw);
+        if (Array.isArray(items) && items.length > 0) {
+          for (const item of items) {
+            if (!item || !item.payload) continue;
+            const status = item.status === 'SYNCED' ? SYNC_STATUS.ACKNOWLEDGED : SYNC_STATUS.PENDING_OFFLINE;
+            if (item.event_type === EVENT_TYPES.FLOOD_REPORT || item.type === EVENT_TYPES.FLOOD_REPORT) {
+              await this.enqueueFloodReport(item.payload, {
+                client_event_id: item.client_event_id || item.payload.client_event_id,
+                sync_status: status,
+                triggerSync: false
+              });
+            } else {
+              await this.enqueueSOS(item.payload, {
+                client_event_id: item.client_event_id || item.payload.client_event_id,
+                sync_status: status,
+                triggerSync: false
+              });
+            }
+          }
+        }
+        global.localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
+      } catch (_) {
+        // Ignore malformed legacy queue
+      }
+    },
+
+    async _ensureClientEventIds() {
+      if (!global.OfflineDB) return;
+      const sosList = await global.OfflineDB.getAllSOS();
+      for (const rec of sosList) {
+        if (!rec.client_event_id) {
+          const cid = (rec.payload && rec.payload.client_event_id) || generateClientEventId();
+          await global.OfflineDB.updateSOS(rec.local_id, { client_event_id: cid });
+        }
+      }
+      const reportList = await global.OfflineDB.getAllFloodReports();
+      for (const rec of reportList) {
+        if (!rec.client_event_id) {
+          const cid = (rec.payload && rec.payload.client_event_id) || generateClientEventId();
+          await global.OfflineDB.updateFloodReport(rec.local_id, { client_event_id: cid });
+        }
+      }
+    },
+
+    async recoverStuckSending(nowMs = Date.now()) {
+      if (!global.OfflineDB) return 0;
+      let recovered = 0;
+      const threshold = this.STUCK_SENDING_TIMEOUT_MS;
+
+      const sosList = await global.OfflineDB.getAllSOS();
+      for (const rec of sosList) {
+        if (rec.sync_status === SYNC_STATUS.SENDING) {
+          const lastAttempt = rec.last_attempt_at ? Date.parse(rec.last_attempt_at) : 0;
+          if (!lastAttempt || nowMs - lastAttempt >= threshold) {
+            await global.OfflineDB.updateSOS(rec.local_id, {
+              sync_status: SYNC_STATUS.PENDING_OFFLINE,
+              last_error: 'Recovered interrupted SENDING state'
+            });
+            recovered += 1;
+          }
+        }
+      }
+
+      const reportList = await global.OfflineDB.getAllFloodReports();
+      for (const rec of reportList) {
+        if (rec.sync_status === SYNC_STATUS.SENDING) {
+          const lastAttempt = rec.last_attempt_at ? Date.parse(rec.last_attempt_at) : 0;
+          if (!lastAttempt || nowMs - lastAttempt >= threshold) {
+            await global.OfflineDB.updateFloodReport(rec.local_id, {
+              sync_status: SYNC_STATUS.PENDING_OFFLINE,
+              last_error: 'Recovered interrupted SENDING state'
+            });
+            recovered += 1;
+          }
+        }
+      }
+
+      return recovered;
+    },
+
+    async enqueueSOS(payload, options = {}) {
+      if (!global.OfflineDB) {
+        throw new Error('OfflineDB is required for OfflineSyncManager');
+      }
+      const clientEventId = options.client_event_id || (payload && payload.client_event_id) || generateClientEventId();
+      const existingList = await global.OfflineDB.getAllSOS();
+      const existing = existingList.find((item) => item.client_event_id === clientEventId);
+
+      const syncStatus = options.sync_status || SYNC_STATUS.PENDING_OFFLINE;
+      const nowIso = new Date().toISOString();
+
+      if (existing) {
+        const updated = await global.OfflineDB.updateSOS(existing.local_id, {
+          payload: { ...payload, client_event_id: clientEventId },
+          sync_status: existing.sync_status === SYNC_STATUS.ACKNOWLEDGED ? SYNC_STATUS.ACKNOWLEDGED : syncStatus,
+          server_id: options.server_id !== undefined ? options.server_id : existing.server_id,
+          acknowledged_at: options.acknowledged_at || existing.acknowledged_at || null
+        });
+        await this.refreshSyncUI();
+        return updated;
+      }
+
+      let saved = await global.OfflineDB.saveSOS({
+        local_id: options.local_id || `SOS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        event_type: EVENT_TYPES.SOS,
+        client_event_id: clientEventId,
+        payload: { ...payload, client_event_id: clientEventId },
+        sync_status: syncStatus,
+        retry_count: Number(options.retry_count) || 0,
+        last_attempt_at: options.last_attempt_at || null,
+        next_retry_at: options.next_retry_at || null,
+        server_id: options.server_id !== undefined ? options.server_id : null,
+        acknowledged_at: options.acknowledged_at || null,
+        last_error: options.last_error || null,
+        created_at: options.created_at || nowIso
+      });
+      if (options.last_attempt_at || options.next_retry_at || options.acknowledged_at) {
+        saved = await global.OfflineDB.updateSOS(saved.local_id, {
+          last_attempt_at: options.last_attempt_at || null,
+          next_retry_at: options.next_retry_at || null,
+          acknowledged_at: options.acknowledged_at || null
+        });
+      }
+
+      this._registerBackgroundSync();
+      await this.refreshSyncUI();
+
+      if (options.triggerSync !== false && syncStatus === SYNC_STATUS.PENDING_OFFLINE && this._isOnline()) {
+        this.syncNow({ reason: 'enqueue_sos' }).catch(() => {});
+      }
+      return saved;
+    },
+
+    async enqueueSOSDraft(payload) {
+      const saved = await this.enqueueSOS(payload, {
+        client_event_id: payload && payload.client_event_id,
+        sync_status: SYNC_STATUS.PENDING_OFFLINE,
+        triggerSync: false
+      });
+      return { id: saved.local_id, ...saved };
+    },
+
+    async enqueueFloodReport(payload, options = {}) {
+      if (!global.OfflineDB) {
+        throw new Error('OfflineDB is required for OfflineSyncManager');
+      }
+      const clientEventId = options.client_event_id || (payload && payload.client_event_id) || generateClientEventId();
+      const existingList = await global.OfflineDB.getAllFloodReports();
+      const existing = existingList.find((item) => item.client_event_id === clientEventId);
+
+      const syncStatus = options.sync_status || SYNC_STATUS.PENDING_OFFLINE;
+      const nowIso = new Date().toISOString();
+
+      if (existing) {
+        const updated = await global.OfflineDB.updateFloodReport(existing.local_id, {
+          payload: { ...payload, client_event_id: clientEventId },
+          sync_status: existing.sync_status === SYNC_STATUS.ACKNOWLEDGED ? SYNC_STATUS.ACKNOWLEDGED : syncStatus,
+          server_id: options.server_id !== undefined ? options.server_id : existing.server_id,
+          acknowledged_at: options.acknowledged_at || existing.acknowledged_at || null
+        });
+        await this.refreshSyncUI();
+        return updated;
+      }
+
+      let saved = await global.OfflineDB.saveFloodReport({
+        local_id: options.local_id || `RPT-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        event_type: EVENT_TYPES.FLOOD_REPORT,
+        client_event_id: clientEventId,
+        payload: { ...payload, client_event_id: clientEventId },
+        sync_status: syncStatus,
+        retry_count: Number(options.retry_count) || 0,
+        last_attempt_at: options.last_attempt_at || null,
+        next_retry_at: options.next_retry_at || null,
+        server_id: options.server_id !== undefined ? options.server_id : null,
+        acknowledged_at: options.acknowledged_at || null,
+        last_error: options.last_error || null,
+        created_at: options.created_at || nowIso
+      });
+      if (options.last_attempt_at || options.next_retry_at || options.acknowledged_at) {
+        saved = await global.OfflineDB.updateFloodReport(saved.local_id, {
+          last_attempt_at: options.last_attempt_at || null,
+          next_retry_at: options.next_retry_at || null,
+          acknowledged_at: options.acknowledged_at || null
+        });
+      }
+
+      this._registerBackgroundSync();
+      await this.refreshSyncUI();
+
+      if (options.triggerSync !== false && syncStatus === SYNC_STATUS.PENDING_OFFLINE && this._isOnline()) {
+        this.syncNow({ reason: 'enqueue_flood_report' }).catch(() => {});
+      }
+      return saved;
+    },
+
+    async markAcknowledged(eventType, clientEventId, serverId, meta = {}) {
+      if (!global.OfflineDB || !clientEventId) return null;
+      const nowIso = new Date().toISOString();
+      if (eventType === EVENT_TYPES.FLOOD_REPORT) {
+        const list = await global.OfflineDB.getAllFloodReports();
+        const found = list.find((r) => r.client_event_id === clientEventId);
+        if (!found) return null;
+        const updated = await global.OfflineDB.updateFloodReport(found.local_id, {
+          sync_status: SYNC_STATUS.ACKNOWLEDGED,
+          server_id: serverId,
+          acknowledged_at: nowIso,
+          idempotent_replay: Boolean(meta.idempotent_replay),
+          last_error: null,
+          next_retry_at: null
+        });
+        await this.refreshSyncUI();
+        return updated;
+      }
+
+      const list = await global.OfflineDB.getAllSOS();
+      const found = list.find((r) => r.client_event_id === clientEventId);
+      if (!found) return null;
+      const updated = await global.OfflineDB.updateSOS(found.local_id, {
+        sync_status: SYNC_STATUS.ACKNOWLEDGED,
+        server_id: serverId,
+        acknowledged_at: nowIso,
+        idempotent_replay: Boolean(meta.idempotent_replay),
+        last_error: null,
+        next_retry_at: null
+      });
+      await this.refreshSyncUI();
+      return updated;
+    },
+
+    _acquireCrossTabLock() {
+      if (!global.localStorage) return true;
+      try {
+        const now = Date.now();
+        const raw = global.localStorage.getItem(TAB_LOCK_STORAGE_KEY);
+        if (raw) {
+          const lock = JSON.parse(raw);
+          if (lock && lock.owner !== this._tabId && Number(lock.expiresAt) > now) {
+            return false;
+          }
+        }
+        const nextLock = {
+          owner: this._tabId,
+          acquiredAt: now,
+          expiresAt: now + this.TAB_LOCK_TTL_MS
+        };
+        global.localStorage.setItem(TAB_LOCK_STORAGE_KEY, JSON.stringify(nextLock));
+        const verify = JSON.parse(global.localStorage.getItem(TAB_LOCK_STORAGE_KEY) || '{}');
+        return verify.owner === this._tabId;
+      } catch (_) {
+        return true;
+      }
+    },
+
+    _releaseCrossTabLock() {
+      if (!global.localStorage) return;
+      try {
+        const raw = global.localStorage.getItem(TAB_LOCK_STORAGE_KEY);
+        if (!raw) return;
+        const lock = JSON.parse(raw);
+        if (lock && lock.owner === this._tabId) {
+          global.localStorage.removeItem(TAB_LOCK_STORAGE_KEY);
+        }
+      } catch (_) {
+        // Ignore storage errors
+      }
+    },
+
+    _clearRetryTimer() {
+      if (this._retryTimerId !== null) {
+        clearTimeout(this._retryTimerId);
+        this._retryTimerId = null;
+      }
+    },
+
+    _scheduleNextRetry(nextRetryAtMs) {
+      this._clearRetryTimer();
+      if (!Number.isFinite(nextRetryAtMs) || !this._isOnline()) return;
+      const delay = Math.max(250, nextRetryAtMs - Date.now());
+      this._retryTimerId = setTimeout(() => {
+        this._retryTimerId = null;
+        this.syncNow({ reason: 'backoff_timer' }).catch(() => {});
+      }, delay);
+    },
+
+    _registerBackgroundSync() {
+      try {
+        if (
+          typeof navigator !== 'undefined' &&
+          navigator.serviceWorker &&
+          navigator.serviceWorker.ready &&
+          typeof global.SyncManager !== 'undefined'
+        ) {
+          navigator.serviceWorker.ready
+            .then((reg) => {
+              if (reg && reg.sync && typeof reg.sync.register === 'function') {
+                return reg.sync.register('northstar-offline-sync');
+              }
+              return null;
+            })
+            .catch(() => {});
+        }
+      } catch (_) {
+        // Ignore unsupported Background Sync
+      }
+    },
+
+    async syncNow(options = {}) {
+      if (!global.OfflineDB) {
+        return { skipped: true, reason: 'no_offline_db' };
+      }
+
+      if (!this._isOnline() && !options.ignoreOfflineCheck) {
+        await this.refreshSyncUI();
+        return { skipped: true, reason: 'offline' };
+      }
+
+      if (this._syncPromise) {
+        return this._syncPromise;
+      }
+
+      if (!this._acquireCrossTabLock()) {
+        return { skipped: true, reason: 'cross_tab_locked' };
+      }
+
+      this._syncPromise = (async () => {
+        const result = {
+          acknowledged: 0,
+          retried: 0,
+          failed: 0,
+          skippedBackoff: 0,
+          details: []
+        };
+
+        try {
+          await this.recoverStuckSending();
+
+          const nowMs = Date.now();
+          const manual = Boolean(options.manual || options.force);
+
+          const sosRecords = (await global.OfflineDB.getAllSOS()).map((r) => ({
+            store: 'sos_queue',
+            eventType: EVENT_TYPES.SOS,
+            record: r
+          }));
+          const reportRecords = (await global.OfflineDB.getAllFloodReports()).map((r) => ({
+            store: 'flood_reports',
+            eventType: EVENT_TYPES.FLOOD_REPORT,
+            record: r
+          }));
+
+          const outbox = [...sosRecords, ...reportRecords].filter(({ record }) => {
+            if (!record) return false;
+            if (record.sync_status === SYNC_STATUS.ACKNOWLEDGED) return false;
+            if (record.sync_status === SYNC_STATUS.FAILED) {
+              return Boolean(options.retryFailed);
+            }
+            return record.sync_status === SYNC_STATUS.PENDING_OFFLINE;
+          });
+
+          outbox.sort((a, b) => {
+            const ta = Date.parse(a.record.created_at || 0) || 0;
+            const tb = Date.parse(b.record.created_at || 0) || 0;
+            return ta - tb;
+          });
+
+          let earliestNextRetryMs = null;
+
+          for (const item of outbox) {
+            const rec = item.record;
+            const nextRetryMs = rec.next_retry_at ? Date.parse(rec.next_retry_at) : 0;
+            if (!manual && nextRetryMs && nextRetryMs > nowMs) {
+              result.skippedBackoff += 1;
+              if (earliestNextRetryMs === null || nextRetryMs < earliestNextRetryMs) {
+                earliestNextRetryMs = nextRetryMs;
+              }
+              continue;
+            }
+
+            if (!this._isOnline() && !options.ignoreOfflineCheck) {
+              break;
+            }
+
+            const clientEventId = rec.client_event_id || generateClientEventId();
+            const attemptAtIso = new Date().toISOString();
+
+            await this._updateRecord(item.store, rec.local_id, {
+              client_event_id: clientEventId,
+              sync_status: SYNC_STATUS.SENDING,
+              last_attempt_at: attemptAtIso
+            });
+            await this.refreshSyncUI();
+
+            try {
+              const response = await this._sendItem(item.eventType, {
+                ...rec,
+                client_event_id: clientEventId
+              });
+
+              const serverId = item.eventType === EVENT_TYPES.SOS
+                ? (response?.properties?.id ?? response?.id)
+                : response?.id;
+
+              if (!Number.isFinite(Number(serverId))) {
+                throw Object.assign(new Error('Server response missing valid numeric ID'), {
+                  type: 'HTTP',
+                  status: 502
+                });
+              }
+
+              const idempotentReplay = Boolean(
+                item.eventType === EVENT_TYPES.SOS
+                  ? (response?.properties?.idempotent_replay ?? response?.idempotent_replay)
+                  : response?.idempotent_replay
+              );
+
+              await this._updateRecord(item.store, rec.local_id, {
+                sync_status: SYNC_STATUS.ACKNOWLEDGED,
+                server_id: Number(serverId),
+                acknowledged_at: new Date().toISOString(),
+                idempotent_replay: idempotentReplay,
+                last_error: null,
+                next_retry_at: null
+              });
+
+              result.acknowledged += 1;
+              result.details.push({
+                local_id: rec.local_id,
+                event_type: item.eventType,
+                client_event_id: clientEventId,
+                server_id: Number(serverId),
+                status: SYNC_STATUS.ACKNOWLEDGED,
+                idempotent_replay: idempotentReplay
+              });
+            } catch (err) {
+              const info = classifySyncError(err);
+              const nextRetryCount = (Number(rec.retry_count) || 0) + 1;
+              const exhausted = nextRetryCount >= this.MAX_RETRIES;
+
+              if (!info.retryable || exhausted) {
+                await this._updateRecord(item.store, rec.local_id, {
+                  sync_status: SYNC_STATUS.FAILED,
+                  retry_count: nextRetryCount,
+                  next_retry_at: null,
+                  last_error: err && err.message ? String(err.message).slice(0, 200) : info.code
+                });
+                result.failed += 1;
+                result.details.push({
+                  local_id: rec.local_id,
+                  event_type: item.eventType,
+                  client_event_id: clientEventId,
+                  status: SYNC_STATUS.FAILED,
+                  error_code: info.code
+                });
+              } else {
+                const delayMs = computeBackoffDelayMs(nextRetryCount, info.retryAfterMs);
+                const nextAtMs = Date.now() + delayMs;
+                await this._updateRecord(item.store, rec.local_id, {
+                  sync_status: SYNC_STATUS.PENDING_OFFLINE,
+                  retry_count: nextRetryCount,
+                  next_retry_at: new Date(nextAtMs).toISOString(),
+                  last_error: err && err.message ? String(err.message).slice(0, 200) : info.code
+                });
+                result.retried += 1;
+                if (earliestNextRetryMs === null || nextAtMs < earliestNextRetryMs) {
+                  earliestNextRetryMs = nextAtMs;
+                }
+                result.details.push({
+                  local_id: rec.local_id,
+                  event_type: item.eventType,
+                  client_event_id: clientEventId,
+                  status: SYNC_STATUS.PENDING_OFFLINE,
+                  retry_count: nextRetryCount,
+                  delay_ms: delayMs
+                });
+              }
+            }
+          }
+
+          if (earliestNextRetryMs !== null) {
+            this._scheduleNextRetry(earliestNextRetryMs);
+          }
+
+          await global.OfflineDB.saveMetadata('last_sync_summary', {
+            ran_at: new Date().toISOString(),
+            acknowledged: result.acknowledged,
+            retried: result.retried,
+            failed: result.failed
+          });
+        } finally {
+          this._syncPromise = null;
+          this._releaseCrossTabLock();
+          await this.refreshSyncUI();
+        }
+
+        return result;
+      })();
+
+      return this._syncPromise;
+    },
+
+    async _updateRecord(store, localId, patch) {
+      if (store === 'flood_reports') {
+        return global.OfflineDB.updateFloodReport(localId, patch);
+      }
+      return global.OfflineDB.updateSOS(localId, patch);
+    },
+
+    async _sendItem(eventType, record) {
+      const path = eventType === EVENT_TYPES.FLOOD_REPORT ? '/api/reports' : '/api/sos';
+      const payload = eventType === EVENT_TYPES.FLOOD_REPORT
+        ? buildFloodReportPayload(record)
+        : buildSOSPayload(record);
+
+      if (global.NorthStarApi && typeof global.NorthStarApi.fetchJson === 'function') {
+        return global.NorthStarApi.fetchJson(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const baseUrl = (global.GRASSTOUCHER_CONFIG && global.GRASSTOUCHER_CONFIG.API_BASE_URL) || '';
+      const url = `${String(baseUrl).replace(/\/$/, '')}${path}`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        const err = new Error(`HTTP ${resp.status}`);
+        err.type = 'HTTP';
+        err.status = resp.status;
+        err.retryAfter = resp.headers ? resp.headers.get('Retry-After') : null;
+        throw err;
+      }
+      return resp.json();
+    },
+
+    async getStatusSummary() {
+      const summary = {
+        online: this._isOnline(),
+        pending: 0,
+        sending: 0,
+        acknowledged: 0,
+        failed: 0,
+        sos_pending: 0,
+        reports_pending: 0,
+        total_outbox: 0
+      };
+      if (!global.OfflineDB) return summary;
+
+      try {
+        const sosList = await global.OfflineDB.getAllSOS();
+        const reportList = await global.OfflineDB.getAllFloodReports();
+
+        for (const r of sosList) {
+          summary.total_outbox += 1;
+          if (r.sync_status === SYNC_STATUS.ACKNOWLEDGED) summary.acknowledged += 1;
+          else if (r.sync_status === SYNC_STATUS.SENDING) {
+            summary.sending += 1;
+            summary.sos_pending += 1;
+          } else if (r.sync_status === SYNC_STATUS.FAILED) summary.failed += 1;
+          else {
+            summary.pending += 1;
+            summary.sos_pending += 1;
+          }
+        }
+
+        for (const r of reportList) {
+          summary.total_outbox += 1;
+          if (r.sync_status === SYNC_STATUS.ACKNOWLEDGED) summary.acknowledged += 1;
+          else if (r.sync_status === SYNC_STATUS.SENDING) {
+            summary.sending += 1;
+            summary.reports_pending += 1;
+          } else if (r.sync_status === SYNC_STATUS.FAILED) summary.failed += 1;
+          else {
+            summary.pending += 1;
+            summary.reports_pending += 1;
+          }
+        }
+      } catch (_) {
+        // Return partial summary if DB unavailable
+      }
+      return summary;
+    },
+
+    async refreshSyncUI() {
+      const summary = await this.getStatusSummary();
+      if (typeof document === 'undefined') return summary;
+
+      const netPill = document.getElementById('citizen-network-status');
+      const netDot = document.getElementById('citizen-network-dot');
+      const netLabel = document.getElementById('citizen-network-label');
+
+      if (netPill && netDot && netLabel) {
+        if (!summary.online) {
+          netPill.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-amber-950/90 border border-amber-500/60 text-amber-300 shadow-sm';
+          netDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+          netLabel.textContent = summary.pending > 0 ? `Ngoại tuyến (${summary.pending})` : 'Ngoại tuyến';
+        } else if (summary.sending > 0) {
+          netPill.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 shadow-sm';
+          netDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping';
+          netLabel.textContent = `Đang đồng bộ (${summary.sending})`;
+        } else if (summary.pending > 0) {
+          netPill.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-amber-950/90 border border-amber-500/60 text-amber-300 shadow-sm';
+          netDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+          netLabel.textContent = `Chờ đồng bộ (${summary.pending})`;
+        } else if (summary.failed > 0) {
+          netPill.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-red-950/90 border border-red-500/60 text-red-300 shadow-sm';
+          netDot.className = 'w-2.5 h-2.5 rounded-full bg-red-400';
+          netLabel.textContent = `Lỗi đồng bộ (${summary.failed})`;
         } else {
-          successCount++;
+          netPill.className = 'hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 shadow-sm';
+          netDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]';
+          netLabel.textContent = 'Trực tuyến';
         }
       }
 
-      queue = remaining;
-      saveQueue();
-      updateUI();
+      const pendingBadge = document.getElementById('citizen-sync-pending-badge');
+      const statusText = document.getElementById('citizen-sync-status-text');
+      const manualBtn = document.getElementById('btn-citizen-manual-sync');
+      const sosBadge = document.getElementById('citizen-sos-sync-badge');
 
-      if (successCount > 0) {
-        if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-          window.CommandUIController.showToast(
-            '🚀 ĐỒNG BỘ HOÀN TẤT',
-            `Đã tự động gửi ${successCount} gói tin ngoại tuyến lên máy chủ cứu nạn thành công!`,
-            'success'
-          );
+      if (pendingBadge) {
+        const activeCount = summary.pending + summary.sending;
+        pendingBadge.textContent = String(activeCount);
+        pendingBadge.classList.toggle('hidden', activeCount === 0);
+      }
+
+      if (statusText) {
+        if (summary.sending > 0) {
+          statusText.textContent = `Đang gửi ${summary.sending} bản ghi lên máy chủ...`;
+        } else if (summary.pending > 0) {
+          statusText.textContent = summary.online
+            ? `Còn ${summary.pending} bản ghi chờ đồng bộ`
+            : `Ngoại tuyến: ${summary.pending} bản ghi đã lưu an toàn trên thiết bị`;
+        } else if (summary.failed > 0) {
+          statusText.textContent = `${summary.failed} bản ghi lỗi vĩnh viễn (không thể đồng bộ)`;
+        } else if (summary.acknowledged > 0) {
+          statusText.textContent = `Đã đồng bộ ${summary.acknowledged} bản ghi với máy chủ`;
+        } else {
+          statusText.textContent = summary.online ? 'Sẵn sàng đồng bộ' : 'Chế độ ngoại tuyến';
         }
       }
 
-      if (remaining.length > 0) {
-        if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-          window.CommandUIController.showToast(
-            '⚠️ ĐỒNG BỘ CHƯA HOÀN TẤT',
-            `Còn ${remaining.length} gói tin chưa thể gửi máy chủ do mạng không ổn định. Dữ liệu vẫn được giữ an toàn tại máy.`,
-            'warning'
-          );
+      if (manualBtn) {
+        const hasWork = summary.pending + summary.failed > 0;
+        manualBtn.classList.toggle('hidden', !hasWork && summary.sending === 0);
+        manualBtn.disabled = summary.sending > 0 || !summary.online;
+      }
+
+      if (sosBadge) {
+        if (summary.sos_pending > 0) {
+          sosBadge.textContent = `SOS chờ gửi: ${summary.sos_pending}`;
+          sosBadge.classList.remove('hidden');
+        } else {
+          sosBadge.classList.add('hidden');
         }
       }
-    } catch (e) {
-      console.error('[OfflineSyncManager] Synchronization error:', e);
-    }
-  }
 
-  function exportBackupJSON() {
-    const backupData = {
-      app: 'NorthStar Emergency Command System (COP)',
-      version: '2026.11.18',
-      standard: 'OLP 2026 PMNM Specification',
-      exported_at: new Date().toISOString(),
-      network_status: isOnline ? 'online' : 'offline',
-      offline_queue: queue,
-      intake_incidents: (window.CommandUIController && typeof window.CommandUIController.getIntakeData === 'function') ? window.CommandUIController.getIntakeData() : [],
-      rescue_units: (window.CommandUIController && typeof window.CommandUIController.getUnitsData === 'function') ? window.CommandUIController.getUnitsData() : [],
-      tactical_missions: (window.CommandUIController && typeof window.CommandUIController.getMissionData === 'function') ? window.CommandUIController.getMissionData() : []
-    };
-
-    const jsonStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `NorthStar_Command_Offline_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    if (window.CommandUIController && typeof window.CommandUIController.showToast === 'function') {
-      window.CommandUIController.showToast(
-        '💾 XUẤT SAO LƯU NGOẠI TUYẾN THÀNH CÔNG',
-        'Tệp JSON sao lưu toàn diện đã được tải về máy cục bộ.',
-        'success'
-      );
-    }
-  }
-
-  function openSyncStatusModal() {
-    const modal = document.getElementById('modal-offline-sync');
-    if (modal) {
-      renderSyncModalContent();
-      modal.classList.remove('hidden');
-    } else {
-      // If modal does not exist, trigger backup export directly with alert
-      if (confirm(`TRẠNG THÁI MẠNG: ${isOnline ? '🟢 TRỰC TUYẾN' : '🟠 NGOẠI TUYẾN'}\nSố gói tin chờ đồng bộ: ${queue.length}\n\nBạn có muốn tải xuống tệp JSON sao lưu ngoại tuyến toàn diện ngay bây giờ?`)) {
-        exportBackupJSON();
+      if (typeof global.dispatchEvent === 'function' && typeof global.CustomEvent === 'function') {
+        global.dispatchEvent(new global.CustomEvent('northstar:sync-updated', { detail: summary }));
       }
+
+      return summary;
+    },
+
+    async getQueueCount() {
+      const s = await this.getStatusSummary();
+      return s.pending + s.sending;
     }
-  }
-
-  function closeSyncStatusModal() {
-    const modal = document.getElementById('modal-offline-sync');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  function renderSyncModalContent() {
-    const container = document.getElementById('offline-sync-queue-list');
-    if (!container) return;
-
-    if (queue.length === 0) {
-      container.innerHTML = `
-        <div class="text-center py-6 text-slate-400 text-xs">
-          <i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-80"></i>
-          Hàng đợi rỗng. Mọi dữ liệu đã được đồng bộ toàn vẹn.
-        </div>
-      `;
-    } else {
-      container.innerHTML = queue.map((item, idx) => `
-        <div class="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-between text-xs">
-          <div class="space-y-0.5">
-            <div class="flex items-center gap-1.5 font-bold text-white">
-              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-              <span>[${item.action}]</span>
-              <span class="text-slate-400 font-mono text-[10px]">${item.id}</span>
-            </div>
-            <div class="text-[11px] text-slate-300">
-              ${item.payload ? (item.payload.title || item.payload.contact_name || item.payload.id || 'Thao tác chỉ huy') : 'Chi tiết'}
-            </div>
-          </div>
-          <span class="text-[10px] text-slate-400 font-mono">${item.display_time}</span>
-        </div>
-      `).join('');
-    }
-
-    if (window.lucide) lucide.createIcons();
-  }
-
-  return {
-    init,
-    isOnline: () => isOnline,
-    enqueue,
-    enqueueSOSDraft,
-    getSOSDrafts,
-    syncQueue,
-    getQueue: () => [...queue],
-    exportBackupJSON,
-    openSyncStatusModal,
-    closeSyncStatusModal
   };
-})();
 
-// Auto-initialize when DOM is ready
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => OfflineSyncManager.init());
-  } else {
-    OfflineSyncManager.init();
-  }
-}
-
-window.OfflineSyncManager = OfflineSyncManager;
+  global.OfflineSyncManager = OfflineSyncManager;
+})(typeof window !== 'undefined' ? window : globalThis);

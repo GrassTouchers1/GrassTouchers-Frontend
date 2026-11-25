@@ -7,6 +7,22 @@ và dự án này tuân thủ [Semantic Versioning](https://semver.org/spec/v2.0
 
 ---
 
+## [1.0.0-olp2026] - 2026-11-25 (Bản nghiệm thu NORTHSTAR Citizen cho OLP 2026)
+
+### Đã thêm (Added)
+- **Citizen Offline-First Platform (`CIT-01`..`CIT-13`):**
+  - Chuẩn hóa cấu hình API qua `js/config.js` (`NorthStarApi.fetchJson()`), loại bỏ URL hardcode và rò rỉ PII trong log.
+  - Định vị GPS thật kèm vòng tròn sai số MapLibre và bắt buộc xác nhận vị trí trước khi gửi SOS.
+  - Tầng lưu trữ `IndexedDB` (`northstar_citizen_db`, 7 Object Stores) và `OfflineSyncManager` với `client_event_id`, SHA-256 idempotency, exponential backoff retry.
+  - PWA Service Worker (`sw.js`) đa tầng cache + `manifest-citizen.json` cho phép mở lại `citizen.html` khi mất Internet.
+  - Thời tiết & Cảnh báo thiên tai phân tách rõ dữ liệu thật, dự báo AI/ML và cảnh báo chính thức.
+  - Báo cáo ngập cộng đồng (kèm ảnh `<= 5MB`, nhãn `[Chờ xác minh]`), định tuyến né ngập A* & sơ tán `/api/route/evacuate` không có thông báo an toàn giả.
+  - Tra cứu SOS riêng tư qua `/api/sos/track/{tracking_token}` (che PII) và Trợ lý AI Online/Offline (15 chủ đề sinh tồn Việt Nam).
+  - Giao thức SOS Relay (`northstar.sos.relay.v1` với SHA-256 + ECDSA-P256) và kiến trúc `SatelliteGatewayAdapter` 7 trạng thái.
+  - Bộ tài liệu kiểm toán & nghiệm thu OLP 2026 (`docs/CITIZEN_FINAL_*.md`).
+
+---
+
 ## [1.0.0] - 2026-11-19 (Bản nộp chính thức Olympic Tin học Sinh viên - PMNM)
 
 ### Đã thêm (Added)
