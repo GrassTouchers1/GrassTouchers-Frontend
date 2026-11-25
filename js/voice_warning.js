@@ -25,7 +25,14 @@
  */
 
 const VoiceWarning = (function () {
-  let isEnabled = true;
+  const STORAGE_KEY = 'northstar_voice_muted';
+  let isEnabled = (function () {
+    try {
+      return localStorage.getItem(STORAGE_KEY) !== '1';
+    } catch (e) {
+      return true;
+    }
+  })();
   let synth = window.speechSynthesis;
   let vietnameseVoice = null;
 
@@ -58,16 +65,56 @@ const VoiceWarning = (function () {
     }
   }
 
-  function toggleVoice() {
-    isEnabled = !isEnabled;
+  function updateMuteButtonUI() {
+    const btn = document.getElementById('btn-voice-toggle');
     const icon = document.getElementById('voice-toggle-icon');
+    const label = document.getElementById('voice-toggle-label');
+    if (btn) {
+      if (isEnabled) {
+        btn.className = 'flex p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-300 font-bold text-xs items-center gap-1 transition cursor-pointer shrink-0';
+        btn.title = 'Đang bật âm cảnh báo (Nhấn để tắt âm / Phím M)';
+      } else {
+        btn.className = 'flex p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/60 text-rose-300 font-bold text-xs items-center gap-1 transition cursor-pointer shrink-0';
+        btn.title = 'Đã tắt âm cảnh báo (Nhấn để bật lại / Phím M)';
+      }
+    }
     if (icon) {
       icon.setAttribute('data-lucide', isEnabled ? 'volume-2' : 'volume-x');
       if (window.lucide) lucide.createIcons();
     }
-    // force = true để câu thông báo "Đã tắt" vẫn được đọc dù loa đang tắt
-    speak(isEnabled ? "Đã bật cảnh báo giọng nói tiếng Việt." : "Đã tắt âm thanh cảnh báo.", true);
+    if (label) {
+      label.textContent = isEnabled ? 'Âm thanh' : 'Đã tắt âm';
+    }
+    document.querySelectorAll('audio, video').forEach(el => {
+      el.muted = !isEnabled;
+    });
   }
+
+  function setMuted(muted) {
+    isEnabled = !muted;
+    try {
+      localStorage.setItem(STORAGE_KEY, isEnabled ? '0' : '1');
+    } catch (e) {}
+
+    if (!isEnabled && synth) {
+      try { synth.cancel(); } catch (e) {}
+    }
+
+    updateMuteButtonUI();
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(isEnabled ? '🔊 Đã bật âm thanh cảnh báo' : '🔇 Đã tắt âm thanh cảnh báo', isEnabled ? 'info' : 'warning');
+    }
+    if (isEnabled) {
+      speak('Đã bật cảnh báo giọng nói tiếng Việt.', true);
+    }
+  }
+
+  function toggleVoice() {
+    setMuted(isEnabled);
+  }
+
+  window.addEventListener('DOMContentLoaded', updateMuteButtonUI);
 
   function speakRouteResult(data) {
     if (!data) return;
@@ -95,6 +142,8 @@ const VoiceWarning = (function () {
   return {
     speak,
     toggleVoice,
+    setMuted,
+    isMuted: () => !isEnabled,
     speakRouteResult,
     speakRoutePlan,
     isEnabled: () => isEnabled

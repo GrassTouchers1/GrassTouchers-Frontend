@@ -933,6 +933,27 @@
         }
       }
 
+      const cmdStatus = document.getElementById('cmd-network-status');
+      const cmdDot = document.getElementById('cmd-network-dot');
+      const cmdLabel = document.getElementById('cmd-network-label');
+      const cmdBadge = document.getElementById('cmd-network-queue-badge');
+      if (cmdStatus) {
+        if (summary.online) {
+          cmdStatus.className = 'hidden xl:flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-1 rounded-lg border bg-emerald-950/80 border-emerald-700/80 text-emerald-300 shrink-0 select-none shadow-xs cursor-pointer hover:bg-emerald-900/80 transition';
+          if (cmdDot) cmdDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          if (cmdLabel) cmdLabel.innerText = 'Trực tuyến';
+        } else {
+          cmdStatus.className = 'hidden xl:flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-1 rounded-lg border bg-amber-950/90 border-amber-600 text-amber-300 shrink-0 select-none shadow-xs cursor-pointer hover:bg-amber-900 transition animate-pulse';
+          if (cmdDot) cmdDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+          if (cmdLabel) cmdLabel.innerText = 'Ngoại tuyến';
+        }
+        if (cmdBadge) {
+          const totalQ = summary.pending + summary.sending + ((this._cmdQueue && this._cmdQueue.length) || 0);
+          cmdBadge.classList.toggle('hidden', totalQ === 0);
+          if (totalQ > 0) cmdBadge.innerText = String(totalQ);
+        }
+      }
+
       if (typeof global.dispatchEvent === 'function' && typeof global.CustomEvent === 'function') {
         global.dispatchEvent(new global.CustomEvent('northstar:sync-updated', { detail: summary }));
       }
@@ -943,8 +964,102 @@
     async getQueueCount() {
       const s = await this.getStatusSummary();
       return s.pending + s.sending;
+    },
+
+    isOnline() {
+      return this._isOnline();
+    },
+
+    _loadCmdQueue() {
+      try {
+        const raw = global.localStorage && global.localStorage.getItem('northstar_offline_outbox');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) {
+        return [];
+      }
+    },
+
+    _saveCmdQueue(list) {
+      try {
+        if (global.localStorage) global.localStorage.setItem('northstar_offline_outbox', JSON.stringify(list));
+      } catch (_) {}
+    },
+
+    enqueue(actionType, payload) {
+      const list = this._loadCmdQueue();
+      const item = {
+        id: `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        action: actionType,
+        payload: payload,
+        queued_at: new Date().toISOString(),
+        display_time: new Date().toLocaleTimeString('vi-VN')
+      };
+      list.push(item);
+      this._cmdQueue = list;
+      this._saveCmdQueue(list);
+      this.refreshSyncUI().catch(() => {});
+      return item;
+    },
+
+    getQueue() {
+      return this._loadCmdQueue();
+    },
+
+    async syncQueue() {
+      await this.syncNow({ manual: true });
+      this._cmdQueue = [];
+      this._saveCmdQueue([]);
+      await this.refreshSyncUI();
+    },
+
+    exportBackupJSON() {
+      const backupData = {
+        app: 'NorthStar Emergency Command System (COP)',
+        version: '1.0.0',
+        exported_at: new Date().toISOString(),
+        network_status: this._isOnline() ? 'online' : 'offline',
+        offline_queue: this._loadCmdQueue(),
+        intake_incidents: (global.CommandUIController && typeof global.CommandUIController.getIntakeData === 'function') ? global.CommandUIController.getIntakeData() : [],
+        rescue_units: (global.CommandUIController && typeof global.CommandUIController.getUnitsData === 'function') ? global.CommandUIController.getUnitsData() : [],
+        tactical_missions: (global.CommandUIController && typeof global.CommandUIController.getMissionData === 'function') ? global.CommandUIController.getMissionData() : []
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NorthStar_Command_Offline_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
+    openSyncStatusModal() {
+      const modal = document.getElementById('modal-offline-sync');
+      if (modal) {
+        const container = document.getElementById('offline-sync-queue-list');
+        const list = this._loadCmdQueue();
+        if (container) {
+          container.innerHTML = list.length === 0
+            ? '<div class="text-center py-6 text-slate-400 text-xs">Hàng đợi rỗng. Mọi dữ liệu đã đồng bộ toàn vẹn.</div>'
+            : list.map(it => `<div class="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-between text-xs"><span class="font-bold text-white">[${it.action}] ${it.id}</span><span class="text-[10px] text-slate-400 font-mono">${it.display_time || ''}</span></div>`).join('');
+        }
+        modal.classList.remove('hidden');
+      }
+    },
+
+    closeSyncStatusModal() {
+      const modal = document.getElementById('modal-offline-sync');
+      if (modal) modal.classList.add('hidden');
     }
   };
 
   global.OfflineSyncManager = OfflineSyncManager;
+  if (typeof document !== 'undefined' && !document.getElementById('citizen-sos-form')) {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!document.getElementById('citizen-sos-form')) {
+        OfflineSyncManager.init({ startInterval: false }).catch(() => {});
+      }
+    });
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -6,7 +6,13 @@
   --font-main: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-html, body, button, input, select, textarea, .font-sans {
+html,
+body,
+button,
+input,
+select,
+textarea,
+.font-sans {
   font-family: var(--font-main) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -54,15 +60,33 @@ html, body, button, input, select, textarea, .font-sans {
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.9; }
-  100% { transform: scale(2.4); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 /* Hiệu ứng sóng ngập lan tỏa động (FE-04) */
 @keyframes pulse-wave {
-  0% { stroke-width: 1.5; stroke-opacity: 0.9; }
-  50% { stroke-width: 3.5; stroke-opacity: 0.35; }
-  100% { stroke-width: 1.5; stroke-opacity: 0.9; }
+  0% {
+    stroke-width: 1.5;
+    stroke-opacity: 0.9;
+  }
+
+  50% {
+    stroke-width: 3.5;
+    stroke-opacity: 0.35;
+  }
+
+  100% {
+    stroke-width: 1.5;
+    stroke-opacity: 0.9;
+  }
 }
 
 .animated-flood-ring {
@@ -73,6 +97,7 @@ html, body, button, input, select, textarea, .font-sans {
 .flood-pulse-danger {
   position: relative;
 }
+
 .flood-pulse-danger::after {
   content: '';
   position: absolute;
@@ -90,6 +115,7 @@ html, body, button, input, select, textarea, .font-sans {
 .flood-pulse-warning {
   position: relative;
 }
+
 .flood-pulse-warning::after {
   content: '';
   position: absolute;
@@ -116,6 +142,7 @@ html, body, button, input, select, textarea, .font-sans {
   border: 2px solid #ffffff;
   transition: transform 0.2s ease;
 }
+
 .custom-marker:hover {
   transform: scale(1.2);
   z-index: 1000 !important;
@@ -126,11 +153,13 @@ body.dark-mode {
   background-color: #090d16;
   color: #f8fafc;
 }
+
 body.dark-mode aside {
   background-color: #111827;
   border-color: #1f2937;
   color: #f8fafc;
 }
+
 body.dark-mode .bg-white,
 body.dark-mode .bg-white\/95,
 body.dark-mode .bg-white\/90,
@@ -186,18 +215,22 @@ body.dark-mode #btn-toggle-hazard-layers-float,
   color: #38bdf8 !important;
   border-color: #334155 !important;
 }
+
 body.dark-mode .bg-slate-50 {
   background-color: #0b1120 !important;
   color: #e2e8f0 !important;
 }
+
 body.dark-mode .border-slate-200,
 body.dark-mode .border-slate-300 {
   border-color: #1f2937 !important;
 }
+
 body.dark-mode .text-slate-800,
 body.dark-mode .text-slate-900 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .text-slate-700,
 body.dark-mode .text-slate-600 {
   color: #94a3b8 !important;
@@ -207,7 +240,9 @@ body.dark-mode .text-slate-600 {
    Cố định màu chữ & độ tương phản cho Form Input / Textarea / Select
    Khắc phục triệt để lỗi gõ không hiện chữ do chữ trắng trên nền trắng
    ======================================================== */
-input, textarea, select {
+input,
+textarea,
+select {
   color: #0f172a;
 }
 
@@ -227,7 +262,8 @@ input::placeholder,
 textarea::placeholder,
 #origin-text::placeholder,
 #dest-text::placeholder {
-  color: #64748b !important; /* Slate 500 */
+  color: #64748b !important;
+  /* Slate 500 */
   opacity: 1 !important;
 }
 
@@ -244,13 +280,16 @@ body.dark-mode select:not(.bg-white) {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
 }
+
 body.dark-mode ::-webkit-scrollbar-thumb {
   background: #374151;
 }
@@ -262,14 +301,17 @@ body.dark-mode #dest-suggestions {
   border-color: #374151 !important;
   color: #f8fafc !important;
 }
-body.dark-mode #origin-suggestions > div:hover,
-body.dark-mode #dest-suggestions > div:hover {
+
+body.dark-mode #origin-suggestions>div:hover,
+body.dark-mode #dest-suggestions>div:hover {
   background-color: #1f2937 !important;
 }
+
 body.dark-mode #origin-suggestions p.text-slate-800,
 body.dark-mode #dest-suggestions p.text-slate-800 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #origin-suggestions p.text-slate-500,
 body.dark-mode #dest-suggestions p.text-slate-500 {
   color: #94a3b8 !important;
@@ -281,6 +323,7 @@ body.dark-mode #dest-suggestions p.text-slate-500 {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -293,6 +336,7 @@ body.dark-mode #dest-suggestions p.text-slate-500 {
     margin-right: 8px !important;
     max-height: 48px !important;
   }
+
   #sidebar-panel {
     top: 58px !important;
     height: calc(100vh - 58px) !important;
@@ -307,16 +351,19 @@ body.dark-mode #sidebar-panel {
   background-color: #111827 !important;
   border-color: #1f2937 !important;
 }
+
 body.dark-mode #sidebar-panel .bg-slate-100 {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #mobile-route-floating-card {
   background-color: rgba(17, 24, 39, 0.95) !important;
   border-color: #374151 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode #mobile-route-floating-card #mobile-card-title {
   color: #f1f5f9 !important;
 }
@@ -327,51 +374,64 @@ body.dark-mode .bg-blue-50 {
   border-color: rgba(59, 130, 246, 0.3) !important;
   color: #93c5fd !important;
 }
+
 body.dark-mode .bg-blue-50\/50 {
   background-color: rgba(30, 58, 138, 0.25) !important;
 }
+
 body.dark-mode .text-blue-800 {
   color: #93c5fd !important;
 }
+
 body.dark-mode .border-blue-100 {
   border-color: rgba(59, 130, 246, 0.2) !important;
 }
+
 body.dark-mode label.border-slate-200 {
   border-color: #334155 !important;
 }
+
 body.dark-mode label.border-slate-200:hover {
   background-color: #1e293b !important;
 }
+
 body.dark-mode button.bg-white {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode button.bg-white:hover {
   background-color: #334155 !important;
 }
+
 body.dark-mode .leaflet-bar a,
 body.dark-mode .leaflet-control-layers {
   background-color: #111827 !important;
   color: #f1f5f9 !important;
   border-color: #374151 !important;
 }
+
 body.dark-mode .leaflet-bar a {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .leaflet-control-layers-expanded {
   background-color: #111827 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode .leaflet-control-attribution {
   background-color: rgba(17, 24, 39, 0.8) !important;
   color: #94a3b8 !important;
 }
+
 body.dark-mode .leaflet-control-attribution a {
   color: #60a5fa !important;
 }
-body.dark-mode #onboarding-modal > div > div,
-body.dark-mode #dashboard-modal > div {
+
+body.dark-mode #onboarding-modal>div>div,
+body.dark-mode #dashboard-modal>div {
   background-color: #111827 !important;
   color: #f8fafc !important;
   border-color: #374151 !important;
@@ -388,6 +448,7 @@ body.dark-mode #dashboard-modal > div {
     opacity: 0;
     transform: translate(-50%, -12px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
@@ -539,9 +600,20 @@ body.dark-mode .floating-header {
 }
 
 @keyframes cluster-pulse-danger {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.8; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
 }
 
 /* Hiệu ứng spiderfy đường nối của Leaflet MarkerCluster */
@@ -566,9 +638,17 @@ body.dark-mode .cluster-danger-dot {
   transform-origin: top right;
   animation: dropdown-pop 0.15s ease-out;
 }
+
 @keyframes dropdown-pop {
-  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 body.dark-mode #header-more-dropdown {
@@ -576,6 +656,7 @@ body.dark-mode #header-more-dropdown {
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #header-more-dropdown button:hover {
   background-color: #1e293b !important;
 }
@@ -585,38 +666,47 @@ body.dark-mode #flood-summary-card h3,
 body.dark-mode #route-results h3 {
   color: #f1f5f9 !important;
 }
+
 body.dark-mode #summary-loading-view {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
   color: #94a3b8 !important;
 }
+
 body.dark-mode #summary-content-view .bg-slate-50 {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
   color: #cbd5e1 !important;
 }
+
 body.dark-mode #summary-content-view .bg-cyan-50\/70 {
   background-color: rgba(8, 51, 68, 0.4) !important;
   border-color: rgba(6, 182, 212, 0.3) !important;
   color: #a5f3fc !important;
 }
+
 body.dark-mode #card-safe-route {
   background: linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(15, 118, 110, 0.3)) !important;
   border-color: #059669 !important;
 }
+
 body.dark-mode #card-safe-route span.text-slate-900 {
   color: #ffffff !important;
 }
+
 body.dark-mode #card-safe-route span.text-slate-500 {
   color: #94a3b8 !important;
 }
+
 body.dark-mode #card-fastest-route {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
 }
+
 body.dark-mode #card-fastest-route span.text-slate-900 {
   color: #ffffff !important;
 }
+
 body.dark-mode #card-fastest-route span.text-slate-500 {
   color: #94a3b8 !important;
 }
@@ -632,11 +722,13 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.75), 0 0 15px rgba(14, 165, 233, 0.2) !important;
   color: #f8fafc !important;
 }
+
 .flood-custom-popup .leaflet-popup-content {
   margin: 8px 10px;
   line-height: 1.4;
   color: #f8fafc !important;
 }
+
 .flood-custom-popup a.leaflet-popup-close-button {
   top: 8px;
   right: 8px;
@@ -652,24 +744,30 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   transition: all 0.15s ease;
   z-index: 10;
 }
+
 .flood-custom-popup a.leaflet-popup-close-button:hover {
   color: #ffffff !important;
   background-color: #334155 !important;
 }
+
 .flood-custom-popup .leaflet-popup-tip {
   background: #0f172a !important;
   box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.5);
 }
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
@@ -762,9 +860,11 @@ body.dark-mode #card-fastest-route span.text-slate-500 {
   background-color: rgba(49, 46, 129, 0.35) !important;
   border-color: rgba(99, 102, 241, 0.4) !important;
 }
+
 .flood-custom-popup .text-indigo-900 {
   color: #c7d2fe !important;
 }
+
 .flood-custom-popup .text-indigo-600 {
   color: #818cf8 !important;
 }
@@ -906,10 +1006,12 @@ body.command-mode-active .floating-header {
     transform: scale(0.9);
     opacity: 0.8;
   }
+
   70% {
     transform: scale(2.2);
     opacity: 0;
   }
+
   100% {
     transform: scale(2.4);
     opacity: 0;
@@ -920,6 +1022,268 @@ body.command-mode-active .floating-header {
   transition: all 0.2s ease-in-out;
   cursor: pointer;
 }
+
+/* ==========================================================================
+   NORTHSTAR CITIZEN – Interactive Location Picker & Verification Styles
+   Phụ trách: Thành viên 1 | Tiêu chuẩn: VIC-04 & V-04
+   ========================================================================== */
+
+.citizen-pin-pulse-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.citizen-pin-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(225, 29, 72, 0.4);
+  animation: citizen-pin-ripple 1.8s infinite ease-out;
+}
+
+.citizen-pin-pulse-core {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e11d48;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.8);
+}
+
+@keyframes citizen-pin-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.citizen-loc-verified {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.citizen-loc-unverified {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fde68a !important;
+}
+
+/* ==========================================================================
+   Tactical Location Picking Toolbar & Accuracy Styling (VIC-04 & V-04)
+   ========================================================================== */
+.citizen-map-pin-toolbar {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: auto;
+  animation: citizen-toolbar-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes citizen-toolbar-slide-down {
+  0% {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.citizen-tb-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 14px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2);
+  color: #f8fafc;
+}
+
+.citizen-tb-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.citizen-tb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 1.5s infinite;
+}
+
+.citizen-tb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.citizen-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.citizen-tb-btn:active {
+  transform: scale(0.95);
+}
+
+.citizen-tb-gps {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.citizen-tb-gps:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.citizen-tb-confirm {
+  background: #0284c7;
+  color: #ffffff;
+  border: 1px solid #38bdf8;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);
+}
+
+.citizen-tb-confirm:hover {
+  background: #0369a1;
+}
+
+.citizen-tb-cancel {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  padding: 5px 7px;
+}
+
+.citizen-tb-cancel:hover {
+  background: #e11d48;
+  color: #ffffff;
+/* =========================================================================
+ * C2 DARK GLASS NAVIGATION & SCALE CONTROLS (MAPLIBRE GL JS)
+ * ========================================================================= */
+.maplibregl-ctrl-top-right {
+  top: 68px !important;
+  right: 16px !important;
+  margin: 0 !important;
+  z-index: 25 !important;
+}
+
+.maplibregl-ctrl-group {
+  background: rgba(11, 15, 25, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.5) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25) !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 34px !important;
+  height: 34px !important;
+  background-color: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.maplibregl-ctrl-group button+button {
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.maplibregl-ctrl-group button:active {
+  background-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(2.2) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+  opacity: 0.92 !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon {
+  opacity: 1 !important;
+  filter: invert(1) brightness(2.8) drop-shadow(0 0 5px #38bdf8) !important;
+}
+
+.maplibregl-ctrl-scale {
+  background: rgba(11, 15, 25, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  border-top: none !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  border-radius: 0 0 6px 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+
+/* MapLibre GL JS Popup Close Button C2 Dark Glass */
+.maplibregl-popup-close-button {
+  color: #94a3b8 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  padding: 4px 8px !important;
+  right: 8px !important;
+  top: 8px !important;
+  border-radius: 8px !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  border: 1px solid rgba(71, 85, 105, 0.4) !important;
+  transition: all 0.2s ease !important;
+  line-height: 1 !important;
+  outline: none !important;
+  z-index: 30 !important;
+}
+.maplibregl-popup-close-button:hover {
+  color: #ffffff !important;
+  background: #ef4444 !important;
+  border-color: #f87171 !important;
+}
+
 
 /* ==========================================================================
    NORTHSTAR CITIZEN – Interactive Location Picker & Verification Styles

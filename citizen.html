@@ -315,14 +315,14 @@
   <!-- 1. HEADER DÂN SỰ CAO CẤP (CITIZEN TOPBAR - NEO GLASS) -->
   <!-- ========================================================================= -->
   <header class="h-14 sm:h-16 citizen-glass-header px-2.5 sm:px-5 flex items-center justify-between gap-2 z-30 shrink-0">
-    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
       <div
         class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/25 text-white font-black text-base border border-white/20 shrink-0">
         <i data-lucide="shield-alert" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </div>
       <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <span class="text-sm sm:text-base font-black tracking-wider text-white whitespace-nowrap">NORTHSTAR</span>
+          <span class="text-xs sm:text-base font-black tracking-wider text-white whitespace-nowrap">NORTHSTAR</span>
           <span
             class="hidden sm:inline-block whitespace-nowrap text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 text-sky-300 border border-sky-400/30 uppercase tracking-wider">Cổng
             Dân Sự</span>
@@ -332,13 +332,13 @@
     </div>
 
     <!-- Tiện ích trạng thái, Nút 114 Siêu Nổi Bật & Lối tắt Chỉ huy -->
-    <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+    <div class="flex items-center gap-1 sm:gap-2.5 shrink-0">
       <!-- Trạng thái mạng Online / Offline & Đồng bộ Outbox (Tiêu chí V-03 / CIT-05) -->
       <div id="citizen-network-status"
-        class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 shadow-sm">
+        class="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-[11px] font-mono font-bold bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 shadow-sm shrink-0">
         <span id="citizen-network-dot"
-          class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
-        <span id="citizen-network-label">Trực tuyến</span>
+          class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
+        <span id="citizen-network-label" class="hidden sm:inline">Trực tuyến</span>
         <span id="citizen-sync-pending-badge"
           class="hidden ml-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/50 text-amber-200 text-[10px]">0</span>
       </div>
@@ -373,6 +373,14 @@
         <i data-lucide="phone-call" class="w-4 h-4 animate-bounce"></i>
         <span class="hidden sm:inline">CỨU NẠN </span><span>114</span>
       </a>
+
+      <!-- Đăng nhập / Tài khoản RBAC -->
+      <button id="btn-auth-account" type="button"
+        onclick="window.NorthStarAuth && window.NorthStarAuth.openLoginModal()"
+        class="flex px-2 py-1 rounded-lg border font-bold text-[10.5px] items-center gap-1 transition cursor-pointer shrink-0 text-slate-300 border-slate-600 bg-slate-800/80"
+        title="Đăng nhập / Đổi tài khoản RBAC">
+        🔐 <span class="hidden sm:inline">Đăng nhập</span>
+      </button>
 
       <!-- Lối tắt sang Trung tâm Chỉ huy (Dành cho Giám khảo & Cán bộ) -->
       <a href="index.html"
@@ -1727,7 +1735,8 @@
   <!-- ========================================================================= -->
   <!-- 5. NẠP SCRIPTS MÃ NGUỒN MỞ -->
   <!-- ========================================================================= -->
-  <script src="js/config.js"></script>
+  <script src="js/config.js?v=20261125_v2"></script>
+  <script src="js/auth_manager.js?v=20261125_v1"></script>
   <script src="js/offline_db.js"></script>
   <script src="js/offline_sync_manager.js"></script>
   <script src="js/sos_relay.js"></script>

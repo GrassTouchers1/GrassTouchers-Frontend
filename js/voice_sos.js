@@ -101,12 +101,6 @@ const VoiceSOSManager = (function () {
     if (!modal) return;
     modal.classList.remove('hidden');
     resetState();
-    const mainPhone = document.getElementById('sos-input-phone')?.value?.trim() || '';
-    const mainName = document.getElementById('sos-input-name')?.value?.trim() || '';
-    const vPhone = document.getElementById('voice-sos-phone');
-    const vName = document.getElementById('voice-sos-contact-name');
-    if (vPhone && mainPhone) vPhone.value = mainPhone;
-    if (vName && mainName) vName.value = mainName;
     initLocation();
     if (window.lucide) lucide.createIcons();
   }
@@ -203,7 +197,7 @@ const VoiceSOSManager = (function () {
   }
 
   /**
-   * Cho phép nạn nhân trực tiếp bấm chấm vị trí trên bản đồ Leaflet
+   * Cho phép nạn nhân trực tiếp bấm chấm vị trí trên bản đồ MapLibre GL JS
    */
   function pickLocationOnMap() {
     const modal = document.getElementById('voice-sos-modal');
@@ -217,41 +211,35 @@ const VoiceSOSManager = (function () {
     if (modal) modal.classList.add('hidden');
     if (banner) banner.classList.remove('hidden');
 
-    const cursorTarget = (window.map.getCanvas ? window.map.getCanvas() : window.map.getContainer());
-    if (cursorTarget) cursorTarget.style.cursor = 'crosshair';
+    const container = window.map.getCanvas ? window.map.getCanvas() : window.map.getContainer();
+    if (container) container.style.cursor = 'crosshair';
 
-    // Đăng ký sự kiện nhấp chuột 1 lần trên bản đồ (hỗ trợ cả Leaflet & MapLibre)
+    // Đăng ký sự kiện nhấp chuột 1 lần trên MapLibre map
     window.map.once('click', handleMapClickPick);
   }
 
   function handleMapClickPick(e) {
     if (!isMapPicking) return;
-    const ll = (e && (e.lngLat || e.latlng)) ? (e.lngLat || e.latlng) : null;
-    if (!ll) return;
-    selectedLat = ll.lat;
-    selectedLng = ll.lng;
+    const lat = e.lngLat ? e.lngLat.lat : (e.latlng ? e.latlng.lat : e.lat);
+    const lng = e.lngLat ? e.lngLat.lng : (e.latlng ? e.latlng.lng : e.lng);
+    selectedLat = lat;
+    selectedLng = lng;
     selectedLocLabel = 'Điểm chấm trên bản đồ';
 
-    // Ghim marker tạm thời để nạn nhân thấy rõ
-    if (tempSOSMarker) {
-      try {
-        if (typeof tempSOSMarker.remove === 'function') tempSOSMarker.remove();
-        else if (window.map && typeof window.map.removeLayer === 'function') window.map.removeLayer(tempSOSMarker);
-      } catch (_) { }
+    // Ghim marker tạm thời bằng MapLibre Marker
+    if (tempSOSMarker && typeof tempSOSMarker.remove === 'function') {
+      tempSOSMarker.remove();
       tempSOSMarker = null;
     }
-    if (window.L && window.map && typeof window.map.addLayer === 'function' && !window.map.getStyle) {
-      tempSOSMarker = L.circleMarker([selectedLat, selectedLng], {
-        radius: 12,
-        color: '#e11d48',
-        fillColor: '#f43f5e',
-        fillOpacity: 0.9,
-        weight: 3
-      }).addTo(window.map);
-    } else if (window.maplibregl && window.map) {
-      tempSOSMarker = new maplibregl.Marker({ color: '#e11d48' })
-        .setLngLat([selectedLng, selectedLat])
-        .addTo(window.map);
+
+    const mapInst = window.map._maplibre || window.map;
+    if (window.maplibregl && mapInst) {
+      const el = document.createElement('div');
+      el.className = 'w-7 h-7 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center text-white text-xs font-black animate-pulse';
+      el.innerText = '📍';
+      tempSOSMarker = new window.maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([lng, lat])
+        .addTo(mapInst);
     }
 
     finishMapPick();
@@ -260,8 +248,7 @@ const VoiceSOSManager = (function () {
   function finishMapPick() {
     isMapPicking = false;
     if (window.map) {
-      const cursorTarget = (window.map.getCanvas ? window.map.getCanvas() : window.map.getContainer());
-      if (cursorTarget) cursorTarget.style.cursor = '';
+      window.map.getContainer().style.cursor = '';
     }
     const banner = document.getElementById('voice-sos-map-picker-banner');
     const modal = document.getElementById('voice-sos-modal');
@@ -274,8 +261,7 @@ const VoiceSOSManager = (function () {
     if (!isMapPicking) return;
     isMapPicking = false;
     if (window.map) {
-      const cursorTarget = (window.map.getCanvas ? window.map.getCanvas() : window.map.getContainer());
-      if (cursorTarget) cursorTarget.style.cursor = '';
+      window.map.getContainer().style.cursor = '';
       window.map.off('click', handleMapClickPick);
     }
     const banner = document.getElementById('voice-sos-map-picker-banner');
@@ -443,13 +429,6 @@ const VoiceSOSManager = (function () {
   }
 
   async function startRecording() {
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-      const statusEl = document.getElementById('voice-sos-status');
-      if (statusEl) {
-        statusEl.innerHTML = '<span class="font-bold text-amber-400 text-xs">⚠️ Thiết bị không hỗ trợ Microphone. Hãy gõ nội dung bên dưới hoặc chuyển vào Form SOS chính.</span>';
-      }
-      return;
-    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunks = [];
@@ -479,10 +458,7 @@ const VoiceSOSManager = (function () {
       setUIState('recording');
     } catch (err) {
       console.error('[VoiceSOS] Lỗi mở microphone:', err);
-      const statusEl = document.getElementById('voice-sos-status');
-      if (statusEl) {
-        statusEl.innerHTML = '<span class="font-bold text-amber-400 text-xs">⚠️ Không thể mở Microphone. Hãy gõ nội dung bên dưới hoặc bấm "Chuyển vào Form SOS chính".</span>';
-      }
+      alert('Không thể mở Microphone. Vui lòng cho phép quyền truy cập hoặc bạn có thể tự tay gõ lời kêu cứu vào ô bên dưới!');
     }
   }
 
@@ -574,16 +550,8 @@ const VoiceSOSManager = (function () {
   async function dispatchValidatedSOS(text, lat, lng) {
     const phoneInput = document.getElementById('voice-sos-phone');
     const nameInput = document.getElementById('voice-sos-contact-name');
-    const mainPhone = document.getElementById('sos-input-phone')?.value?.trim() || '';
-    const mainName = document.getElementById('sos-input-name')?.value?.trim() || '';
-    const contactPhone = (phoneInput && phoneInput.value.trim()) ? phoneInput.value.trim() : mainPhone;
-    const contactName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : (mainName || 'Nạn nhân Voice SOS');
-
-    if (!navigator.onLine) {
-      transferToMainForm();
-      alert('Thiết bị đang ngoại tuyến. Nội dung Voice SOS đã được chuyển vào Form SOS chính để lưu vào hàng đợi đồng bộ.');
-      return;
-    }
+    const contactPhone = phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : '0999999999';
+    const contactName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Nạn nhân Voice SOS';
 
     try {
       const res = await fetch(getApiUrl('/api/ai/voice-sos/text'), {
@@ -622,11 +590,8 @@ const VoiceSOSManager = (function () {
     setUIState('success');
 
     // Xóa marker tạm nếu có
-    if (tempSOSMarker) {
-      try {
-        if (typeof tempSOSMarker.remove === 'function') tempSOSMarker.remove();
-        else if (window.map && typeof window.map.removeLayer === 'function') window.map.removeLayer(tempSOSMarker);
-      } catch (_) { }
+    if (tempSOSMarker && typeof tempSOSMarker.remove === 'function') {
+      tempSOSMarker.remove();
       tempSOSMarker = null;
     }
 
@@ -672,13 +637,9 @@ const VoiceSOSManager = (function () {
       window.NorthStarRescue.loadSOSBeacons();
     }
 
-    // Tự động bay camera tới điểm SOS vừa tạo với zoom rõ ràng (hỗ trợ cả Leaflet & MapLibre)
-    if (window.map && typeof window.map.flyTo === 'function') {
-      if (typeof window.map.getStyle === 'function') {
-        window.map.flyTo({ center: [lng, lat], zoom: 16 });
-      } else {
-        window.map.flyTo([lat, lng], 16, { duration: 1.5 });
-      }
+    // Tự động bay camera tới điểm SOS vừa tạo với zoom rõ ràng
+    if (window.map) {
+      window.map.flyTo([lat, lng], 16, { duration: 1.5 });
     }
 
     // Phản hồi âm thanh giọng nói tiếng Việt
@@ -691,16 +652,6 @@ const VoiceSOSManager = (function () {
   window.addEventListener('DOMContentLoaded', () => {
     initSpeechRecognition();
   });
-
-  function transferToMainForm() {
-    const voiceText = document.getElementById('voice-sos-text-input')?.value?.trim() || '';
-    const notesEl = document.getElementById('sos-input-notes');
-    if (notesEl && voiceText) {
-      notesEl.value = notesEl.value.trim() ? `${notesEl.value.trim()} | ${voiceText}` : voiceText;
-    }
-    closeModal();
-    if (notesEl) notesEl.focus();
-  }
 
   return {
     openModal,
@@ -718,8 +669,7 @@ const VoiceSOSManager = (function () {
     pickLocationOnMap,
     cancelMapPick,
     setLocationPreset,
-    confirmAndSend,
-    transferToMainForm
+    confirmAndSend
   };
 })();
 

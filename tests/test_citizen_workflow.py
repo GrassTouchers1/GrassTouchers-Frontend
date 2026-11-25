@@ -37,12 +37,14 @@ API_BASE_URL = "http://127.0.0.1:8000"
 class TestCitizenWorkflow(unittest.TestCase):
     """Bộ kiểm thử liên thông cho toàn bộ phân hệ Người dân NORTHSTAR."""
 
-    def make_request(self, path, method="GET", data=None):
+    def make_request(self, path, method="GET", data=None, headers=None):
         """Hàm phụ trợ gửi HTTP request tới máy chủ backend."""
         url = f"{API_BASE_URL}{path}"
-        headers = {"Content-Type": "application/json"}
+        hdrs = {"Content-Type": "application/json"}
+        if headers:
+            hdrs.update(headers)
         req_data = json.dumps(data).encode("utf-8") if data is not None else None
-        req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
+        req = urllib.request.Request(url, data=req_data, headers=hdrs, method=method)
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 status = resp.status
@@ -90,14 +92,32 @@ class TestCitizenWorkflow(unittest.TestCase):
         )
         self.assertEqual(props.get("status"), "pending", "Trạng thái ban đầu của hồ sơ là pending")
 
-        # Lưu lại id và ticket code để test case sau tra cứu
+        # Lưu lại id, tracking_token và ticket code để test case sau tra cứu
         self.__class__.created_ticket_code = ticket_code
         self.__class__.created_record_id = record_id
+        self.__class__.created_tracking_token = props.get("tracking_token")
 
     def test_03_track_sos_ticket_progress(self):
-        """Kiểm tra tra cứu hành trình tiến độ cứu hộ theo mã ticket (VIC-05, V-03)."""
-        status, data = self.make_request("/api/sos")
-        self.assertEqual(status, 200, "Truy vấn danh sách SOS phải trả về HTTP 200")
+        """Kiểm tra tra cứu riêng tư via tracking_token và xác thực RBAC trên /api/sos."""
+        token = getattr(self.__class__, "created_tracking_token", None)
+        self.assertIsNotNone(token)
+        t_status, t_data = self.make_request(f"/api/sos/track/{token}")
+        self.assertEqual(t_status, 200, "Tra cứu riêng tư bằng tracking_token phải trả về 200")
+        self.assertEqual(t_data.get("ticket_code"), self.__class__.created_ticket_code)
+
+        # Kiểm tra /api/sos yêu cầu xác thực RBAC (Guest bị 401, Coordinator được 200)
+        guest_status, _ = self.make_request("/api/sos")
+        self.assertEqual(guest_status, 401)
+
+        import os
+        l_status, l_data = self.make_request("/api/auth/login", method="POST", data={
+            "username": "coordinator_demo",
+            "password": os.getenv("NORTHSTAR_DEMO_PASSWORD", "NorthStarDemo@2026"),
+        })
+        self.assertEqual(l_status, 200)
+        coord_hdr = {"Authorization": f"Bearer {l_data['access_token']}"}
+        status, data = self.make_request("/api/sos", headers=coord_hdr)
+        self.assertEqual(status, 200, "Truy vấn danh sách SOS có RBAC Coordinator phải trả về HTTP 200")
         self.assertEqual(data.get("type"), "FeatureCollection", "Phải trả về FeatureCollection GeoJSON")
 
         features = data.get("features", [])
@@ -114,7 +134,7 @@ class TestCitizenWorkflow(unittest.TestCase):
             f"Hồ sơ cứu nạn #{target_id} phải tồn tại trên hệ thống để người dân và chỉ huy theo dõi"
         )
         props = matched_feature.get("properties", {})
-        self.assertIn(props.get("status"), ["pending", "acknowledged", "dispatched", "rescued"])
+        self.assertIn(props.get("status"), ["pending", "verified", "acknowledged", "dispatched", "on_scene", "rescued"])
 
     def test_04_crowdsourced_flood_report(self):
         """Kiểm tra người dân gửi báo ngập cộng đồng kèm gắn nhãn [Chờ xác minh] (VIC-06)."""

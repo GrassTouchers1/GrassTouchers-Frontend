@@ -1200,66 +1200,6 @@ const CitizenPortal = (function () {
       }
       return;
     }
-
-    // B. Dự phòng động cơ Leaflet (2D Raster)
-    if (typeof L === 'undefined') return;
-    if (sosMarker) {
-      sosMarker.setLatLng([lat, lng]);
-    } else {
-      const pinIcon = L.divIcon({
-        className: 'citizen-sos-custom-pin',
-        html: `
-          <div class="citizen-pin-pulse-container">
-            <div class="citizen-pin-pulse-ring"></div>
-            <div class="citizen-pin-pulse-core"></div>
-          </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      sosMarker = L.marker([lat, lng], {
-        icon: pinIcon,
-        draggable: true,
-        title: 'Vị trí cứu hộ SOS (Kéo thả để tinh chỉnh)'
-      }).addTo(window.map);
-
-      sosMarker.on('dragstart', function () {
-        triggerHaptic([30]);
-      });
-
-      sosMarker.on('dragend', function (event) {
-        const marker = event.target;
-        const pos = marker.getLatLng();
-        triggerHaptic([40, 30, 40]);
-        setSOSLocation(pos.lat, pos.lng, null, 'manual');
-        showCitizenToast(`📍 Đã di chuyển ghim tới: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}. Vui lòng xác nhận lại vị trí!`, 'info');
-      });
-    }
-
-    // Hiển thị hoặc xóa vòng tròn sai số định vị GPS (Accuracy Radius)
-    if (accuracy && window.map && typeof L !== 'undefined') {
-      if (accuracyCircle) {
-        accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
-      } else {
-        accuracyCircle = L.circle([lat, lng], {
-          radius: accuracy,
-          color: '#059669',
-          fillColor: '#10b981',
-          fillOpacity: 0.15,
-          weight: 1.5,
-          dashArray: '4, 4'
-        }).addTo(window.map);
-      }
-    } else if (accuracyCircle && !accuracy) {
-      if (typeof window.map.removeLayer === 'function') {
-        window.map.removeLayer(accuracyCircle);
-      }
-      accuracyCircle = null;
-    }
-
-    if (typeof window.map.panTo === 'function') {
-      window.map.panTo([lat, lng]);
-    }
   }
 
   /**

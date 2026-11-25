@@ -290,6 +290,10 @@ const NorthStarDemo = (function () {
       } else if (e.key.toLowerCase() === 'v') {
         if (window.VoiceSOSManager) window.VoiceSOSManager.openModal();
         showToast('Phím tắt [V]: Mở Cấp cứu Giọng nói Voice SOS', 'danger', 2000);
+      } else if (e.key.toLowerCase() === 'm') {
+        if (window.VoiceWarning && typeof window.VoiceWarning.toggleVoice === 'function') {
+          window.VoiceWarning.toggleVoice();
+        }
       } else if (e.key.toLowerCase() === 'd') {
         toggleDemoModal();
       } else if (e.key === 'Escape') {
@@ -311,6 +315,8 @@ const NorthStarDemo = (function () {
     initKeyboardShortcuts
   };
 })();
+
+window.NorthStarDemo = NorthStarDemo;
 
 // Khởi tạo phím tắt khi tải trang
 window.addEventListener('DOMContentLoaded', () => {
